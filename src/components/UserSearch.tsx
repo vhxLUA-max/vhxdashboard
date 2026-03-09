@@ -54,7 +54,7 @@ async function fetchRobloxProfile(userId: number): Promise<RobloxProfile | null>
     if (!userRes.ok) return null;
     const userData = await userRes.json();
 
-    const avatarUrl = `https://www.roblox.com/headshot-thumbnail/image?userId=${userId}&width=150&height=150&format=png`;
+    const avatarUrl = `https://tr.rbxcdn.com/avatar-thumbnail/150/150/AvatarHeadshot/Png?userId=${userId}`;
 
     return {
       displayName: userData.displayName ?? userData.name,

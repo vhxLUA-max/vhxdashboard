@@ -38,7 +38,7 @@ async function fetchAvatarUrl(robloxUserId: number): Promise<string | null> {
   try {
     const res = await fetch(`https://users.roblox.com/v1/users/${robloxUserId}`);
     if (!res.ok) return null;
-    return `https://www.roblox.com/headshot-thumbnail/image?userId=${robloxUserId}&width=150&height=150&format=png`;
+    return `https://tr.rbxcdn.com/avatar-thumbnail/150/150/AvatarHeadshot/Png?userId=${robloxUserId}`;
   } catch {
     return null;
   }
