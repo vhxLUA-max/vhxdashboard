@@ -296,7 +296,7 @@ export function UserSearch() {
           value={query}
           onChange={handleChange}
           placeholder="Search by token (e.g. A3X9K)..."
-          maxLength={5}
+          maxLength={8}
           className="pl-9 bg-gray-950 border-gray-700 text-white placeholder:text-gray-600 focus:border-purple-500 focus:ring-purple-500/20 font-mono tracking-widest uppercase"
         />
       </div>

@@ -76,7 +76,7 @@ export function WebhookTab() {
   };
 
   const handleSend = async () => {
-    if (!webhookUrl.trim() || token.length !== 5) return;
+    if (!webhookUrl.trim() || token.length < 4) return;
     if (!webhookUrl.startsWith('https://discord.com/api/webhooks/')) {
       setErrorMsg('Please enter a valid Discord webhook URL.');
       setStatus('error');
@@ -191,12 +191,12 @@ export function WebhookTab() {
               value={token}
               onChange={e => { setToken(e.target.value.toUpperCase()); setStatus('idle'); }}
               placeholder="e.g. A3X9K"
-              maxLength={5}
+              maxLength={8}
               className="bg-gray-950 border-gray-700 text-white placeholder:text-gray-600 focus:border-indigo-500 font-mono tracking-widest"
             />
             <Button
               onClick={handleSaveToken}
-              disabled={token.length !== 5}
+              disabled={token.length < 4}
               variant="outline"
               size="icon"
               className={`flex-shrink-0 border-gray-700 transition-colors ${savedToken ? 'border-emerald-500/50 text-emerald-400' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
@@ -243,7 +243,7 @@ export function WebhookTab() {
 
         <Button
           onClick={handleSend}
-          disabled={status === 'loading' || !webhookUrl.trim() || token.length !== 5}
+          disabled={status === 'loading' || !webhookUrl.trim() || token.length < 4}
           className="w-full bg-indigo-600 hover:bg-indigo-500 text-white border-0"
         >
           {status === 'loading' ? (
