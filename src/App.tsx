@@ -1,5 +1,6 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useSupabaseDashboard } from '@/hooks/useSupabaseDashboard';
+import { supabase } from '@/lib/supabase';
 import type { DateRange } from '@/types';
 import { Header } from '@/components/Header';
 import { MetricCard } from '@/components/MetricCard';
@@ -22,6 +23,32 @@ function timeAgo(iso: string): string {
   return `${Math.floor(diff / 86400)}d ago`;
 }
 
+function useLiveCounter() {
+  const [count, setCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    const fetchCount = async () => {
+      const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const { data } = await supabase
+        .from('game_executions')
+        .select('count')
+        .gte('last_executed_at', since);
+      if (data) setCount(data.reduce((s: number, e: { count: number }) => s + e.count, 0));
+    };
+
+    fetchCount();
+
+    const channel = supabase
+      .channel('live-executions')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'game_executions' }, fetchCount)
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, []);
+
+  return count;
+}
+
 type SidebarTab = 'stats' | 'search' | 'webhook';
 
 function App() {
@@ -30,6 +57,7 @@ function App() {
   const { data, loading, error, refresh } = useSupabaseDashboard(dateRange);
   const handleRefresh = useCallback(() => refresh(), [refresh]);
   const connected = isConfigured();
+  const liveCount = useLiveCounter();
 
   return (
     <div className="min-h-screen bg-gray-950 text-white">
@@ -42,6 +70,12 @@ function App() {
             <p className="text-sm text-gray-500 mt-1">Monitor your execution metrics and performance</p>
           </div>
           <div className="flex items-center gap-3">
+            {liveCount !== null && (
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="text-xs font-medium text-emerald-400">{liveCount.toLocaleString()} live</span>
+              </div>
+            )}
             <DateRangeFilter value={dateRange} onChange={setDateRange} />
             <Button
               variant="outline"
@@ -125,12 +159,7 @@ function App() {
 
       <footer className="border-t border-gray-800 mt-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <p className="text-sm text-gray-500">Execution Analytics Dashboard</p>
-            <div className="flex items-center gap-4 text-sm text-gray-600">
-              <span>React</span><span>·</span><span>Tailwind CSS</span><span>·</span><span>Supabase</span>
-            </div>
-          </div>
+          <p className="text-sm text-gray-500 text-center">Execution Analytics Dashboard</p>
         </div>
       </footer>
     </div>

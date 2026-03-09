@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { UniqueUser, GameExecution } from '@/types';
-import { Webhook, Send, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { Webhook, Send, CheckCircle2, AlertCircle, Loader2, Save } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+
+const STORAGE_KEY = 'vhx_webhook_url';
 
 type PlaceEntry = {
   place_id: number;
@@ -43,10 +45,20 @@ async function fetchAvatarUrl(robloxUserId: number): Promise<string | null> {
 }
 
 export function WebhookTab() {
-  const [webhookUrl, setWebhookUrl] = useState('');
+  const [webhookUrl, setWebhookUrl] = useState(() => localStorage.getItem(STORAGE_KEY) ?? '');
   const [username, setUsername] = useState('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    setSaved(false);
+  }, [webhookUrl]);
+
+  const handleSaveUrl = () => {
+    localStorage.setItem(STORAGE_KEY, webhookUrl);
+    setSaved(true);
+  };
 
   const handleSend = async () => {
     if (!webhookUrl.trim() || !username.trim()) return;
@@ -209,12 +221,25 @@ export function WebhookTab() {
 
         <div>
           <label className="text-xs text-gray-400 mb-1.5 block">Webhook URL</label>
-          <Input
-            value={webhookUrl}
-            onChange={e => { setWebhookUrl(e.target.value); setStatus('idle'); }}
-            placeholder="https://discord.com/api/webhooks/..."
-            className="bg-gray-950 border-gray-700 text-white placeholder:text-gray-600 focus:border-indigo-500"
-          />
+          <div className="flex gap-2">
+            <Input
+              value={webhookUrl}
+              onChange={e => { setWebhookUrl(e.target.value); setStatus('idle'); }}
+              placeholder="https://discord.com/api/webhooks/..."
+              className="bg-gray-950 border-gray-700 text-white placeholder:text-gray-600 focus:border-indigo-500"
+            />
+            <Button
+              onClick={handleSaveUrl}
+              disabled={!webhookUrl.trim()}
+              variant="outline"
+              size="icon"
+              className={`flex-shrink-0 border-gray-700 transition-colors ${saved ? 'border-emerald-500/50 text-emerald-400' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+              title="Save webhook URL"
+            >
+              <Save className="w-4 h-4" />
+            </Button>
+          </div>
+          {saved && <p className="text-[11px] text-emerald-400 mt-1">Saved for next visit</p>}
         </div>
 
         <Button
