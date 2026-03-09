@@ -1,4 +1,4 @@
-import type { Execution } from '@/types';
+import type { GameExecution } from '@/types';
 import { RefreshCw, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
