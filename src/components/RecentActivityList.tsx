@@ -1,32 +1,19 @@
-import type { Execution } from '@/types';
+import type { GameExecution } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Badge } from '@/components/ui/badge';
-import { Clock, User, Zap } from 'lucide-react';
+import { Clock, Activity } from 'lucide-react';
 
 interface RecentActivityListProps {
-  executions: Execution[];
+  executions: GameExecution[];
   loading?: boolean;
 }
 
 function formatRelativeTime(dateString: string): string {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffSecs = Math.floor(diffMs / 1000);
-  const diffMins = Math.floor(diffSecs / 60);
-  const diffHours = Math.floor(diffMins / 60);
-  const diffDays = Math.floor(diffHours / 24);
-
-  if (diffSecs < 60) return 'just now';
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays < 7) return `${diffDays}d ago`;
-  return date.toLocaleDateString();
-}
-
-function formatDuration(ms: number): string {
-  if (ms < 1000) return `${ms}ms`;
-  return `${(ms / 1000).toFixed(2)}s`;
+  const diff = (Date.now() - new Date(dateString).getTime()) / 1000;
+  if (diff < 60) return 'just now';
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  if (diff < 86400 * 7) return `${Math.floor(diff / 86400)}d ago`;
+  return new Date(dateString).toLocaleDateString();
 }
 
 export function RecentActivityList({ executions, loading = false }: RecentActivityListProps) {
@@ -62,50 +49,27 @@ export function RecentActivityList({ executions, loading = false }: RecentActivi
     <div className="space-y-2">
       {executions.map((execution) => (
         <div
-          key={execution.id}
+          key={execution.place_id}
           className="flex items-center gap-4 p-4 bg-gray-900 rounded-lg border border-gray-800 hover:border-gray-700 transition-colors"
         >
-          <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
-            execution.status === 'success' ? 'bg-emerald-500/10' : 'bg-rose-500/10'
-          }`}>
-            <User className={`w-5 h-5 ${
-              execution.status === 'success' ? 'text-emerald-400' : 'text-rose-400'
-            }`} />
-          </div>
-          
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="font-medium text-white truncate">
-                {execution.username || execution.user_id}
-              </span>
-              <span className="text-gray-500 text-sm">·</span>
-              <span className="text-gray-400 text-sm">
-                {formatRelativeTime(execution.created_at)}
-              </span>
-            </div>
-            <div className="flex items-center gap-3 mt-1">
-              <span className="flex items-center gap-1 text-xs text-gray-500">
-                <Zap className="w-3 h-3" />
-                {formatDuration(execution.duration_ms)}
-              </span>
-              {execution.metadata?.source && (
-                <span className="text-xs text-gray-600">
-                  via {execution.metadata.source}
-                </span>
-              )}
-            </div>
+          <div className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center bg-indigo-500/10">
+            <Activity className="w-5 h-5 text-indigo-400" />
           </div>
 
-          <Badge
-            variant="outline"
-            className={`capitalize ${
-              execution.status === 'success'
-                ? 'border-emerald-500/30 text-emerald-400 bg-emerald-500/10'
-                : 'border-rose-500/30 text-rose-400 bg-rose-500/10'
-            }`}
-          >
-            {execution.status}
-          </Badge>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="font-medium text-white truncate">Place {execution.place_id}</span>
+              <span className="text-gray-500 text-sm">·</span>
+              <span className="text-gray-400 text-sm">{formatRelativeTime(execution.last_executed_at)}</span>
+            </div>
+            <p className="text-xs text-gray-500 mt-0.5">
+              {execution.count.toLocaleString()} executions
+            </p>
+          </div>
+
+          <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+            Active
+          </span>
         </div>
       ))}
     </div>
