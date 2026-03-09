@@ -67,7 +67,7 @@ function App() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <MetricCard title="Total Executions" value={data?.totalExecutions.toLocaleString() ?? '-'} subtitle={`In last ${dateRange}`} icon={Activity} loading={loading} />
                 <MetricCard title="Unique Users" value={data?.uniqueUsers.toLocaleString() ?? '-'} subtitle="Active users" icon={Users} loading={loading} />
-                <MetricCard title="Active Games" value={data?.activeGames.toLocaleString() ?? '-'} subtitle="Distinct game titles" icon={Gamepad2} loading={loading} />
+                <MetricCard title="Active Scripts" value="3" subtitle="Deployed scripts" icon={Gamepad2} loading={loading} />
                 <MetricCard title="Last Execution" value={data?.lastExecutedAt ? timeAgo(data.lastExecutedAt) : '-'} subtitle="Most recent activity" icon={Clock} loading={loading} />
               </div>
 
