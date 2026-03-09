@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { UniqueUser, GameExecution } from '@/types';
-import { Search, Users, Clock, Calendar, Gamepad2, ArrowLeft, ExternalLink, Shield, Activity } from 'lucide-react';
+import { Search, Users, Clock, Calendar, Gamepad2, ArrowLeft, ExternalLink, Shield, Activity, Hash } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 
 type PlaceEntry = {
@@ -31,9 +31,9 @@ type RobloxProfile = {
 
 function formatDuration(first: string, last: string): string {
   const diff = new Date(last).getTime() - new Date(first).getTime();
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-  const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  const days = Math.floor(diff / 86400000);
+  const hours = Math.floor((diff % 86400000) / 3600000);
+  const mins = Math.floor((diff % 3600000) / 60000);
   if (days > 0) return `${days}d ${hours}h`;
   if (hours > 0) return `${hours}h ${mins}m`;
   if (mins > 0) return `${mins}m`;
@@ -53,15 +53,12 @@ async function fetchRobloxProfile(userId: number): Promise<RobloxProfile | null>
     const userRes = await fetch(`https://users.roblox.com/v1/users/${userId}`);
     if (!userRes.ok) return null;
     const userData = await userRes.json();
-
-    const avatarUrl = `https://tr.rbxcdn.com/avatar-thumbnail/150/150/AvatarHeadshot/Png?userId=${userId}`;
-
     return {
       displayName: userData.displayName ?? userData.name,
       description: userData.description ?? '',
       created: userData.created ?? '',
       isBanned: userData.isBanned ?? false,
-      avatarUrl,
+      avatarUrl: `https://tr.rbxcdn.com/avatar-thumbnail/150/150/AvatarHeadshot/Png?userId=${userId}`,
     };
   } catch {
     return null;
@@ -82,10 +79,7 @@ function UserProfilePanel({ user, onBack }: { user: UserResult; onBack: () => vo
   return (
     <div className="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
       <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-800 bg-gray-950">
-        <button
-          onClick={onBack}
-          className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white transition-colors"
-        >
+        <button onClick={onBack} className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white transition-colors">
           <ArrowLeft className="w-3.5 h-3.5" />
           Back
         </button>
@@ -102,11 +96,7 @@ function UserProfilePanel({ user, onBack }: { user: UserResult; onBack: () => vo
           <div className="flex flex-col items-center text-center mb-5">
             <div className="relative mb-3">
               {profile?.avatarUrl ? (
-                <img
-                  src={profile.avatarUrl}
-                  alt={user.username}
-                  className="w-16 h-16 rounded-full border-2 border-purple-500/40 object-cover"
-                />
+                <img src={profile.avatarUrl} alt={user.username} className="w-16 h-16 rounded-full border-2 border-purple-500/40 object-cover" />
               ) : (
                 <div className="w-16 h-16 rounded-full bg-purple-500/10 border-2 border-purple-500/30 flex items-center justify-center">
                   <Users className="w-7 h-7 text-purple-400" />
@@ -219,7 +209,8 @@ export function UserSearch() {
   const [selectedUser, setSelectedUser] = useState<UserResult | null>(null);
 
   const search = useCallback(async (value: string) => {
-    if (!value.trim()) {
+    const trimmed = value.trim().toUpperCase();
+    if (!trimmed) {
       setResults([]);
       setSearched(false);
       setSelectedUser(null);
@@ -233,7 +224,7 @@ export function UserSearch() {
     const { data: rows } = await supabase
       .from('unique_users')
       .select('*')
-      .ilike('username', `%${value.trim()}%`)
+      .eq('token', trimmed)
       .limit(50);
 
     if (!rows || rows.length === 0) {
@@ -266,12 +257,8 @@ export function UserSearch() {
           total_executions: 0,
         };
       }
-      if (new Date(row.first_seen) < new Date(grouped[uid].earliest_seen)) {
-        grouped[uid].earliest_seen = row.first_seen;
-      }
-      if (new Date(row.last_seen) > new Date(grouped[uid].latest_seen)) {
-        grouped[uid].latest_seen = row.last_seen;
-      }
+      if (new Date(row.first_seen) < new Date(grouped[uid].earliest_seen)) grouped[uid].earliest_seen = row.first_seen;
+      if (new Date(row.last_seen) > new Date(grouped[uid].latest_seen)) grouped[uid].latest_seen = row.last_seen;
       grouped[uid].total_executions += row.execution_count ?? 0;
       grouped[uid].places.push({
         place_id: row.place_id,
@@ -287,7 +274,7 @@ export function UserSearch() {
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
+    const val = e.target.value.toUpperCase();
     setQuery(val);
     search(val);
   };
@@ -304,21 +291,20 @@ export function UserSearch() {
       </h3>
 
       <div className="relative mb-4">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+        <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
         <Input
           value={query}
           onChange={handleChange}
-          placeholder="Search username..."
-          className="pl-9 bg-gray-950 border-gray-700 text-white placeholder:text-gray-600 focus:border-purple-500 focus:ring-purple-500/20"
+          placeholder="Search by token (e.g. A3X9K)..."
+          maxLength={5}
+          className="pl-9 bg-gray-950 border-gray-700 text-white placeholder:text-gray-600 focus:border-purple-500 focus:ring-purple-500/20 font-mono tracking-widest uppercase"
         />
       </div>
 
-      {loading && (
-        <div className="text-center py-6 text-gray-500 text-sm">Searching...</div>
-      )}
+      {loading && <div className="text-center py-6 text-gray-500 text-sm">Searching...</div>}
 
       {!loading && searched && results.length === 0 && (
-        <div className="text-center py-6 text-gray-500 text-sm">No users found for "{query}"</div>
+        <div className="text-center py-6 text-gray-500 text-sm">No user found for token "{query}"</div>
       )}
 
       {!loading && results.length > 0 && (

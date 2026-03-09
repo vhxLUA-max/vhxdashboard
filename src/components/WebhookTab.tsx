@@ -5,7 +5,8 @@ import { Webhook, Send, CheckCircle2, AlertCircle, Loader2, Save, Copy, Check } 
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
-const STORAGE_KEY = 'vhx_webhook_url';
+const STORAGE_KEY_URL   = 'vhx_webhook_url';
+const STORAGE_KEY_TOKEN = 'vhx_webhook_token';
 
 type PlaceEntry = {
   place_id: number;
@@ -19,9 +20,9 @@ type UserRow = UniqueUser & { token?: string };
 
 function formatDuration(first: string, last: string): string {
   const diff = new Date(last).getTime() - new Date(first).getTime();
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-  const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  const days = Math.floor(diff / 86400000);
+  const hours = Math.floor((diff % 86400000) / 3600000);
+  const mins = Math.floor((diff % 3600000) / 60000);
   if (days > 0) return `${days}d ${hours}h`;
   if (hours > 0) return `${hours}h ${mins}m`;
   if (mins > 0) return `${mins}m`;
@@ -47,29 +48,35 @@ async function fetchAvatarUrl(robloxUserId: number): Promise<string | null> {
 }
 
 export function WebhookTab() {
-  const [webhookUrl, setWebhookUrl] = useState(() => localStorage.getItem(STORAGE_KEY) ?? '');
-  const [username, setUsername] = useState('');
-  const [token, setToken] = useState('');
-  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
-  const [errorMsg, setErrorMsg] = useState('');
-  const [saved, setSaved] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [webhookUrl, setWebhookUrl]   = useState(() => localStorage.getItem(STORAGE_KEY_URL)   ?? '');
+  const [token, setToken]             = useState(() => localStorage.getItem(STORAGE_KEY_TOKEN)  ?? '');
+  const [status, setStatus]           = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [errorMsg, setErrorMsg]       = useState('');
+  const [savedUrl, setSavedUrl]       = useState(false);
+  const [savedToken, setSavedToken]   = useState(false);
+  const [copiedUrl, setCopiedUrl]     = useState(false);
 
-  useEffect(() => { setSaved(false); }, [webhookUrl]);
+  useEffect(() => { setSavedUrl(false); }, [webhookUrl]);
+  useEffect(() => { setSavedToken(false); }, [token]);
 
   const handleSaveUrl = () => {
-    localStorage.setItem(STORAGE_KEY, webhookUrl);
-    setSaved(true);
+    localStorage.setItem(STORAGE_KEY_URL, webhookUrl);
+    setSavedUrl(true);
+  };
+
+  const handleSaveToken = () => {
+    localStorage.setItem(STORAGE_KEY_TOKEN, token);
+    setSavedToken(true);
   };
 
   const handleCopyUrl = () => {
     navigator.clipboard.writeText(webhookUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    setCopiedUrl(true);
+    setTimeout(() => setCopiedUrl(false), 2000);
   };
 
   const handleSend = async () => {
-    if (!webhookUrl.trim() || !username.trim() || !token.trim()) return;
+    if (!webhookUrl.trim() || token.length !== 5) return;
     if (!webhookUrl.startsWith('https://discord.com/api/webhooks/')) {
       setErrorMsg('Please enter a valid Discord webhook URL.');
       setStatus('error');
@@ -82,26 +89,18 @@ export function WebhookTab() {
     const { data: rows } = await supabase
       .from('unique_users')
       .select('*')
-      .ilike('username', username.trim())
+      .eq('token', token.trim().toUpperCase())
       .limit(50);
 
     if (!rows || rows.length === 0) {
-      setErrorMsg(`No user found with username "${username}".`);
+      setErrorMsg('Token not found. Run the script in-game first.');
       setStatus('error');
       return;
     }
 
     const users = rows as UserRow[];
-
-    const tokenMatch = users.some(u => u.token?.toUpperCase() === token.trim().toUpperCase());
-    if (!tokenMatch) {
-      setErrorMsg('Invalid token. Run the script in-game to get your token.');
-      setStatus('error');
-      return;
-    }
-
     const robloxUserId = users[0].roblox_user_id ?? users[0].user_id;
-    const displayName = users[0].username;
+    const displayName  = users[0].username;
 
     const placeIds = [...new Set(users.map(u => u.place_id))];
     const { data: executions } = await supabase
@@ -123,11 +122,10 @@ export function WebhookTab() {
     }));
 
     const totalExecs = places.reduce((s, p) => s + p.user_execution_count, 0);
-    const earliest = places.reduce((a, b) => new Date(a.first_seen) < new Date(b.first_seen) ? a : b).first_seen;
-    const latest = places.reduce((a, b) => new Date(a.last_seen) > new Date(b.last_seen) ? a : b).last_seen;
-    const topGame = places.reduce((a, b) => a.user_execution_count > b.user_execution_count ? a : b);
-
-    const avatarUrl = await fetchAvatarUrl(robloxUserId);
+    const earliest   = places.reduce((a, b) => new Date(a.first_seen) < new Date(b.first_seen) ? a : b).first_seen;
+    const latest     = places.reduce((a, b) => new Date(a.last_seen)  > new Date(b.last_seen)  ? a : b).last_seen;
+    const topGame    = places.reduce((a, b) => a.user_execution_count > b.user_execution_count ? a : b);
+    const avatarUrl  = await fetchAvatarUrl(robloxUserId);
 
     const gameFields = places
       .sort((a, b) => b.user_execution_count - a.user_execution_count)
@@ -166,10 +164,7 @@ export function WebhookTab() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(embed),
       });
-      if (!res.ok) {
-        const body = await res.text();
-        throw new Error(`Discord returned ${res.status}: ${body}`);
-      }
+      if (!res.ok) throw new Error(`Discord returned ${res.status}: ${await res.text()}`);
       setStatus('success');
       setTimeout(() => setStatus('idle'), 4000);
     } catch (err) {
@@ -188,24 +183,29 @@ export function WebhookTab() {
 
       <div className="space-y-3">
         <div>
-          <label className="text-xs text-gray-400 mb-1.5 block">Username</label>
-          <Input
-            value={username}
-            onChange={e => { setUsername(e.target.value); setStatus('idle'); }}
-            placeholder="Roblox username..."
-            className="bg-gray-950 border-gray-700 text-white placeholder:text-gray-600 focus:border-indigo-500"
-          />
-        </div>
-
-        <div>
-          <label className="text-xs text-gray-400 mb-1.5 block">Token <span className="text-gray-600">(from console when script runs)</span></label>
-          <Input
-            value={token}
-            onChange={e => { setToken(e.target.value.toUpperCase()); setStatus('idle'); }}
-            placeholder="e.g. A3X9K"
-            maxLength={5}
-            className="bg-gray-950 border-gray-700 text-white placeholder:text-gray-600 focus:border-indigo-500 font-mono tracking-widest"
-          />
+          <label className="text-xs text-gray-400 mb-1.5 block">
+            Token <span className="text-gray-600">(from Settings → Copy My Token in-game)</span>
+          </label>
+          <div className="flex gap-2">
+            <Input
+              value={token}
+              onChange={e => { setToken(e.target.value.toUpperCase()); setStatus('idle'); }}
+              placeholder="e.g. A3X9K"
+              maxLength={5}
+              className="bg-gray-950 border-gray-700 text-white placeholder:text-gray-600 focus:border-indigo-500 font-mono tracking-widest"
+            />
+            <Button
+              onClick={handleSaveToken}
+              disabled={token.length !== 5}
+              variant="outline"
+              size="icon"
+              className={`flex-shrink-0 border-gray-700 transition-colors ${savedToken ? 'border-emerald-500/50 text-emerald-400' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+              title="Save token"
+            >
+              <Save className="w-4 h-4" />
+            </Button>
+          </div>
+          {savedToken && <p className="text-[11px] text-emerald-400 mt-1">Token saved for next visit</p>}
         </div>
 
         <div>
@@ -225,25 +225,25 @@ export function WebhookTab() {
               className="flex-shrink-0 border-gray-700 text-gray-400 hover:text-white hover:bg-gray-800"
               title="Copy webhook URL"
             >
-              {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+              {copiedUrl ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
             </Button>
             <Button
               onClick={handleSaveUrl}
               disabled={!webhookUrl.trim()}
               variant="outline"
               size="icon"
-              className={`flex-shrink-0 border-gray-700 transition-colors ${saved ? 'border-emerald-500/50 text-emerald-400' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+              className={`flex-shrink-0 border-gray-700 transition-colors ${savedUrl ? 'border-emerald-500/50 text-emerald-400' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
               title="Save webhook URL"
             >
               <Save className="w-4 h-4" />
             </Button>
           </div>
-          {saved && <p className="text-[11px] text-emerald-400 mt-1">Saved for next visit</p>}
+          {savedUrl && <p className="text-[11px] text-emerald-400 mt-1">Saved for next visit</p>}
         </div>
 
         <Button
           onClick={handleSend}
-          disabled={status === 'loading' || !webhookUrl.trim() || !username.trim() || token.length !== 5}
+          disabled={status === 'loading' || !webhookUrl.trim() || token.length !== 5}
           className="w-full bg-indigo-600 hover:bg-indigo-500 text-white border-0"
         >
           {status === 'loading' ? (
@@ -259,7 +259,6 @@ export function WebhookTab() {
             <p className="text-sm text-emerald-400">Report sent successfully!</p>
           </div>
         )}
-
         {status === 'error' && (
           <div className="flex items-center gap-2 p-3 bg-rose-500/10 border border-rose-500/20 rounded-lg">
             <AlertCircle className="w-4 h-4 text-rose-400 flex-shrink-0" />
