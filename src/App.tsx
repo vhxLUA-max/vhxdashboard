@@ -6,6 +6,7 @@ import { MetricCard } from '@/components/MetricCard';
 import { DateRangeFilter } from '@/components/DateRangeFilter';
 import { RecentActivityList } from '@/components/RecentActivityList';
 import { QuickStatsPanel } from '@/components/QuickStatsPanel';
+import { UserSearch } from '@/components/UserSearch';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { isConfigured } from '@/lib/supabase';
@@ -116,6 +117,8 @@ function App() {
                 </h3>
                 <QuickStatsPanel data={data} loading={loading} />
               </div>
+
+              <UserSearch />
             </div>
           </div>
         )}
