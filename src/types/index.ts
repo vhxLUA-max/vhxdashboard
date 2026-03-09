@@ -2,10 +2,12 @@ export interface GameExecution {
   place_id: number;
   count: number;
   last_executed_at: string;
+  game_name: string | null;
 }
 
 export interface UniqueUser {
   user_id: number;
+  roblox_user_id: number;
   place_id: number;
   username: string;
   first_seen: string;
