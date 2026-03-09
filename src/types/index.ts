@@ -12,6 +12,7 @@ export interface UniqueUser {
   username: string;
   first_seen: string;
   last_seen: string;
+  execution_count: number;
 }
 
 export interface DashboardData {
