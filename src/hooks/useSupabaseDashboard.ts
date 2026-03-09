@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase, isConfigured } from '@/lib/supabase';
+import { supabase } from '@/lib/supabase';
 import type { DashboardData, DateRange, UseSupabaseDashboardReturn, GameExecution, UniqueUser } from '@/types';
 
 function getStartDate(dateRange: DateRange): string {
