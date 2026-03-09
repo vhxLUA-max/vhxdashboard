@@ -1,21 +1,24 @@
-export interface Execution {
-  id: string;
-  created_at: string;
+export interface GameExecution {
+  place_id: number;
+  count: number;
+  last_executed_at: string;
+}
+
+export interface UniqueUser {
+  user_id: number;
+  place_id: number;
   username: string;
-  user_id: string;
-  status: 'success' | 'failed';
-  duration_ms: number;
-  metadata: Record<string, any>;
+  first_seen: string;
+  last_seen: string;
 }
 
 export interface DashboardData {
   totalExecutions: number;
   uniqueUsers: number;
-  successRate: number;
-  avgDuration: number;
-  successful: number;
-  failed: number;
-  recentExecutions: Execution[];
+  activePlaces: number;
+  lastExecutedAt: string | null;
+  recentExecutions: GameExecution[];
+  recentUsers: UniqueUser[];
 }
 
 export type DateRange = '24h' | '7d' | '30d' | '90d';
@@ -24,6 +27,5 @@ export interface UseSupabaseDashboardReturn {
   data: DashboardData | null;
   loading: boolean;
   error: Error | null;
-  realtimeExecutions: Execution[];
   refresh: () => void;
 }
