@@ -10,7 +10,7 @@ import { UserSearch } from '@/components/UserSearch';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { isConfigured } from '@/lib/supabase';
-import { Activity, Users, TrendingUp, Clock, RefreshCw, BarChart3, Zap } from 'lucide-react';
+import { Activity, Users, TrendingUp, Clock, RefreshCw, BarChart3, Gamepad2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 function timeAgo(iso: string): string {
@@ -24,7 +24,6 @@ function timeAgo(iso: string): string {
 function App() {
   const [dateRange, setDateRange] = useState<DateRange>('24h');
   const { data, loading, error, refresh } = useSupabaseDashboard(dateRange);
-
   const handleRefresh = useCallback(() => refresh(), [refresh]);
   const connected = isConfigured();
 
@@ -95,12 +94,10 @@ function App() {
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                    <Zap className="w-5 h-5 text-amber-400" />
-                    Recent Activity
+                    <Gamepad2 className="w-5 h-5 text-indigo-400" />
+                    Supported Games
                   </h3>
-                  <span className="text-sm text-gray-500">Last 10 executions</span>
                 </div>
-
                 {!loading && data && data.recentExecutions.length === 0 ? (
                   <EmptyState />
                 ) : (
