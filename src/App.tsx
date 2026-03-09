@@ -11,6 +11,7 @@ import { ErrorState } from '@/components/ErrorState';
 import { isConfigured } from '@/lib/supabase';
 import { Activity, Users, TrendingUp, Clock, RefreshCw, BarChart3, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 
 function timeAgo(iso: string): string {
   const diff = (Date.now() - new Date(iso).getTime()) / 1000;
@@ -135,6 +136,7 @@ function App() {
           </div>
         </div>
       </footer>
+      <SpeedInsights />
     </div>
   );
 }
