@@ -7,10 +7,11 @@ import { DateRangeFilter } from '@/components/DateRangeFilter';
 import { RecentActivityList } from '@/components/RecentActivityList';
 import { QuickStatsPanel } from '@/components/QuickStatsPanel';
 import { UserSearch } from '@/components/UserSearch';
+import { WebhookTab } from '@/components/WebhookTab';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { isConfigured } from '@/lib/supabase';
-import { Activity, Users, TrendingUp, Clock, RefreshCw, BarChart3, Gamepad2 } from 'lucide-react';
+import { Activity, Users, TrendingUp, Clock, RefreshCw, BarChart3, Gamepad2, Search, Webhook } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 function timeAgo(iso: string): string {
@@ -21,8 +22,11 @@ function timeAgo(iso: string): string {
   return `${Math.floor(diff / 86400)}d ago`;
 }
 
+type SidebarTab = 'stats' | 'search' | 'webhook';
+
 function App() {
   const [dateRange, setDateRange] = useState<DateRange>('24h');
+  const [sidebarTab, setSidebarTab] = useState<SidebarTab>('stats');
   const { data, loading, error, refresh } = useSupabaseDashboard(dateRange);
   const handleRefresh = useCallback(() => refresh(), [refresh]);
   const connected = isConfigured();
@@ -61,34 +65,10 @@ function App() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-8">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <MetricCard
-                  title="Total Executions"
-                  value={data?.totalExecutions.toLocaleString() ?? '-'}
-                  subtitle={`In last ${dateRange}`}
-                  icon={Activity}
-                  loading={loading}
-                />
-                <MetricCard
-                  title="Unique Users"
-                  value={data?.uniqueUsers.toLocaleString() ?? '-'}
-                  subtitle="Active users"
-                  icon={Users}
-                  loading={loading}
-                />
-                <MetricCard
-                  title="Active Places"
-                  value={data?.activePlaces.toLocaleString() ?? '-'}
-                  subtitle="Distinct place IDs"
-                  icon={TrendingUp}
-                  loading={loading}
-                />
-                <MetricCard
-                  title="Last Execution"
-                  value={data?.lastExecutedAt ? timeAgo(data.lastExecutedAt) : '-'}
-                  subtitle="Most recent activity"
-                  icon={Clock}
-                  loading={loading}
-                />
+                <MetricCard title="Total Executions" value={data?.totalExecutions.toLocaleString() ?? '-'} subtitle={`In last ${dateRange}`} icon={Activity} loading={loading} />
+                <MetricCard title="Unique Users" value={data?.uniqueUsers.toLocaleString() ?? '-'} subtitle="Active users" icon={Users} loading={loading} />
+                <MetricCard title="Active Places" value={data?.activePlaces.toLocaleString() ?? '-'} subtitle="Distinct place IDs" icon={TrendingUp} loading={loading} />
+                <MetricCard title="Last Execution" value={data?.lastExecutedAt ? timeAgo(data.lastExecutedAt) : '-'} subtitle="Most recent activity" icon={Clock} loading={loading} />
               </div>
 
               <div>
@@ -106,16 +86,38 @@ function App() {
               </div>
             </div>
 
-            <div className="space-y-6">
-              <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
-                <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                  <BarChart3 className="w-5 h-5 text-blue-400" />
-                  Quick Stats
-                </h3>
-                <QuickStatsPanel data={data} loading={loading} />
+            <div className="space-y-4">
+              <div className="flex gap-1 bg-gray-900 border border-gray-800 rounded-lg p-1">
+                {([
+                  { id: 'stats',   label: 'Stats',   icon: BarChart3 },
+                  { id: 'search',  label: 'Search',  icon: Search    },
+                  { id: 'webhook', label: 'Webhook', icon: Webhook   },
+                ] as { id: SidebarTab; label: string; icon: React.ElementType }[]).map(tab => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setSidebarTab(tab.id)}
+                    className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-md text-xs font-medium transition-all ${
+                      sidebarTab === tab.id ? 'bg-gray-800 text-white' : 'text-gray-500 hover:text-gray-300'
+                    }`}
+                  >
+                    <tab.icon className="w-3.5 h-3.5" />
+                    {tab.label}
+                  </button>
+                ))}
               </div>
 
-              <UserSearch />
+              {sidebarTab === 'stats' && (
+                <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
+                  <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                    <BarChart3 className="w-5 h-5 text-blue-400" />
+                    Quick Stats
+                  </h3>
+                  <QuickStatsPanel data={data} loading={loading} />
+                </div>
+              )}
+
+              {sidebarTab === 'search' && <UserSearch />}
+              {sidebarTab === 'webhook' && <WebhookTab />}
             </div>
           </div>
         )}
@@ -126,11 +128,7 @@ function App() {
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <p className="text-sm text-gray-500">Execution Analytics Dashboard</p>
             <div className="flex items-center gap-4 text-sm text-gray-600">
-              <span>React</span>
-              <span>·</span>
-              <span>Tailwind CSS</span>
-              <span>·</span>
-              <span>Supabase</span>
+              <span>React</span><span>·</span><span>Tailwind CSS</span><span>·</span><span>Supabase</span>
             </div>
           </div>
         </div>
