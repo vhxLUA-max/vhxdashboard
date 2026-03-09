@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { UniqueUser, GameExecution } from '@/types';
-import { Search, Users, MapPin, Clock, Calendar, Gamepad2 } from 'lucide-react';
+import { Search, Users, Clock, Calendar, Gamepad2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 
 type PlaceEntry = {
