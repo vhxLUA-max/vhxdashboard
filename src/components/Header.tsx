@@ -23,16 +23,14 @@ export function Header({ isConnected = true }: HeaderProps) {
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 text-sm">
               <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-500' : 'bg-amber-500'} animate-pulse`} />
-              <span className="text-gray-400">
-                {isConnected ? 'Live' : 'Demo Mode'}
-              </span>
+              <span className="text-gray-400">{isConnected ? 'Live' : 'Offline'}</span>
             </div>
-            
+
             <div className="h-6 w-px bg-gray-800" />
-            
+
             <div className="flex items-center gap-2 text-sm text-gray-500">
               <Database className="w-4 h-4" />
-              <span className="hidden sm:inline">Dual DB</span>
+              <span className="hidden sm:inline">projectcounter</span>
             </div>
 
             <Button
