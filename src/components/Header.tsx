@@ -1,11 +1,15 @@
-import { Activity, Database, Settings } from 'lucide-react';
+import { Activity, Database, LogIn, LogOut, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface HeaderProps {
   isConnected?: boolean;
+  isLoggedIn?: boolean;
+  username?: string | null;
+  onLogin?: () => void;
+  onLogout?: () => void;
 }
 
-export function Header({ isConnected = true }: HeaderProps) {
+export function Header({ isConnected = true, isLoggedIn = false, username, onLogin, onLogout }: HeaderProps) {
   return (
     <header className="border-b border-gray-800 bg-gray-950/80 backdrop-blur-sm sticky top-0 z-40">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -33,13 +37,35 @@ export function Header({ isConnected = true }: HeaderProps) {
               <span className="hidden sm:inline">projectcounter</span>
             </div>
 
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-gray-400 hover:text-white hover:bg-gray-800"
-            >
-              <Settings className="w-5 h-5" />
-            </Button>
+            <div className="h-6 w-px bg-gray-800" />
+
+            {isLoggedIn ? (
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 text-xs text-emerald-400">
+                  <User className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">{username}</span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={onLogout}
+                  title="Sign out"
+                  className="text-gray-400 hover:text-rose-400 hover:bg-gray-800 w-8 h-8"
+                >
+                  <LogOut className="w-4 h-4" />
+                </Button>
+              </div>
+            ) : (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onLogin}
+                className="text-gray-400 hover:text-white hover:bg-gray-800 gap-1.5 text-xs h-8"
+              >
+                <LogIn className="w-3.5 h-3.5" />
+                Sign In
+              </Button>
+            )}
           </div>
         </div>
       </div>

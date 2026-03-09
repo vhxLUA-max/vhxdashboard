@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useSupabaseDashboard } from '@/hooks/useSupabaseDashboard';
 import { supabase } from '@/lib/supabase';
+import { getSession, logout } from '@/lib/auth';
 import type { DateRange } from '@/types';
 import { Header } from '@/components/Header';
 import { MetricCard } from '@/components/MetricCard';
@@ -9,6 +10,8 @@ import { RecentActivityList } from '@/components/RecentActivityList';
 import { QuickStatsPanel } from '@/components/QuickStatsPanel';
 import { UserSearch } from '@/components/UserSearch';
 import { WebhookTab } from '@/components/WebhookTab';
+import { LoginModal } from '@/components/LoginModal';
+import { LockedTab } from '@/components/LockedTab';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { isConfigured } from '@/lib/supabase';
@@ -25,43 +28,60 @@ function timeAgo(iso: string): string {
 
 function useLiveCounter() {
   const [count, setCount] = useState<number | null>(null);
-
   useEffect(() => {
     const fetchCount = async () => {
       const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-      const { data } = await supabase
-        .from('game_executions')
-        .select('count')
-        .gte('last_executed_at', since);
+      const { data } = await supabase.from('game_executions').select('count').gte('last_executed_at', since);
       if (data) setCount(data.reduce((s: number, e: { count: number }) => s + e.count, 0));
     };
-
     fetchCount();
-
     const channel = supabase
       .channel('live-executions')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'game_executions' }, fetchCount)
       .subscribe();
-
     return () => { supabase.removeChannel(channel); };
   }, []);
-
   return count;
 }
 
 type SidebarTab = 'stats' | 'search' | 'webhook';
 
 function App() {
-  const [dateRange, setDateRange] = useState<DateRange>('24h');
-  const [sidebarTab, setSidebarTab] = useState<SidebarTab>('stats');
+  const [dateRange, setDateRange]     = useState<DateRange>('24h');
+  const [sidebarTab, setSidebarTab]   = useState<SidebarTab>('stats');
+  const [showLogin, setShowLogin]     = useState(false);
+  const [auth, setAuth]               = useState(() => getSession());
   const { data, loading, error, refresh } = useSupabaseDashboard(dateRange);
   const handleRefresh = useCallback(() => refresh(), [refresh]);
   const connected = isConfigured();
   const liveCount = useLiveCounter();
 
+  const handleLoginSuccess = (username: string) => {
+    setAuth({ isLoggedIn: true, username });
+    setShowLogin(false);
+  };
+
+  const handleLogout = () => {
+    logout();
+    setAuth({ isLoggedIn: false, username: null });
+  };
+
   return (
     <div className="min-h-screen bg-gray-950 text-white">
-      <Header isConnected={connected} />
+      <Header
+        isConnected={connected}
+        isLoggedIn={auth.isLoggedIn}
+        username={auth.username}
+        onLogin={() => setShowLogin(true)}
+        onLogout={handleLogout}
+      />
+
+      {showLogin && (
+        <LoginModal
+          onSuccess={handleLoginSuccess}
+          onClose={() => setShowLogin(false)}
+        />
+      )}
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
@@ -150,8 +170,17 @@ function App() {
                 </div>
               )}
 
-              {sidebarTab === 'search' && <UserSearch />}
-              {sidebarTab === 'webhook' && <WebhookTab />}
+              {sidebarTab === 'search' && (
+                auth.isLoggedIn
+                  ? <UserSearch />
+                  : <LockedTab label="User Search" onLogin={() => setShowLogin(true)} />
+              )}
+
+              {sidebarTab === 'webhook' && (
+                auth.isLoggedIn
+                  ? <WebhookTab />
+                  : <LockedTab label="Webhook" onLogin={() => setShowLogin(true)} />
+              )}
             </div>
           </div>
         )}
