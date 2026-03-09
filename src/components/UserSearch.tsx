@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { UniqueUser, GameExecution } from '@/types';
-import { Search, Users, Clock, Calendar, Gamepad2 } from 'lucide-react';
+import { Search, Users, Clock, Calendar, Gamepad2, ArrowLeft, ExternalLink, Shield, Activity } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 
 type PlaceEntry = {
@@ -19,6 +19,14 @@ type UserResult = {
   earliest_seen: string;
   latest_seen: string;
   total_executions: number;
+};
+
+type RobloxProfile = {
+  displayName: string;
+  description: string;
+  created: string;
+  isBanned: boolean;
+  avatarUrl: string | null;
 };
 
 function formatDuration(first: string, last: string): string {
@@ -40,21 +48,195 @@ function timeAgo(iso: string): string {
   return `${Math.floor(diff / 86400)}d ago`;
 }
 
+async function fetchRobloxProfile(userId: number): Promise<RobloxProfile | null> {
+  try {
+    const [userRes, avatarRes] = await Promise.all([
+      fetch(`https://users.roblox.com/v1/users/${userId}`),
+      fetch(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${userId}&size=150x150&format=Png&isCircular=true`),
+    ]);
+
+    if (!userRes.ok) return null;
+    const userData = await userRes.json();
+    let avatarUrl: string | null = null;
+
+    if (avatarRes.ok) {
+      const avatarData = await avatarRes.json();
+      avatarUrl = avatarData?.data?.[0]?.imageUrl ?? null;
+    }
+
+    return {
+      displayName: userData.displayName ?? userData.name,
+      description: userData.description ?? '',
+      created: userData.created ?? '',
+      isBanned: userData.isBanned ?? false,
+      avatarUrl,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function UserProfilePanel({ user, onBack }: { user: UserResult; onBack: () => void }) {
+  const [profile, setProfile] = useState<RobloxProfile | null>(null);
+  const [profileLoading, setProfileLoading] = useState(true);
+
+  useState(() => {
+    fetchRobloxProfile(user.roblox_user_id).then((p) => {
+      setProfile(p);
+      setProfileLoading(false);
+    });
+  });
+
+  return (
+    <div className="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
+      <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-800 bg-gray-950">
+        <button
+          onClick={onBack}
+          className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white transition-colors"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          Back
+        </button>
+      </div>
+
+      <div className="p-5">
+        {profileLoading ? (
+          <div className="flex flex-col items-center gap-3 py-6">
+            <div className="w-16 h-16 rounded-full bg-gray-800 animate-pulse" />
+            <div className="h-4 w-28 bg-gray-800 rounded animate-pulse" />
+            <div className="h-3 w-20 bg-gray-800 rounded animate-pulse" />
+          </div>
+        ) : (
+          <div className="flex flex-col items-center text-center mb-5">
+            <div className="relative mb-3">
+              {profile?.avatarUrl ? (
+                <img
+                  src={profile.avatarUrl}
+                  alt={user.username}
+                  className="w-16 h-16 rounded-full border-2 border-purple-500/40 object-cover"
+                />
+              ) : (
+                <div className="w-16 h-16 rounded-full bg-purple-500/10 border-2 border-purple-500/30 flex items-center justify-center">
+                  <Users className="w-7 h-7 text-purple-400" />
+                </div>
+              )}
+              {profile?.isBanned && (
+                <div className="absolute -bottom-1 -right-1 bg-red-500 rounded-full p-0.5">
+                  <Shield className="w-3 h-3 text-white" />
+                </div>
+              )}
+            </div>
+
+            <p className="font-bold text-white text-base">{profile?.displayName ?? user.username}</p>
+            {profile?.displayName && profile.displayName !== user.username && (
+              <p className="text-xs text-gray-500">@{user.username}</p>
+            )}
+            <p className="text-[11px] text-gray-600 mt-0.5">ID: {user.roblox_user_id}</p>
+
+            {profile?.isBanned && (
+              <span className="mt-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] font-medium">
+                <Shield className="w-2.5 h-2.5" /> Banned
+              </span>
+            )}
+
+            {profile?.created && (
+              <p className="text-[11px] text-gray-600 mt-2">
+                Roblox account since {new Date(profile.created).toLocaleDateString('en-US', { year: 'numeric', month: 'short' })}
+              </p>
+            )}
+
+            {profile?.description ? (
+              <p className="text-[11px] text-gray-500 mt-2 line-clamp-2 px-2">{profile.description}</p>
+            ) : null}
+
+            <a
+              href={`https://www.roblox.com/users/${user.roblox_user_id}/profile`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-3 inline-flex items-center gap-1.5 text-[11px] text-indigo-400 hover:text-indigo-300 transition-colors"
+            >
+              View on Roblox <ExternalLink className="w-3 h-3" />
+            </a>
+          </div>
+        )}
+
+        <div className="grid grid-cols-2 gap-2 mb-4">
+          <div className="bg-gray-950 rounded-lg p-3 text-center border border-gray-800">
+            <p className="text-lg font-bold text-indigo-400">{user.total_executions.toLocaleString()}</p>
+            <p className="text-[10px] text-gray-500 mt-0.5">Total Executions</p>
+          </div>
+          <div className="bg-gray-950 rounded-lg p-3 text-center border border-gray-800">
+            <p className="text-lg font-bold text-purple-400">{user.places.length}</p>
+            <p className="text-[10px] text-gray-500 mt-0.5">Games Played</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-2 text-xs mb-4">
+          <div className="flex items-center gap-1.5 text-gray-400 bg-gray-950 rounded-lg px-3 py-2 border border-gray-800">
+            <Calendar className="w-3 h-3 text-gray-600 flex-shrink-0" />
+            <div>
+              <p className="text-[10px] text-gray-600">First seen</p>
+              <p className="text-white text-[11px]">{timeAgo(user.earliest_seen)}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5 text-gray-400 bg-gray-950 rounded-lg px-3 py-2 border border-gray-800">
+            <Clock className="w-3 h-3 text-gray-600 flex-shrink-0" />
+            <div>
+              <p className="text-[10px] text-gray-600">Last seen</p>
+              <p className="text-white text-[11px]">{timeAgo(user.latest_seen)}</p>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <p className="text-xs font-medium text-gray-400 mb-2 flex items-center gap-1.5">
+            <Activity className="w-3.5 h-3.5 text-indigo-400" />
+            Game History
+          </p>
+          <div className="space-y-2">
+            {user.places.map((place) => (
+              <div key={place.place_id} className="flex items-center justify-between bg-gray-950 rounded-lg px-3 py-2 border border-gray-800">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Gamepad2 className="w-3.5 h-3.5 text-indigo-400 flex-shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-white truncate">
+                      {place.game_name ?? `Place ${place.place_id}`}
+                    </p>
+                    <p className="text-[10px] text-gray-600">
+                      {formatDuration(place.first_seen, place.last_seen)} · last {timeAgo(place.last_seen)}
+                    </p>
+                  </div>
+                </div>
+                <p className="text-xs font-semibold text-indigo-400 flex-shrink-0 ml-2">
+                  {place.user_execution_count.toLocaleString()}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function UserSearch() {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<UserResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<UserResult | null>(null);
 
   const search = useCallback(async (value: string) => {
     if (!value.trim()) {
       setResults([]);
       setSearched(false);
+      setSelectedUser(null);
       return;
     }
 
     setLoading(true);
     setSearched(true);
+    setSelectedUser(null);
 
     const { data: rows } = await supabase
       .from('unique_users')
@@ -118,6 +300,10 @@ export function UserSearch() {
     search(val);
   };
 
+  if (selectedUser) {
+    return <UserProfilePanel user={selectedUser} onBack={() => setSelectedUser(null)} />;
+  }
+
   return (
     <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
       <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
@@ -144,62 +330,29 @@ export function UserSearch() {
       )}
 
       {!loading && results.length > 0 && (
-        <div className="space-y-4">
+        <div className="space-y-2">
           {results.map((user) => (
-            <div key={user.roblox_user_id} className="p-4 bg-gray-950 rounded-lg border border-gray-800">
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
+            <button
+              key={user.roblox_user_id}
+              onClick={() => setSelectedUser(user)}
+              className="w-full text-left p-3 bg-gray-950 rounded-lg border border-gray-800 hover:border-purple-500/40 hover:bg-gray-900 transition-all group"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-full bg-purple-500/10 border border-purple-500/20 flex items-center justify-center flex-shrink-0">
                     <Users className="w-4 h-4 text-purple-400" />
                   </div>
                   <div>
-                    <p className="font-semibold text-white">{user.username}</p>
-                    <p className="text-[11px] text-gray-600">ID {user.roblox_user_id}</p>
+                    <p className="font-semibold text-white text-sm group-hover:text-purple-300 transition-colors">{user.username}</p>
+                    <p className="text-[10px] text-gray-600">ID {user.roblox_user_id} · {user.places.length} game{user.places.length !== 1 ? 's' : ''}</p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-lg font-bold text-indigo-400">{user.total_executions.toLocaleString()}</p>
-                  <p className="text-[11px] text-gray-600">total execs</p>
+                <div className="text-right flex-shrink-0">
+                  <p className="text-sm font-bold text-indigo-400">{user.total_executions.toLocaleString()}</p>
+                  <p className="text-[10px] text-gray-600">execs</p>
                 </div>
               </div>
-
-              <div className="grid grid-cols-2 gap-2 text-xs mb-3">
-                <div className="flex items-center gap-1.5 text-gray-400">
-                  <Calendar className="w-3 h-3 text-gray-600" />
-                  <span>First seen {timeAgo(user.earliest_seen)}</span>
-                </div>
-                <div className="flex items-center gap-1.5 text-gray-400">
-                  <Clock className="w-3 h-3 text-gray-600" />
-                  <span>Last seen {timeAgo(user.latest_seen)}</span>
-                </div>
-                <div className="flex items-center gap-1.5 text-gray-400 col-span-2">
-                  <Clock className="w-3 h-3 text-gray-600" />
-                  <span>Using for {formatDuration(user.earliest_seen, user.latest_seen)}</span>
-                </div>
-              </div>
-
-              <div className="border-t border-gray-800 pt-3 space-y-2">
-                <p className="text-xs text-gray-500 mb-1">{user.places.length} place{user.places.length !== 1 ? 's' : ''}</p>
-                {user.places.map((place) => (
-                  <div key={place.place_id} className="flex items-center justify-between bg-gray-900 rounded-md px-3 py-2">
-                    <div className="flex items-center gap-2">
-                      <Gamepad2 className="w-3.5 h-3.5 text-indigo-400 flex-shrink-0" />
-                      <div>
-                        <p className="text-xs font-medium text-white">
-                          {place.game_name ?? `Place ${place.place_id}`}
-                        </p>
-                        <p className="text-[10px] text-gray-600">
-                          {formatDuration(place.first_seen, place.last_seen)} · last {timeAgo(place.last_seen)}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right flex-shrink-0">
-                      <p className="text-xs font-semibold text-indigo-400">{place.user_execution_count.toLocaleString()} execs</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            </button>
           ))}
         </div>
       )}
