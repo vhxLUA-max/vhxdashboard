@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { UniqueUser, GameExecution } from '@/types';
-import { Webhook, Send, CheckCircle2, AlertCircle, Loader2, Save } from 'lucide-react';
+import { Webhook, Send, CheckCircle2, AlertCircle, Loader2, Save, Copy, Check } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
@@ -14,6 +14,8 @@ type PlaceEntry = {
   first_seen: string;
   last_seen: string;
 };
+
+type UserRow = UniqueUser & { token?: string };
 
 function formatDuration(first: string, last: string): string {
   const diff = new Date(last).getTime() - new Date(first).getTime();
@@ -47,21 +49,27 @@ async function fetchAvatarUrl(robloxUserId: number): Promise<string | null> {
 export function WebhookTab() {
   const [webhookUrl, setWebhookUrl] = useState(() => localStorage.getItem(STORAGE_KEY) ?? '');
   const [username, setUsername] = useState('');
+  const [token, setToken] = useState('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
   const [saved, setSaved] = useState(false);
+  const [copied, setCopied] = useState(false);
 
-  useEffect(() => {
-    setSaved(false);
-  }, [webhookUrl]);
+  useEffect(() => { setSaved(false); }, [webhookUrl]);
 
   const handleSaveUrl = () => {
     localStorage.setItem(STORAGE_KEY, webhookUrl);
     setSaved(true);
   };
 
+  const handleCopyUrl = () => {
+    navigator.clipboard.writeText(webhookUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   const handleSend = async () => {
-    if (!webhookUrl.trim() || !username.trim()) return;
+    if (!webhookUrl.trim() || !username.trim() || !token.trim()) return;
     if (!webhookUrl.startsWith('https://discord.com/api/webhooks/')) {
       setErrorMsg('Please enter a valid Discord webhook URL.');
       setStatus('error');
@@ -83,7 +91,15 @@ export function WebhookTab() {
       return;
     }
 
-    const users = rows as UniqueUser[];
+    const users = rows as UserRow[];
+
+    const tokenMatch = users.some(u => u.token?.toUpperCase() === token.trim().toUpperCase());
+    if (!tokenMatch) {
+      setErrorMsg('Invalid token. Run the script in-game to get your token.');
+      setStatus('error');
+      return;
+    }
+
     const robloxUserId = users[0].roblox_user_id ?? users[0].user_id;
     const displayName = users[0].username;
 
@@ -124,60 +140,24 @@ export function WebhookTab() {
     const embed = {
       username: 'vhx Analytics',
       avatar_url: 'https://i.imgur.com/4M34hi2.png',
-      embeds: [
-        {
-          title: `${displayName}'s Execution Report`,
-          color: 0x6366f1,
-          thumbnail: avatarUrl ? { url: avatarUrl } : undefined,
-          fields: [
-            {
-              name: '👤 Roblox ID',
-              value: `\`${robloxUserId}\``,
-              inline: true,
-            },
-            {
-              name: '⚡ Total Executions',
-              value: `**${totalExecs.toLocaleString()}**`,
-              inline: true,
-            },
-            {
-              name: '🎮 Games Played',
-              value: `**${places.length}**`,
-              inline: true,
-            },
-            {
-              name: '🏆 Most Played',
-              value: `${topGame.game_name ?? `Place ${topGame.place_id}`} · **${topGame.user_execution_count.toLocaleString()}** execs`,
-              inline: false,
-            },
-            {
-              name: '🕒 Time Using',
-              value: formatDuration(earliest, latest),
-              inline: true,
-            },
-            {
-              name: '📅 First Seen',
-              value: new Date(earliest).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-              inline: true,
-            },
-            {
-              name: '🔄 Last Seen',
-              value: timeAgo(latest),
-              inline: true,
-            },
-            {
-              name: '─────────────────────',
-              value: '**Game Breakdown**',
-              inline: false,
-            },
-            ...gameFields,
-          ],
-          footer: {
-            text: 'vhx Analytics Dashboard',
-          },
-          timestamp: new Date().toISOString(),
-        },
-      ],
+      embeds: [{
+        title: `${displayName}'s Execution Report`,
+        color: 0x6366f1,
+        thumbnail: avatarUrl ? { url: avatarUrl } : undefined,
+        fields: [
+          { name: '👤 Roblox ID',        value: `\`${robloxUserId}\``,                  inline: true  },
+          { name: '⚡ Total Executions',  value: `**${totalExecs.toLocaleString()}**`,    inline: true  },
+          { name: '🎮 Games Played',      value: `**${places.length}**`,                 inline: true  },
+          { name: '🏆 Most Played',       value: `${topGame.game_name ?? `Place ${topGame.place_id}`} · **${topGame.user_execution_count.toLocaleString()}** execs`, inline: false },
+          { name: '🕒 Time Using',        value: formatDuration(earliest, latest),        inline: true  },
+          { name: '📅 First Seen',        value: new Date(earliest).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }), inline: true },
+          { name: '🔄 Last Seen',         value: timeAgo(latest),                        inline: true  },
+          { name: '─────────────────────', value: '**Game Breakdown**',                  inline: false },
+          ...gameFields,
+        ],
+        footer: { text: 'vhx Analytics Dashboard' },
+        timestamp: new Date().toISOString(),
+      }],
     };
 
     try {
@@ -186,12 +166,10 @@ export function WebhookTab() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(embed),
       });
-
       if (!res.ok) {
         const body = await res.text();
         throw new Error(`Discord returned ${res.status}: ${body}`);
       }
-
       setStatus('success');
       setTimeout(() => setStatus('idle'), 4000);
     } catch (err) {
@@ -206,7 +184,7 @@ export function WebhookTab() {
         <Webhook className="w-5 h-5 text-indigo-400" />
         Discord Webhook
       </h3>
-      <p className="text-sm text-gray-500 mb-5">Send a user's execution report to a Discord channel.</p>
+      <p className="text-sm text-gray-500 mb-5">Send your execution report to Discord.</p>
 
       <div className="space-y-3">
         <div>
@@ -220,6 +198,17 @@ export function WebhookTab() {
         </div>
 
         <div>
+          <label className="text-xs text-gray-400 mb-1.5 block">Token <span className="text-gray-600">(from console when script runs)</span></label>
+          <Input
+            value={token}
+            onChange={e => { setToken(e.target.value.toUpperCase()); setStatus('idle'); }}
+            placeholder="e.g. A3X9K"
+            maxLength={5}
+            className="bg-gray-950 border-gray-700 text-white placeholder:text-gray-600 focus:border-indigo-500 font-mono tracking-widest"
+          />
+        </div>
+
+        <div>
           <label className="text-xs text-gray-400 mb-1.5 block">Webhook URL</label>
           <div className="flex gap-2">
             <Input
@@ -228,6 +217,16 @@ export function WebhookTab() {
               placeholder="https://discord.com/api/webhooks/..."
               className="bg-gray-950 border-gray-700 text-white placeholder:text-gray-600 focus:border-indigo-500"
             />
+            <Button
+              onClick={handleCopyUrl}
+              disabled={!webhookUrl.trim()}
+              variant="outline"
+              size="icon"
+              className="flex-shrink-0 border-gray-700 text-gray-400 hover:text-white hover:bg-gray-800"
+              title="Copy webhook URL"
+            >
+              {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+            </Button>
             <Button
               onClick={handleSaveUrl}
               disabled={!webhookUrl.trim()}
@@ -244,7 +243,7 @@ export function WebhookTab() {
 
         <Button
           onClick={handleSend}
-          disabled={status === 'loading' || !webhookUrl.trim() || !username.trim()}
+          disabled={status === 'loading' || !webhookUrl.trim() || !username.trim() || token.length !== 5}
           className="w-full bg-indigo-600 hover:bg-indigo-500 text-white border-0"
         >
           {status === 'loading' ? (
@@ -267,18 +266,6 @@ export function WebhookTab() {
             <p className="text-sm text-rose-400">{errorMsg}</p>
           </div>
         )}
-      </div>
-
-      <div className="mt-5 pt-4 border-t border-gray-800">
-        <p className="text-xs text-gray-600 mb-2">Embed preview includes:</p>
-        <ul className="space-y-1">
-          {['Avatar headshot', 'Total executions', 'Games played', 'Most played game', 'Time using · First & last seen', 'Per-game breakdown'].map(item => (
-            <li key={item} className="text-xs text-gray-500 flex items-center gap-1.5">
-              <span className="w-1 h-1 rounded-full bg-indigo-500 flex-shrink-0" />
-              {item}
-            </li>
-          ))}
-        </ul>
       </div>
     </div>
   );
