@@ -18,7 +18,7 @@ export interface UniqueUser {
 export interface DashboardData {
   totalExecutions: number;
   uniqueUsers: number;
-  activePlaces: number;
+  activeGames: number;
   lastExecutedAt: string | null;
   recentExecutions: GameExecution[];
   recentUsers: UniqueUser[];

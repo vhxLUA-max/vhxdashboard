@@ -47,7 +47,7 @@ export function useSupabaseDashboard(dateRange: DateRange): UseSupabaseDashboard
       setData({
         totalExecutions: executions.reduce((s, e) => s + e.count, 0),
         uniqueUsers: distinctUsers,
-        activePlaces: executions.length,
+        activeGames: executions.filter(e => e.game_name).length || executions.length,
         lastExecutedAt: executions[0]?.last_executed_at ?? null,
         recentExecutions: executions,
         recentUsers: [],

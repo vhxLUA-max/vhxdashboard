@@ -11,7 +11,7 @@ import { WebhookTab } from '@/components/WebhookTab';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { isConfigured } from '@/lib/supabase';
-import { Activity, Users, TrendingUp, Clock, RefreshCw, BarChart3, Gamepad2, Search, Webhook } from 'lucide-react';
+import { Activity, Users, Clock, RefreshCw, BarChart3, Gamepad2, Search, Webhook } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 function timeAgo(iso: string): string {
@@ -67,7 +67,7 @@ function App() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <MetricCard title="Total Executions" value={data?.totalExecutions.toLocaleString() ?? '-'} subtitle={`In last ${dateRange}`} icon={Activity} loading={loading} />
                 <MetricCard title="Unique Users" value={data?.uniqueUsers.toLocaleString() ?? '-'} subtitle="Active users" icon={Users} loading={loading} />
-                <MetricCard title="Active Places" value={data?.activePlaces.toLocaleString() ?? '-'} subtitle="Distinct place IDs" icon={TrendingUp} loading={loading} />
+                <MetricCard title="Active Games" value={data?.activeGames.toLocaleString() ?? '-'} subtitle="Distinct game titles" icon={Gamepad2} loading={loading} />
                 <MetricCard title="Last Execution" value={data?.lastExecutedAt ? timeAgo(data.lastExecutedAt) : '-'} subtitle="Most recent activity" icon={Clock} loading={loading} />
               </div>
 
