@@ -9,7 +9,7 @@ type PlaceEntry = {
   game_name: string | null;
   first_seen: string;
   last_seen: string;
-  execution_count: number | null;
+  user_execution_count: number;
 };
 
 type UserResult = {
@@ -18,6 +18,7 @@ type UserResult = {
   places: PlaceEntry[];
   earliest_seen: string;
   latest_seen: string;
+  total_executions: number;
 };
 
 function formatDuration(first: string, last: string): string {
@@ -88,6 +89,7 @@ export function UserSearch() {
           places: [],
           earliest_seen: row.first_seen,
           latest_seen: row.last_seen,
+          total_executions: 0,
         };
       }
       if (new Date(row.first_seen) < new Date(grouped[uid].earliest_seen)) {
@@ -96,12 +98,13 @@ export function UserSearch() {
       if (new Date(row.last_seen) > new Date(grouped[uid].latest_seen)) {
         grouped[uid].latest_seen = row.last_seen;
       }
+      grouped[uid].total_executions += row.execution_count ?? 0;
       grouped[uid].places.push({
         place_id: row.place_id,
         game_name: execMap[row.place_id]?.game_name ?? null,
         first_seen: row.first_seen,
         last_seen: row.last_seen,
-        execution_count: execMap[row.place_id]?.count ?? null,
+        user_execution_count: row.execution_count ?? 0,
       });
     }
 
@@ -144,13 +147,19 @@ export function UserSearch() {
         <div className="space-y-4">
           {results.map((user) => (
             <div key={user.roblox_user_id} className="p-4 bg-gray-950 rounded-lg border border-gray-800">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-8 h-8 rounded-full bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
-                  <Users className="w-4 h-4 text-purple-400" />
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
+                    <Users className="w-4 h-4 text-purple-400" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-white">{user.username}</p>
+                    <p className="text-[11px] text-gray-600">ID {user.roblox_user_id}</p>
+                  </div>
                 </div>
-                <div>
-                  <span className="font-semibold text-white">{user.username}</span>
-                  <span className="text-xs text-gray-500 ml-2">ID {user.roblox_user_id}</span>
+                <div className="text-right">
+                  <p className="text-lg font-bold text-indigo-400">{user.total_executions.toLocaleString()}</p>
+                  <p className="text-[11px] text-gray-600">total execs</p>
                 </div>
               </div>
 
@@ -165,14 +174,12 @@ export function UserSearch() {
                 </div>
                 <div className="flex items-center gap-1.5 text-gray-400 col-span-2">
                   <Clock className="w-3 h-3 text-gray-600" />
-                  <span>Total time using: {formatDuration(user.earliest_seen, user.latest_seen)}</span>
+                  <span>Using for {formatDuration(user.earliest_seen, user.latest_seen)}</span>
                 </div>
               </div>
 
               <div className="border-t border-gray-800 pt-3 space-y-2">
-                <p className="text-xs text-gray-500 mb-1">
-                  {user.places.length} place{user.places.length !== 1 ? 's' : ''}
-                </p>
+                <p className="text-xs text-gray-500 mb-1">{user.places.length} place{user.places.length !== 1 ? 's' : ''}</p>
                 {user.places.map((place) => (
                   <div key={place.place_id} className="flex items-center justify-between bg-gray-900 rounded-md px-3 py-2">
                     <div className="flex items-center gap-2">
@@ -186,11 +193,9 @@ export function UserSearch() {
                         </p>
                       </div>
                     </div>
-                    {place.execution_count !== null && (
-                      <span className="text-xs font-semibold text-indigo-400 flex-shrink-0">
-                        {place.execution_count.toLocaleString()} execs
-                      </span>
-                    )}
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-xs font-semibold text-indigo-400">{place.user_execution_count.toLocaleString()} execs</p>
+                    </div>
                   </div>
                 ))}
               </div>
