@@ -34,11 +34,9 @@ function timeAgo(iso: string): string {
 
 async function fetchAvatarUrl(robloxUserId: number): Promise<string | null> {
   try {
-    const res = await fetch(
-      `https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${robloxUserId}&size=150x150&format=Png&isCircular=true`
-    );
-    const data = await res.json();
-    return data?.data?.[0]?.imageUrl ?? null;
+    const res = await fetch(`https://users.roblox.com/v1/users/${robloxUserId}`);
+    if (!res.ok) return null;
+    return `https://www.roblox.com/headshot-thumbnail/image?userId=${robloxUserId}&width=150&height=150&format=png`;
   } catch {
     return null;
   }

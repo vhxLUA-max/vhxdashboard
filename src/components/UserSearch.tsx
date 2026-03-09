@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { UniqueUser, GameExecution } from '@/types';
 import { Search, Users, Clock, Calendar, Gamepad2, ArrowLeft, ExternalLink, Shield, Activity } from 'lucide-react';
@@ -50,19 +50,11 @@ function timeAgo(iso: string): string {
 
 async function fetchRobloxProfile(userId: number): Promise<RobloxProfile | null> {
   try {
-    const [userRes, avatarRes] = await Promise.all([
-      fetch(`https://users.roblox.com/v1/users/${userId}`),
-      fetch(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${userId}&size=150x150&format=Png&isCircular=true`),
-    ]);
-
+    const userRes = await fetch(`https://users.roblox.com/v1/users/${userId}`);
     if (!userRes.ok) return null;
     const userData = await userRes.json();
-    let avatarUrl: string | null = null;
 
-    if (avatarRes.ok) {
-      const avatarData = await avatarRes.json();
-      avatarUrl = avatarData?.data?.[0]?.imageUrl ?? null;
-    }
+    const avatarUrl = `https://www.roblox.com/headshot-thumbnail/image?userId=${userId}&width=150&height=150&format=png`;
 
     return {
       displayName: userData.displayName ?? userData.name,
@@ -80,12 +72,12 @@ function UserProfilePanel({ user, onBack }: { user: UserResult; onBack: () => vo
   const [profile, setProfile] = useState<RobloxProfile | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
 
-  useState(() => {
+  useEffect(() => {
     fetchRobloxProfile(user.roblox_user_id).then((p) => {
       setProfile(p);
       setProfileLoading(false);
     });
-  });
+  }, [user.roblox_user_id]);
 
   return (
     <div className="bg-gray-900 rounded-xl border border-gray-800 overflow-hidden">
