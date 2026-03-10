@@ -14,7 +14,7 @@ export function LockedTab({ label, onLogin }: LockedTabProps) {
       </div>
       <div>
         <p className="text-sm font-medium text-gray-300">{label} is restricted</p>
-        <p className="text-xs text-gray-600 mt-1">Sign in as admin to access this feature</p>
+        <p className="text-xs text-gray-600 mt-1">Sign in or register to access this feature</p>
       </div>
       <Button onClick={onLogin} className="bg-indigo-600 hover:bg-indigo-500 text-white border-0 text-xs h-8 px-4">
         Sign In
