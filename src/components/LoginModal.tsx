@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
 interface LoginModalProps {
-  onSuccess: (username: string) => void;
+  onSuccess: () => void;
   onClose: () => void;
 }
 
@@ -50,7 +50,7 @@ export function LoginModal({ onSuccess, onClose }: LoginModalProps) {
       if (mode === 'register') {
         setSuccess('Account created! Check your email to confirm.');
       } else {
-        onSuccess(username || email.split('@')[0]);
+        onSuccess();
       }
     } else {
       setError(result.error ?? 'Something went wrong.');

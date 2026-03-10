@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import type { UniqueUser, GameExecution } from '@/types';
+import type { GameExecution } from '@/types';
 import { Webhook, Send, CheckCircle2, AlertCircle, Loader2, Save, Copy, Check } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -37,14 +37,8 @@ function timeAgo(iso: string): string {
   return `${Math.floor(diff / 86400)}d ago`;
 }
 
-async function fetchAvatarUrl(robloxUserId: number): Promise<string | null> {
-  try {
-    const res = await fetch(`https://users.roblox.com/v1/users/${robloxUserId}`);
-    if (!res.ok) return null;
-    return `https://tr.rbxcdn.com/avatar-thumbnail/150/150/AvatarHeadshot/Png?userId=${robloxUserId}`;
-  } catch {
-    return null;
-  }
+function getRobloxAvatarUrl(robloxUserId: number): string {
+  return `https://tr.rbxcdn.com/avatar-thumbnail/150/150/AvatarHeadshot/Png?userId=${robloxUserId}`;
 }
 
 export function WebhookTab() {
@@ -125,7 +119,7 @@ export function WebhookTab() {
     const earliest   = places.reduce((a, b) => new Date(a.first_seen) < new Date(b.first_seen) ? a : b).first_seen;
     const latest     = places.reduce((a, b) => new Date(a.last_seen)  > new Date(b.last_seen)  ? a : b).last_seen;
     const topGame    = places.reduce((a, b) => a.user_execution_count > b.user_execution_count ? a : b);
-    const avatarUrl  = await fetchAvatarUrl(robloxUserId);
+    const avatarUrl  = getRobloxAvatarUrl(robloxUserId);
 
     const gameFields = places
       .sort((a, b) => b.user_execution_count - a.user_execution_count)
@@ -141,7 +135,7 @@ export function WebhookTab() {
       embeds: [{
         title: `${displayName}'s Execution Report`,
         color: 0x6366f1,
-        thumbnail: avatarUrl ? { url: avatarUrl } : undefined,
+        thumbnail: { url: avatarUrl },
         fields: [
           { name: '👤 Roblox ID',        value: `\`${robloxUserId}\``,                  inline: true  },
           { name: '⚡ Total Executions',  value: `**${totalExecs.toLocaleString()}**`,    inline: true  },

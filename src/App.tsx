@@ -52,7 +52,11 @@ function App() {
   const [dateRange, setDateRange]   = useState<DateRange>('24h');
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>('stats');
   const [showLogin, setShowLogin]             = useState(false);
-  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(() => {
+    const isReset = new URLSearchParams(window.location.search).get('reset') === 'true';
+    if (isReset) window.history.replaceState({}, '', window.location.pathname);
+    return isReset;
+  });
   const [auth, setAuth] = useState<AuthState>({ isLoggedIn: false, username: null, email: null });
   const [authReady, setAuthReady] = useState(false);
   const { data, loading, error, refresh } = useSupabaseDashboard(dateRange);
@@ -67,21 +71,16 @@ function App() {
       } else {
         setAuth({
           isLoggedIn: true,
-          username: session.user.user_metadata?.username ?? null,
+          username: session.user.user_metadata?.username ?? session.user.email?.split('@')[0] ?? null,
           email: session.user.email ?? null,
         });
       }
       setAuthReady(true);
     });
-    if (new URLSearchParams(window.location.search).get('reset') === 'true') {
-      setShowChangePassword(true);
-      window.history.replaceState({}, '', window.location.pathname);
-    }
     return () => subscription.unsubscribe();
   }, []);
 
-  const handleLoginSuccess = (username: string) => {
-    setAuth({ isLoggedIn: true, username, email: null });
+  const handleLoginSuccess = () => {
     setShowLogin(false);
   };
 
@@ -108,9 +107,9 @@ function App() {
         />
       )}
 
-      {showChangePassword && auth.username && (
+      {showChangePassword && (auth.username || auth.email) && (
         <ChangePasswordModal
-          username={auth.username}
+          username={auth.username ?? auth.email ?? ''}
           onClose={() => setShowChangePassword(false)}
         />
       )}

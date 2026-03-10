@@ -12,8 +12,8 @@ export const supabase: SupabaseClient = createClient(
   key || 'placeholder-key',
   {
     auth: {
-      persistSession: false,
-      autoRefreshToken: false,
+      persistSession: true,
+      autoRefreshToken: true,
     },
   }
 );

@@ -63,5 +63,14 @@ export function useSupabaseDashboard(dateRange: DateRange): UseSupabaseDashboard
     fetchData();
   }, [fetchData]);
 
+  useEffect(() => {
+    const channel = supabase
+      .channel('dashboard-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'game_executions' }, fetchData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'unique_users' }, fetchData)
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [fetchData]);
+
   return { data, loading, error, refresh: fetchData };
 }
