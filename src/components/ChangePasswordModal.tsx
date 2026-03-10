@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { login } from '@/lib/auth';
-import { supabase } from '@/lib/supabase';
+import { updatePassword } from '@/lib/auth';
 import { Lock, Loader2, AlertCircle, CheckCircle2, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -11,7 +10,6 @@ interface ChangePasswordModalProps {
 }
 
 export function ChangePasswordModal({ username, onClose }: ChangePasswordModalProps) {
-  const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirm, setConfirm]         = useState('');
   const [loading, setLoading]         = useState(false);
@@ -19,23 +17,14 @@ export function ChangePasswordModal({ username, onClose }: ChangePasswordModalPr
   const [success, setSuccess]         = useState(false);
 
   const handleSubmit = async () => {
-    if (!oldPassword || !newPassword || !confirm) return;
-    if (newPassword !== confirm) { setError('New passwords do not match.'); return; }
+    if (!newPassword || !confirm) return;
+    if (newPassword !== confirm) { setError('Passwords do not match.'); return; }
     if (newPassword.length < 6) { setError('Password must be at least 6 characters.'); return; }
-    if (oldPassword === newPassword) { setError('New password must be different.'); return; }
-
-    setLoading(true);
-    setError('');
-
-    const verify = await login(username, oldPassword);
-    if (!verify.success) { setError('Current password is incorrect.'); setLoading(false); return; }
-
-    const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
+    setLoading(true); setError('');
+    const result = await updatePassword(newPassword);
     setLoading(false);
-
-    if (updateError) { setError(updateError.message); return; }
-    setSuccess(true);
-    setTimeout(onClose, 2000);
+    if (result.success) { setSuccess(true); setTimeout(onClose, 2000); }
+    else setError(result.error ?? 'Failed to update password.');
   };
 
   const handleKey = (e: React.KeyboardEvent) => { if (e.key === 'Enter') handleSubmit(); };
@@ -59,56 +48,25 @@ export function ChangePasswordModal({ username, onClose }: ChangePasswordModalPr
         {success ? (
           <div className="flex flex-col items-center gap-3 py-4">
             <CheckCircle2 className="w-10 h-10 text-emerald-400" />
-            <p className="text-sm text-emerald-400 font-medium">Password updated successfully!</p>
+            <p className="text-sm text-emerald-400 font-medium">Password updated!</p>
           </div>
         ) : (
           <div className="space-y-3">
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-              <Input
-                type="password"
-                value={oldPassword}
-                onChange={e => { setOldPassword(e.target.value); setError(''); }}
-                onKeyDown={handleKey}
-                placeholder="Current password"
-                className="pl-9 bg-gray-950 border-gray-700 text-white placeholder:text-gray-600 focus:border-indigo-500"
-              />
+              <Input type="password" value={newPassword} onChange={e => { setNewPassword(e.target.value); setError(''); }} onKeyDown={handleKey} placeholder="New password" autoComplete="new-password" className="pl-9 bg-gray-950 border-gray-700 text-white placeholder:text-gray-600 focus:border-indigo-500" />
             </div>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-              <Input
-                type="password"
-                value={newPassword}
-                onChange={e => { setNewPassword(e.target.value); setError(''); }}
-                onKeyDown={handleKey}
-                placeholder="New password"
-                className="pl-9 bg-gray-950 border-gray-700 text-white placeholder:text-gray-600 focus:border-indigo-500"
-              />
+              <Input type="password" value={confirm} onChange={e => { setConfirm(e.target.value); setError(''); }} onKeyDown={handleKey} placeholder="Confirm new password" autoComplete="new-password" className="pl-9 bg-gray-950 border-gray-700 text-white placeholder:text-gray-600 focus:border-indigo-500" />
             </div>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-              <Input
-                type="password"
-                value={confirm}
-                onChange={e => { setConfirm(e.target.value); setError(''); }}
-                onKeyDown={handleKey}
-                placeholder="Confirm new password"
-                className="pl-9 bg-gray-950 border-gray-700 text-white placeholder:text-gray-600 focus:border-indigo-500"
-              />
-            </div>
-
             {error && (
               <div className="flex items-center gap-2 p-2.5 bg-rose-500/10 border border-rose-500/20 rounded-lg">
                 <AlertCircle className="w-3.5 h-3.5 text-rose-400 flex-shrink-0" />
                 <p className="text-xs text-rose-400">{error}</p>
               </div>
             )}
-
-            <Button
-              onClick={handleSubmit}
-              disabled={loading || !oldPassword || !newPassword || !confirm}
-              className="w-full bg-indigo-600 hover:bg-indigo-500 text-white border-0"
-            >
+            <Button onClick={handleSubmit} disabled={loading || !newPassword || !confirm} className="w-full bg-indigo-600 hover:bg-indigo-500 text-white border-0">
               {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Updating...</> : 'Update Password'}
             </Button>
           </div>

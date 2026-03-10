@@ -53,7 +53,7 @@ function App() {
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>('stats');
   const [showLogin, setShowLogin]             = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
-  const [auth, setAuth]             = useState<AuthState>({ isLoggedIn: false, username: null });
+  const [auth, setAuth] = useState<AuthState>({ isLoggedIn: false, username: null, email: null });
   const { data, loading, error, refresh } = useSupabaseDashboard(dateRange);
   const handleRefresh = useCallback(() => refresh(), [refresh]);
   const connected = isConfigured();
@@ -63,12 +63,19 @@ function App() {
     getSession().then(setAuth);
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (!session) {
-        setAuth({ isLoggedIn: false, username: null });
+        setAuth({ isLoggedIn: false, username: null, email: null });
       } else {
-        const username = session.user.user_metadata?.username ?? session.user.email?.replace('@vhx.local', '') ?? null;
-        setAuth({ isLoggedIn: true, username });
+        setAuth({
+          isLoggedIn: true,
+          username: session.user.user_metadata?.username ?? null,
+          email: session.user.email ?? null,
+        });
       }
     });
+    if (new URLSearchParams(window.location.search).get('reset') === 'true') {
+      setShowChangePassword(true);
+      window.history.replaceState({}, '', window.location.pathname);
+    }
     return () => subscription.unsubscribe();
   }, []);
 
