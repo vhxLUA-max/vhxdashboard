@@ -12,6 +12,7 @@ import { QuickStatsPanel } from '@/components/QuickStatsPanel';
 import { UserSearch } from '@/components/UserSearch';
 import { WebhookTab } from '@/components/WebhookTab';
 import { LoginModal } from '@/components/LoginModal';
+import { ChangePasswordModal } from '@/components/ChangePasswordModal';
 import { LockedTab } from '@/components/LockedTab';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
@@ -50,7 +51,8 @@ type SidebarTab = 'stats' | 'search' | 'webhook';
 function App() {
   const [dateRange, setDateRange]   = useState<DateRange>('24h');
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>('stats');
-  const [showLogin, setShowLogin]   = useState(false);
+  const [showLogin, setShowLogin]             = useState(false);
+  const [showChangePassword, setShowChangePassword] = useState(false);
   const [auth, setAuth]             = useState<AuthState>({ isLoggedIn: false, username: null });
   const { data, loading, error, refresh } = useSupabaseDashboard(dateRange);
   const handleRefresh = useCallback(() => refresh(), [refresh]);
@@ -88,12 +90,20 @@ function App() {
         username={auth.username}
         onLogin={() => setShowLogin(true)}
         onLogout={handleLogout}
+        onChangePassword={() => setShowChangePassword(true)}
       />
 
       {showLogin && (
         <LoginModal
           onSuccess={handleLoginSuccess}
           onClose={() => setShowLogin(false)}
+        />
+      )}
+
+      {showChangePassword && auth.username && (
+        <ChangePasswordModal
+          username={auth.username}
+          onClose={() => setShowChangePassword(false)}
         />
       )}
 

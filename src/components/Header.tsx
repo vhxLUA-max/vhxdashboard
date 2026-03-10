@@ -1,4 +1,4 @@
-import { Activity, Database, LogIn, LogOut, User } from 'lucide-react';
+import { Activity, Database, LogIn, LogOut, User, KeyRound } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface HeaderProps {
@@ -7,9 +7,10 @@ interface HeaderProps {
   username?: string | null;
   onLogin?: () => void;
   onLogout?: () => void;
+  onChangePassword?: () => void;
 }
 
-export function Header({ isConnected = true, isLoggedIn = false, username, onLogin, onLogout }: HeaderProps) {
+export function Header({ isConnected = true, isLoggedIn = false, username, onLogin, onLogout, onChangePassword }: HeaderProps) {
   return (
     <header className="border-b border-gray-800 bg-gray-950/80 backdrop-blur-sm sticky top-0 z-40">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -45,6 +46,15 @@ export function Header({ isConnected = true, isLoggedIn = false, username, onLog
                   <User className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">{username}</span>
                 </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={onChangePassword}
+                  title="Change password"
+                  className="text-gray-400 hover:text-indigo-400 hover:bg-gray-800 w-8 h-8"
+                >
+                  <KeyRound className="w-4 h-4" />
+                </Button>
                 <Button
                   variant="ghost"
                   size="icon"
