@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import type { GameExecution } from '@/types';
+import type { GameExecution, UniqueUser } from '@/types';
 import { Webhook, Send, CheckCircle2, AlertCircle, Loader2, Save, Copy, Check } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -37,8 +37,15 @@ function timeAgo(iso: string): string {
   return `${Math.floor(diff / 86400)}d ago`;
 }
 
-function getRobloxAvatarUrl(robloxUserId: number): string {
-  return `https://tr.rbxcdn.com/avatar-thumbnail/150/150/AvatarHeadshot/Png?userId=${robloxUserId}`;
+async function getRobloxAvatarUrl(robloxUserId: number): Promise<string | null> {
+  try {
+    const res = await fetch(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${robloxUserId}&size=150x150&format=Png&isCircular=false`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data?.data?.[0]?.imageUrl ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export function WebhookTab() {
@@ -119,7 +126,7 @@ export function WebhookTab() {
     const earliest   = places.reduce((a, b) => new Date(a.first_seen) < new Date(b.first_seen) ? a : b).first_seen;
     const latest     = places.reduce((a, b) => new Date(a.last_seen)  > new Date(b.last_seen)  ? a : b).last_seen;
     const topGame    = places.reduce((a, b) => a.user_execution_count > b.user_execution_count ? a : b);
-    const avatarUrl  = getRobloxAvatarUrl(robloxUserId);
+    const avatarUrl  = await getRobloxAvatarUrl(robloxUserId);
 
     const gameFields = places
       .sort((a, b) => b.user_execution_count - a.user_execution_count)
@@ -135,7 +142,7 @@ export function WebhookTab() {
       embeds: [{
         title: `${displayName}'s Execution Report`,
         color: 0x6366f1,
-        thumbnail: { url: avatarUrl },
+        ...(avatarUrl ? { thumbnail: { url: avatarUrl } } : {}),
         fields: [
           { name: '👤 Roblox ID',        value: `\`${robloxUserId}\``,                  inline: true  },
           { name: '⚡ Total Executions',  value: `**${totalExecs.toLocaleString()}**`,    inline: true  },
