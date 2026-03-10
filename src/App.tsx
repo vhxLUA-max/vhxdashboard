@@ -81,13 +81,13 @@ function App() {
   }, []);
 
   const handleLoginSuccess = (username: string) => {
-    setAuth({ isLoggedIn: true, username });
+    setAuth({ isLoggedIn: true, username, email: null });
     setShowLogin(false);
   };
 
   const handleLogout = async () => {
     await logout();
-    setAuth({ isLoggedIn: false, username: null });
+    setAuth({ isLoggedIn: false, username: null, email: null });
   };
 
   return (
