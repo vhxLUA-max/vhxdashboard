@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useSupabaseDashboard } from '@/hooks/useSupabaseDashboard';
 import { supabase } from '@/lib/supabase';
-import { logout, getSession } from '@/lib/auth';
+import { logout } from '@/lib/auth';
 import type { AuthState } from '@/lib/auth';
 import type { DateRange } from '@/types';
 import { Header } from '@/components/Header';
@@ -54,14 +54,14 @@ function App() {
   const [showLogin, setShowLogin]             = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [auth, setAuth] = useState<AuthState>({ isLoggedIn: false, username: null, email: null });
+  const [authReady, setAuthReady] = useState(false);
   const { data, loading, error, refresh } = useSupabaseDashboard(dateRange);
   const handleRefresh = useCallback(() => refresh(), [refresh]);
   const connected = isConfigured();
   const liveCount = useLiveCounter();
 
   useEffect(() => {
-    getSession().then(setAuth);
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session) {
         setAuth({ isLoggedIn: false, username: null, email: null });
       } else {
@@ -71,6 +71,7 @@ function App() {
           email: session.user.email ?? null,
         });
       }
+      setAuthReady(true);
     });
     if (new URLSearchParams(window.location.search).get('reset') === 'true') {
       setShowChangePassword(true);
@@ -202,12 +203,14 @@ function App() {
               )}
 
               {sidebarTab === 'search' && (
+                !authReady ? null :
                 auth.isLoggedIn
                   ? <UserSearch />
                   : <LockedTab label="User Search" onLogin={() => setShowLogin(true)} />
               )}
 
               {sidebarTab === 'webhook' && (
+                !authReady ? null :
                 auth.isLoggedIn
                   ? <WebhookTab />
                   : <LockedTab label="Webhook" onLogin={() => setShowLogin(true)} />
