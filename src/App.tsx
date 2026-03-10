@@ -1,7 +1,8 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useSupabaseDashboard } from '@/hooks/useSupabaseDashboard';
 import { supabase } from '@/lib/supabase';
-import { getSession, logout } from '@/lib/auth';
+import { logout, getSession } from '@/lib/auth';
+import type { AuthState } from '@/lib/auth';
 import type { DateRange } from '@/types';
 import { Header } from '@/components/Header';
 import { MetricCard } from '@/components/MetricCard';
@@ -47,22 +48,35 @@ function useLiveCounter() {
 type SidebarTab = 'stats' | 'search' | 'webhook';
 
 function App() {
-  const [dateRange, setDateRange]     = useState<DateRange>('24h');
-  const [sidebarTab, setSidebarTab]   = useState<SidebarTab>('stats');
-  const [showLogin, setShowLogin]     = useState(false);
-  const [auth, setAuth]               = useState(() => getSession());
+  const [dateRange, setDateRange]   = useState<DateRange>('24h');
+  const [sidebarTab, setSidebarTab] = useState<SidebarTab>('stats');
+  const [showLogin, setShowLogin]   = useState(false);
+  const [auth, setAuth]             = useState<AuthState>({ isLoggedIn: false, username: null });
   const { data, loading, error, refresh } = useSupabaseDashboard(dateRange);
   const handleRefresh = useCallback(() => refresh(), [refresh]);
   const connected = isConfigured();
   const liveCount = useLiveCounter();
+
+  useEffect(() => {
+    getSession().then(setAuth);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (!session) {
+        setAuth({ isLoggedIn: false, username: null });
+      } else {
+        const username = session.user.user_metadata?.username ?? session.user.email?.replace('@vhx.local', '') ?? null;
+        setAuth({ isLoggedIn: true, username });
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
 
   const handleLoginSuccess = (username: string) => {
     setAuth({ isLoggedIn: true, username });
     setShowLogin(false);
   };
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     setAuth({ isLoggedIn: false, username: null });
   };
 
