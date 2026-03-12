@@ -19,19 +19,19 @@ export function LoginModal({ onSuccess, onClose }: LoginModalProps) {
   const [confirm, setConfirm]   = useState('');
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState('');
-  const [success, setSuccess]   = useState('');
+  const [forgotSent, setForgotSent] = useState(false);
 
-  const reset = () => { setEmail(''); setUsername(''); setPassword(''); setConfirm(''); setError(''); setSuccess(''); };
+  const reset = () => { setEmail(''); setUsername(''); setPassword(''); setConfirm(''); setError(''); setForgotSent(false); };
   const switchMode = (m: Mode) => { setMode(m); reset(); };
 
   const handleSubmit = async () => {
-    setError(''); setSuccess('');
+    setError('');
     if (mode === 'forgot') {
       if (!email.trim()) return;
       setLoading(true);
       const result = await forgotPassword(email);
       setLoading(false);
-      if (result.success) setSuccess('Reset link sent! Check your email.');
+      if (result.success) setForgotSent(true);
       else setError(result.error ?? 'Failed to send reset email.');
       return;
     }
@@ -47,11 +47,7 @@ export function LoginModal({ onSuccess, onClose }: LoginModalProps) {
       : await register(email, password, username);
     setLoading(false);
     if (result.success) {
-      if (mode === 'register') {
-        setSuccess('Account created! Check your email to confirm.');
-      } else {
-        onSuccess();
-      }
+      onSuccess();
     } else {
       setError(result.error ?? 'Something went wrong.');
     }
@@ -159,10 +155,10 @@ export function LoginModal({ onSuccess, onClose }: LoginModalProps) {
             </div>
           )}
 
-          {success && (
+          {forgotSent && (
             <div className="flex items-center gap-2 p-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
-              <p className="text-xs text-emerald-400">{success}</p>
+              <p className="text-xs text-emerald-400">Reset link sent! Check your email.</p>
             </div>
           )}
 

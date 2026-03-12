@@ -54,12 +54,11 @@ type TokenRow = {
 export function MyTokenPanel() {
   const [tokenRow, setTokenRow] = useState<TokenRow | null>(null);
   const [loading, setLoading]   = useState(true);
-  const [step, setStep]         = useState<'idle' | 'verifying' | 'generating'>('idle');
+  const [verifying, setVerifying] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
   const [copied, setCopied]     = useState(false);
   const [error, setError]       = useState('');
-
-  const [robloxInput, setRobloxInput]       = useState('');
-  const [verifiedRoblox, setVerifiedRoblox] = useState<RobloxUser | null>(null);
+  const [robloxInput, setRobloxInput] = useState('');
 
   const fetchToken = useCallback(async () => {
     setLoading(true);
@@ -80,41 +79,30 @@ export function MyTokenPanel() {
 
   useEffect(() => { fetchToken(); }, [fetchToken]);
 
-  const handleVerify = async () => {
+  const handleVerifyAndGenerate = async () => {
     const trimmed = robloxInput.trim();
     if (!trimmed) return;
-    setStep('verifying');
+    setVerifying(true);
     setError('');
-    setVerifiedRoblox(null);
 
-    const robloxUser = await verifyRobloxUsername(trimmed);
-    if (!robloxUser) {
-      setError(`Roblox user "${trimmed}" not found. Check the spelling and try again.`);
-      setStep('idle');
-      return;
-    }
-
-    const { data: existing } = await supabase
-      .from('user_tokens')
-      .select('user_id')
-      .eq('roblox_user_id', robloxUser.id)
-      .maybeSingle();
-
-    if (existing) {
-      setError('This Roblox account is already linked to another dashboard account.');
-      setStep('idle');
-      return;
-    }
-
-    setVerifiedRoblox(robloxUser);
-    setStep('idle');
-  };
-
-  const handleGenerate = async () => {
-    if (!verifiedRoblox) return;
-    setStep('generating');
-    setError('');
     try {
+      const robloxUser = await verifyRobloxUsername(trimmed);
+      if (!robloxUser) {
+        setError(`Roblox user "${trimmed}" not found. Check the spelling and try again.`);
+        return;
+      }
+
+      const { data: existing } = await supabase
+        .from('user_tokens')
+        .select('user_id')
+        .eq('roblox_user_id', robloxUser.id)
+        .maybeSingle();
+
+      if (existing) {
+        setError('This Roblox account is already linked to another dashboard account.');
+        return;
+      }
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated.');
 
@@ -125,25 +113,25 @@ export function MyTokenPanel() {
         .upsert({
           user_id: user.id,
           token: newToken,
-          roblox_username: verifiedRoblox.name,
-          roblox_user_id: verifiedRoblox.id,
+          roblox_username: robloxUser.name,
+          roblox_user_id: robloxUser.id,
           updated_at: new Date().toISOString(),
         }, { onConflict: 'user_id' });
 
       if (upsertErr) throw new Error(upsertErr.message);
-      setTokenRow({ token: newToken, roblox_username: verifiedRoblox.name, roblox_user_id: verifiedRoblox.id });
-      setVerifiedRoblox(null);
+
+      setTokenRow({ token: newToken, roblox_username: robloxUser.name, roblox_user_id: robloxUser.id });
       setRobloxInput('');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to generate token.');
+      setError(err instanceof Error ? err.message : 'Something went wrong.');
     } finally {
-      setStep('idle');
+      setVerifying(false);
     }
   };
 
   const handleRegenerate = async () => {
     if (!tokenRow) return;
-    setStep('generating');
+    setRegenerating(true);
     setError('');
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -166,7 +154,7 @@ export function MyTokenPanel() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to regenerate token.');
     } finally {
-      setStep('idle');
+      setRegenerating(false);
     }
   };
 
@@ -176,8 +164,6 @@ export function MyTokenPanel() {
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
-
-  const isLoading = step !== 'idle';
 
   return (
     <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
@@ -246,11 +232,11 @@ export function MyTokenPanel() {
 
           <Button
             onClick={handleRegenerate}
-            disabled={isLoading}
+            disabled={regenerating}
             variant="outline"
             className="w-full border-gray-700 text-gray-400 hover:text-white hover:bg-gray-800 text-xs h-8"
           >
-            {step === 'generating'
+            {regenerating
               ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Regenerating...</>
               : <><RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Regenerate Token</>
             }
@@ -259,85 +245,42 @@ export function MyTokenPanel() {
 
       ) : (
         <div className="space-y-4">
-          {!verifiedRoblox ? (
-            <>
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs text-gray-400">Your Roblox username</label>
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                    <Input
-                      value={robloxInput}
-                      onChange={e => { setRobloxInput(e.target.value); setError(''); }}
-                      onKeyDown={e => { if (e.key === 'Enter') handleVerify(); }}
-                      placeholder="e.g. Builderman"
-                      className="pl-9 bg-gray-950 border-gray-700 text-white placeholder:text-gray-600 focus:border-amber-500"
-                      disabled={isLoading}
-                    />
-                  </div>
-                  <Button
-                    onClick={handleVerify}
-                    disabled={!robloxInput.trim() || isLoading}
-                    className="bg-amber-500 hover:bg-amber-400 text-gray-950 font-semibold border-0 flex-shrink-0"
-                  >
-                    {step === 'verifying'
-                      ? <Loader2 className="w-4 h-4 animate-spin" />
-                      : 'Verify'
-                    }
-                  </Button>
-                </div>
-                <p className="text-[11px] text-gray-600">
-                  We verify this account exists on Roblox before linking it.
-                </p>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs text-gray-400">Your Roblox username</label>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                <Input
+                  value={robloxInput}
+                  onChange={e => { setRobloxInput(e.target.value); setError(''); }}
+                  onKeyDown={e => { if (e.key === 'Enter') handleVerifyAndGenerate(); }}
+                  placeholder="e.g. Builderman"
+                  className="pl-9 bg-gray-950 border-gray-700 text-white placeholder:text-gray-600 focus:border-amber-500"
+                  disabled={verifying}
+                />
               </div>
-
-              <div className="flex flex-col items-center justify-center py-5 gap-2 bg-gray-950 border border-dashed border-gray-800 rounded-xl">
-                <div className="w-10 h-10 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
-                  <Key className="w-5 h-5 text-amber-400/60" />
-                </div>
-                <p className="text-xs text-gray-600">Verify your Roblox account to generate a token</p>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="flex items-center gap-3 px-4 py-3 bg-emerald-500/5 border border-emerald-500/20 rounded-xl">
-                <div className="w-9 h-9 rounded-full overflow-hidden border border-emerald-500/30 flex-shrink-0 bg-gray-800">
-                  <img
-                    src={`https://tr.rbxcdn.com/avatar-thumbnail/150/150/AvatarHeadshot/Png?userId=${verifiedRoblox.id}`}
-                    alt={verifiedRoblox.name}
-                    className="w-full h-full object-cover"
-                    onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                  />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-white">{verifiedRoblox.displayName}</p>
-                  <p className="text-[11px] text-gray-500">@{verifiedRoblox.name} · ID {verifiedRoblox.id}</p>
-                </div>
-                <Check className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-              </div>
-
-              <p className="text-[11px] text-gray-500 text-center">
-                This Roblox account will be permanently linked to your dashboard.{' '}
-                <button
-                  onClick={() => { setVerifiedRoblox(null); setRobloxInput(''); }}
-                  className="text-gray-400 hover:text-white underline underline-offset-2 transition-colors"
-                >
-                  Use a different account
-                </button>
-              </p>
-
               <Button
-                onClick={handleGenerate}
-                disabled={isLoading}
-                className="w-full bg-amber-500 hover:bg-amber-400 text-gray-950 font-semibold border-0"
+                onClick={handleVerifyAndGenerate}
+                disabled={!robloxInput.trim() || verifying}
+                className="bg-amber-500 hover:bg-amber-400 text-gray-950 font-semibold border-0 flex-shrink-0 min-w-[80px]"
               >
-                {step === 'generating'
-                  ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Generating...</>
-                  : <><Key className="w-4 h-4 mr-2" /> Generate My Token</>
+                {verifying
+                  ? <Loader2 className="w-4 h-4 animate-spin" />
+                  : 'Generate'
                 }
               </Button>
-            </>
-          )}
+            </div>
+            <p className="text-[11px] text-gray-600">
+              We verify this account exists on Roblox, then instantly generate your token.
+            </p>
+          </div>
+
+          <div className="flex flex-col items-center justify-center py-5 gap-2 bg-gray-950 border border-dashed border-gray-800 rounded-xl">
+            <div className="w-10 h-10 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
+              <Key className="w-5 h-5 text-amber-400/60" />
+            </div>
+            <p className="text-xs text-gray-600">Enter your Roblox username to get your token</p>
+          </div>
         </div>
       )}
 

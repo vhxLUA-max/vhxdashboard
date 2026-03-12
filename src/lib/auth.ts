@@ -7,15 +7,20 @@ export type AuthState = {
 };
 
 export async function register(email: string, password: string, username: string): Promise<{ success: boolean; error?: string }> {
-  const { error } = await supabase.auth.signUp({
+  const { error: signUpError } = await supabase.auth.signUp({
     email: email.trim().toLowerCase(),
     password,
     options: { data: { username: username.trim().toLowerCase() } },
   });
-  if (error) {
-    if (error.message.toLowerCase().includes('already')) return { success: false, error: 'Email already registered.' };
-    return { success: false, error: error.message };
+  if (signUpError) {
+    if (signUpError.message.toLowerCase().includes('already')) return { success: false, error: 'Email already registered.' };
+    return { success: false, error: signUpError.message };
   }
+  const { error: signInError } = await supabase.auth.signInWithPassword({
+    email: email.trim().toLowerCase(),
+    password,
+  });
+  if (signInError) return { success: false, error: 'Account created but could not sign in automatically. Please sign in manually.' };
   return { success: true };
 }
 
