@@ -36,7 +36,7 @@ export function QuickStatsPanel({ data, loading = false }: QuickStatsPanelProps)
   const stats = [
     { label: 'Total Executions', value: data.totalExecutions.toLocaleString(),  icon: Activity, color: 'text-indigo-400', bg: 'bg-indigo-500/10' },
     { label: 'Unique Users',     value: data.uniqueUsers.toLocaleString(),       icon: Users,    color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
-    { label: 'Active Games',     value: data.activeGames.toLocaleString(),       icon: Gamepad2, color: 'text-blue-400',    bg: 'bg-blue-500/10'   },
+    { label: 'Active Scripts', value: '3',                                                                          icon: Gamepad2, color: 'text-blue-400',    bg: 'bg-blue-500/10'   },
     { label: 'Last Execution',   value: data.lastExecutedAt ? timeAgo(data.lastExecutedAt) : '—', icon: Clock, color: 'text-amber-400', bg: 'bg-amber-500/10' },
   ];
 
