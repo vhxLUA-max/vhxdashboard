@@ -65,10 +65,10 @@ function App() {
   const liveCount = useLiveCounter();
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session) {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT' || !session) {
         setAuth({ isLoggedIn: false, username: null, email: null });
-      } else {
+      } else if (session) {
         setAuth({
           isLoggedIn: true,
           username: session.user.user_metadata?.username ?? session.user.email?.split('@')[0] ?? null,
@@ -80,13 +80,10 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  const handleLoginSuccess = () => {
-    setShowLogin(false);
-  };
+  const handleLoginSuccess = () => setShowLogin(false);
 
   const handleLogout = async () => {
     await logout();
-    setAuth({ isLoggedIn: false, username: null, email: null });
   };
 
   return (
@@ -150,9 +147,9 @@ function App() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-8">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <MetricCard title="Total Executions" value={data?.totalExecutions.toLocaleString() ?? '-'} subtitle={`In last ${dateRange}`} icon={Activity} loading={loading} />
-                <MetricCard title="Unique Users" value={data?.uniqueUsers.toLocaleString() ?? '-'} subtitle="Active users" icon={Users} loading={loading} />
-                <MetricCard title="Active Scripts" value={data?.activeGames.toLocaleString() ?? '-'} subtitle="Deployed scripts" icon={Gamepad2} loading={loading} />
+                <MetricCard title="Total Executions" value={data?.totalExecutions.toLocaleString() ?? '-'} subtitle="All-time executions" icon={Activity} loading={loading} />
+                <MetricCard title="Unique Users" value={data?.uniqueUsers.toLocaleString() ?? '-'} subtitle={`Active in last ${dateRange}`} icon={Users} loading={loading} />
+                <MetricCard title="Active Scripts" value={data?.activeGames.toLocaleString() ?? '-'} subtitle={`Active in last ${dateRange}`} icon={Gamepad2} loading={loading} />
                 <MetricCard title="Last Execution" value={data?.lastExecutedAt ? timeAgo(data.lastExecutedAt) : '-'} subtitle="Most recent activity" icon={Clock} loading={loading} />
               </div>
 
