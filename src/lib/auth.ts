@@ -12,9 +12,9 @@ function toInternalEmail(username: string): string {
 
 export async function checkUsernameAvailable(username: string): Promise<boolean> {
   const { data } = await supabase
-    .from('dashboard_users')
+    .from('unique_users')
     .select('username')
-    .eq('username', username.trim().toLowerCase())
+    .ilike('username', username.trim())
     .maybeSingle();
   return !data;
 }
@@ -29,12 +29,6 @@ export async function register(username: string, password: string): Promise<{ su
   if (signUpError) {
     if (signUpError.message.toLowerCase().includes('already')) return { success: false, error: 'Username already taken.' };
     return { success: false, error: signUpError.message };
-  }
-  if (signUpData.user) {
-    await supabase.from('dashboard_users').upsert({
-      id: signUpData.user.id,
-      username: username.trim().toLowerCase(),
-    });
   }
   const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
   if (signInError) return { success: false, error: 'Account created but could not sign in. Please try signing in.' };
