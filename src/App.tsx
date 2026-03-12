@@ -11,13 +11,14 @@ import { RecentActivityList } from '@/components/RecentActivityList';
 import { QuickStatsPanel } from '@/components/QuickStatsPanel';
 import { UserSearch } from '@/components/UserSearch';
 import { WebhookTab } from '@/components/WebhookTab';
+import { MyTokenPanel } from '@/components/MyTokenPanel';
 import { LoginModal } from '@/components/LoginModal';
 import { ChangePasswordModal } from '@/components/ChangePasswordModal';
 import { LockedTab } from '@/components/LockedTab';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { isConfigured } from '@/lib/supabase';
-import { Activity, Users, Clock, RefreshCw, BarChart3, Gamepad2, Search, Webhook } from 'lucide-react';
+import { Activity, Users, Clock, RefreshCw, BarChart3, Gamepad2, Search, Webhook, Key } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 function timeAgo(iso: string): string {
@@ -46,7 +47,7 @@ function useLiveCounter() {
   return count;
 }
 
-type SidebarTab = 'stats' | 'search' | 'webhook';
+type SidebarTab = 'stats' | 'search' | 'webhook' | 'token';
 
 function App() {
   const [dateRange, setDateRange]   = useState<DateRange>('24h');
@@ -177,6 +178,7 @@ function App() {
                   { id: 'stats',   label: 'Stats',   icon: BarChart3 },
                   { id: 'search',  label: 'Search',  icon: Search    },
                   { id: 'webhook', label: 'Webhook', icon: Webhook   },
+                  { id: 'token',   label: 'Token',   icon: Key       },
                 ] as { id: SidebarTab; label: string; icon: React.ElementType }[]).map(tab => (
                   <button
                     key={tab.id}
@@ -213,6 +215,13 @@ function App() {
                 auth.isLoggedIn
                   ? <WebhookTab />
                   : <LockedTab label="Webhook" onLogin={() => setShowLogin(true)} />
+              )}
+
+              {sidebarTab === 'token' && (
+                !authReady ? null :
+                auth.isLoggedIn
+                  ? <MyTokenPanel />
+                  : <LockedTab label="My Token" onLogin={() => setShowLogin(true)} />
               )}
             </div>
           </div>
