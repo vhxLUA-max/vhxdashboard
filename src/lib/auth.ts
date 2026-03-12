@@ -6,38 +6,32 @@ export type AuthState = {
   email: string | null;
 };
 
-export async function register(email: string, password: string, username: string): Promise<{ success: boolean; error?: string }> {
+function toInternalEmail(username: string): string {
+  return `${username.trim().toLowerCase()}@vhx.internal`;
+}
+
+export async function register(username: string, password: string): Promise<{ success: boolean; error?: string }> {
+  const email = toInternalEmail(username);
   const { error: signUpError } = await supabase.auth.signUp({
-    email: email.trim().toLowerCase(),
+    email,
     password,
     options: { data: { username: username.trim().toLowerCase() } },
   });
   if (signUpError) {
-    if (signUpError.message.toLowerCase().includes('already')) return { success: false, error: 'Email already registered.' };
+    if (signUpError.message.toLowerCase().includes('already')) return { success: false, error: 'Username already taken.' };
     return { success: false, error: signUpError.message };
   }
-  const { error: signInError } = await supabase.auth.signInWithPassword({
-    email: email.trim().toLowerCase(),
-    password,
-  });
-  if (signInError) return { success: false, error: 'Account created but could not sign in automatically. Please sign in manually.' };
+  const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+  if (signInError) return { success: false, error: 'Account created but could not sign in. Please try signing in.' };
   return { success: true };
 }
 
-export async function login(email: string, password: string): Promise<{ success: boolean; error?: string }> {
+export async function login(username: string, password: string): Promise<{ success: boolean; error?: string }> {
   const { error } = await supabase.auth.signInWithPassword({
-    email: email.trim().toLowerCase(),
+    email: toInternalEmail(username),
     password,
   });
-  if (error) return { success: false, error: 'Invalid email or password.' };
-  return { success: true };
-}
-
-export async function forgotPassword(email: string): Promise<{ success: boolean; error?: string }> {
-  const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
-    redirectTo: `${window.location.origin}?reset=true`,
-  });
-  if (error) return { success: false, error: error.message };
+  if (error) return { success: false, error: 'Invalid username or password.' };
   return { success: true };
 }
 

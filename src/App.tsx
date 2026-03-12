@@ -71,7 +71,7 @@ function App() {
       } else if (session) {
         setAuth({
           isLoggedIn: true,
-          username: session.user.user_metadata?.username ?? session.user.email?.split('@')[0] ?? null,
+          username: session.user.user_metadata?.username ?? null,
           email: session.user.email ?? null,
         });
       }

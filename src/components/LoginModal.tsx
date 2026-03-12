@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { login, register, forgotPassword } from '@/lib/auth';
-import { Lock, Mail, Loader2, AlertCircle, CheckCircle2, X } from 'lucide-react';
+import { login, register } from '@/lib/auth';
+import { Lock, User, Loader2, AlertCircle, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
@@ -9,46 +9,32 @@ interface LoginModalProps {
   onClose: () => void;
 }
 
-type Mode = 'login' | 'register' | 'forgot';
+type Mode = 'login' | 'register';
 
 export function LoginModal({ onSuccess, onClose }: LoginModalProps) {
   const [mode, setMode]         = useState<Mode>('login');
-  const [email, setEmail]       = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm]   = useState('');
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState('');
-  const [forgotSent, setForgotSent] = useState(false);
 
-  const reset = () => { setEmail(''); setPassword(''); setConfirm(''); setError(''); setForgotSent(false); };
+  const reset = () => { setUsername(''); setPassword(''); setConfirm(''); setError(''); };
   const switchMode = (m: Mode) => { setMode(m); reset(); };
 
   const handleSubmit = async () => {
     setError('');
-
-    if (mode === 'forgot') {
-      if (!email.trim()) return;
-      setLoading(true);
-      const result = await forgotPassword(email);
-      setLoading(false);
-      if (result.success) setForgotSent(true);
-      else setError(result.error ?? 'Failed to send reset email.');
-      return;
-    }
-
-    if (!email.trim() || !password.trim()) return;
-
+    if (!username.trim() || !password.trim()) return;
     if (mode === 'register') {
       if (password !== confirm) { setError('Passwords do not match.'); return; }
       if (password.length < 6) { setError('Password must be at least 6 characters.'); return; }
+      if (username.trim().length < 3) { setError('Username must be at least 3 characters.'); return; }
     }
-
     setLoading(true);
     const result = mode === 'login'
-      ? await login(email, password)
-      : await register(email, password, email.split('@')[0]);
+      ? await login(username, password)
+      : await register(username, password);
     setLoading(false);
-
     if (result.success) onSuccess();
     else setError(result.error ?? 'Something went wrong.');
   };
@@ -68,55 +54,50 @@ export function LoginModal({ onSuccess, onClose }: LoginModalProps) {
             <Lock className="w-5 h-5 text-white" />
           </div>
           <h2 className="text-lg font-semibold text-white">
-            {mode === 'login' ? 'Sign In' : mode === 'register' ? 'Create Account' : 'Reset Password'}
+            {mode === 'login' ? 'Sign In' : 'Create Account'}
           </h2>
           <p className="text-xs text-gray-500 mt-1">
-            {mode === 'login' ? 'Access your dashboard' : mode === 'register' ? 'Register to unlock all features' : "We'll send a reset link to your email"}
+            {mode === 'login' ? 'Access your dashboard' : 'Register to unlock all features'}
           </p>
         </div>
 
-        {mode !== 'forgot' && (
-          <div className="flex gap-1 bg-gray-950 border border-gray-800 rounded-lg p-1 mb-4">
-            {(['login', 'register'] as const).map(m => (
-              <button
-                key={m}
-                onClick={() => switchMode(m)}
-                className={`flex-1 py-1.5 rounded-md text-xs font-medium transition-all ${mode === m ? 'bg-gray-800 text-white' : 'text-gray-500 hover:text-gray-300'}`}
-              >
-                {m === 'login' ? 'Sign In' : 'Register'}
-              </button>
-            ))}
-          </div>
-        )}
+        <div className="flex gap-1 bg-gray-950 border border-gray-800 rounded-lg p-1 mb-4">
+          {(['login', 'register'] as const).map(m => (
+            <button
+              key={m}
+              onClick={() => switchMode(m)}
+              className={`flex-1 py-1.5 rounded-md text-xs font-medium transition-all ${mode === m ? 'bg-gray-800 text-white' : 'text-gray-500 hover:text-gray-300'}`}
+            >
+              {m === 'login' ? 'Sign In' : 'Register'}
+            </button>
+          ))}
+        </div>
 
         <div className="space-y-3">
           <div className="relative">
-            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+            <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
             <Input
-              type="email"
-              value={email}
-              onChange={e => { setEmail(e.target.value); setError(''); }}
+              value={username}
+              onChange={e => { setUsername(e.target.value); setError(''); }}
               onKeyDown={handleKey}
-              placeholder="Email"
-              autoComplete="email"
+              placeholder="Username"
+              autoComplete="username"
               className="pl-9 bg-gray-950 border-gray-700 text-white placeholder:text-gray-600 focus:border-indigo-500"
             />
           </div>
 
-          {mode !== 'forgot' && (
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-              <Input
-                type="password"
-                value={password}
-                onChange={e => { setPassword(e.target.value); setError(''); }}
-                onKeyDown={handleKey}
-                placeholder="Password"
-                autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-                className="pl-9 bg-gray-950 border-gray-700 text-white placeholder:text-gray-600 focus:border-indigo-500"
-              />
-            </div>
-          )}
+          <div className="relative">
+            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+            <Input
+              type="password"
+              value={password}
+              onChange={e => { setPassword(e.target.value); setError(''); }}
+              onKeyDown={handleKey}
+              placeholder="Password"
+              autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+              className="pl-9 bg-gray-950 border-gray-700 text-white placeholder:text-gray-600 focus:border-indigo-500"
+            />
+          </div>
 
           {mode === 'register' && (
             <div className="relative">
@@ -140,35 +121,16 @@ export function LoginModal({ onSuccess, onClose }: LoginModalProps) {
             </div>
           )}
 
-          {forgotSent && (
-            <div className="flex items-center gap-2 p-2.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
-              <p className="text-xs text-emerald-400">Reset link sent! Check your email.</p>
-            </div>
-          )}
-
           <Button
             onClick={handleSubmit}
-            disabled={loading || !email.trim() || (mode !== 'forgot' && !password.trim())}
+            disabled={loading || !username.trim() || !password.trim()}
             className="w-full bg-indigo-600 hover:bg-indigo-500 text-white border-0"
           >
             {loading
-              ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{mode === 'login' ? 'Signing in...' : mode === 'register' ? 'Creating account...' : 'Sending...'}</>
-              : mode === 'login' ? 'Sign In' : mode === 'register' ? 'Create Account' : 'Send Reset Link'
+              ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{mode === 'login' ? 'Signing in...' : 'Creating account...'}</>
+              : mode === 'login' ? 'Sign In' : 'Create Account'
             }
           </Button>
-
-          {mode === 'login' && (
-            <button onClick={() => switchMode('forgot')} className="w-full text-center text-xs text-gray-600 hover:text-gray-400 transition-colors mt-1">
-              Forgot password?
-            </button>
-          )}
-
-          {mode === 'forgot' && (
-            <button onClick={() => switchMode('login')} className="w-full text-center text-xs text-gray-600 hover:text-gray-400 transition-colors mt-1">
-              Back to sign in
-            </button>
-          )}
         </div>
       </div>
     </div>
