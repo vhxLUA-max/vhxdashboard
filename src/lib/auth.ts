@@ -10,9 +10,18 @@ function toInternalEmail(username: string): string {
   return `${username.trim().toLowerCase()}@vhx.internal`;
 }
 
+export async function checkUsernameAvailable(username: string): Promise<boolean> {
+  const { data } = await supabase
+    .from('profiles')
+    .select('username')
+    .eq('username', username.trim().toLowerCase())
+    .maybeSingle();
+  return !data;
+}
+
 export async function register(username: string, password: string): Promise<{ success: boolean; error?: string }> {
   const email = toInternalEmail(username);
-  const { error: signUpError } = await supabase.auth.signUp({
+  const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
     email,
     password,
     options: { data: { username: username.trim().toLowerCase() } },
@@ -20,6 +29,12 @@ export async function register(username: string, password: string): Promise<{ su
   if (signUpError) {
     if (signUpError.message.toLowerCase().includes('already')) return { success: false, error: 'Username already taken.' };
     return { success: false, error: signUpError.message };
+  }
+  if (signUpData.user) {
+    await supabase.from('profiles').upsert({
+      id: signUpData.user.id,
+      username: username.trim().toLowerCase(),
+    });
   }
   const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
   if (signInError) return { success: false, error: 'Account created but could not sign in. Please try signing in.' };
