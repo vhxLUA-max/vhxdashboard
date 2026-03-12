@@ -33,8 +33,7 @@ function useLiveCounter() {
   const [count, setCount] = useState<number | null>(null);
   useEffect(() => {
     const fetchCount = async () => {
-      const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-      const { data } = await supabase.from('game_executions').select('count').gte('last_executed_at', since);
+      const { data } = await supabase.from('game_executions').select('count');
       if (data) setCount(data.reduce((s: number, e: { count: number }) => s + e.count, 0));
     };
     fetchCount();
