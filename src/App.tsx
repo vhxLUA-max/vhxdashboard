@@ -17,6 +17,7 @@ import { ChangePasswordModal } from '@/components/ChangePasswordModal';
 import { LockedTab } from '@/components/LockedTab';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { isConfigured } from '@/lib/supabase';
 import { Activity, Users, Clock, RefreshCw, BarChart3, Gamepad2, Search, Webhook, Key } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -169,7 +170,7 @@ function App() {
             </div>
 
             <div className="space-y-4">
-              <div className="flex gap-1 bg-gray-900 border border-gray-800 rounded-lg p-1">
+              <div className="flex gap-1 bg-gray-900 border border-gray-800 rounded-lg p-1 overflow-x-auto">
                 {([
                   { id: 'stats',   label: 'Stats',   icon: BarChart3 },
                   { id: 'search',  label: 'Search',  icon: Search    },
@@ -179,46 +180,52 @@ function App() {
                   <button
                     key={tab.id}
                     onClick={() => setSidebarTab(tab.id)}
-                    className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-md text-xs font-medium transition-all ${
+                    className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-md text-xs font-medium transition-all whitespace-nowrap min-w-0 ${
                       sidebarTab === tab.id ? 'bg-gray-800 text-white' : 'text-gray-500 hover:text-gray-300'
                     }`}
                   >
-                    <tab.icon className="w-3.5 h-3.5" />
-                    {tab.label}
+                    <tab.icon className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span className="hidden sm:inline">{tab.label}</span>
                   </button>
                 ))}
               </div>
 
-              {sidebarTab === 'stats' && (
-                <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
-                  <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                    <BarChart3 className="w-5 h-5 text-blue-400" />
-                    Quick Stats
-                  </h3>
-                  <QuickStatsPanel data={data} loading={loading} />
+              <ErrorBoundary fallback={
+                <div className="bg-gray-900 rounded-xl border border-rose-500/20 p-6 text-center">
+                  <p className="text-sm text-rose-400">This panel crashed. Try switching tabs.</p>
                 </div>
-              )}
+              }>
+                {sidebarTab === 'stats' && (
+                  <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
+                    <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                      <BarChart3 className="w-5 h-5 text-blue-400" />
+                      Quick Stats
+                    </h3>
+                    <QuickStatsPanel data={data} loading={loading} />
+                  </div>
+                )}
 
-              {sidebarTab === 'search' && (
-                !authReady ? null :
-                auth.isLoggedIn
-                  ? <UserSearch />
-                  : <LockedTab label="User Search" onLogin={() => setShowLogin(true)} />
-              )}
+                {sidebarTab === 'search' && (
+                  !authReady ? null :
+                  auth.isLoggedIn
+                    ? <UserSearch />
+                    : <LockedTab label="User Search" onLogin={() => setShowLogin(true)} />
+                )}
 
-              {sidebarTab === 'webhook' && (
-                !authReady ? null :
-                auth.isLoggedIn
-                  ? <WebhookTab />
-                  : <LockedTab label="Webhook" onLogin={() => setShowLogin(true)} />
-              )}
+                {sidebarTab === 'webhook' && (
+                  !authReady ? null :
+                  auth.isLoggedIn
+                    ? <WebhookTab />
+                    : <LockedTab label="Webhook" onLogin={() => setShowLogin(true)} />
+                )}
 
-              {sidebarTab === 'token' && (
-                !authReady ? null :
-                auth.isLoggedIn
-                  ? <MyTokenPanel />
-                  : <LockedTab label="My Token" onLogin={() => setShowLogin(true)} />
-              )}
+                {sidebarTab === 'token' && (
+                  !authReady ? null :
+                  auth.isLoggedIn
+                    ? <MyTokenPanel />
+                    : <LockedTab label="My Token" onLogin={() => setShowLogin(true)} />
+                )}
+              </ErrorBoundary>
             </div>
           </div>
         )}
