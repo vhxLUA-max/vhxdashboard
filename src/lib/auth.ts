@@ -12,7 +12,7 @@ function toInternalEmail(username: string): string {
 
 export async function checkUsernameAvailable(username: string): Promise<boolean> {
   const { data } = await supabase
-    .from('profiles')
+    .from('dashboard_users')
     .select('username')
     .eq('username', username.trim().toLowerCase())
     .maybeSingle();
@@ -31,7 +31,7 @@ export async function register(username: string, password: string): Promise<{ su
     return { success: false, error: signUpError.message };
   }
   if (signUpData.user) {
-    await supabase.from('profiles').upsert({
+    await supabase.from('dashboard_users').upsert({
       id: signUpData.user.id,
       username: username.trim().toLowerCase(),
     });
