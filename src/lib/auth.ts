@@ -23,7 +23,7 @@ export async function checkUsernameAvailable(username: string): Promise<boolean>
 
 export async function register(username: string, password: string): Promise<{ success: boolean; error?: string }> {
   const email = toInternalEmail(username);
-  const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+  const { error: signUpError } = await supabase.auth.signUp({
     email,
     password,
     options: { data: { username: username.trim().toLowerCase() } },
