@@ -11,11 +11,13 @@ function toInternalEmail(username: string): string {
 }
 
 export async function checkUsernameAvailable(username: string): Promise<boolean> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('unique_users')
     .select('username')
     .ilike('username', username.trim())
+    .limit(1)
     .maybeSingle();
+  if (error) console.warn('checkUsernameAvailable error:', error.message, error.code);
   return !data;
 }
 
