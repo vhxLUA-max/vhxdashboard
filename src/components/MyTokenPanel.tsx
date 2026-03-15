@@ -26,16 +26,22 @@ async function ensureUniqueToken(): Promise<string> {
 
 type RobloxUser = { id: number; name: string; displayName: string };
 
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+
+async function robloxProxy(path: string, method = 'GET', body?: unknown): Promise<unknown> {
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/roblox-proxy`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path, method, body }),
+  });
+  if (!res.ok) return null;
+  return res.json();
+}
+
 async function lookupRobloxUser(username: string): Promise<RobloxUser | null> {
   try {
-    const res = await fetch('https://users.roblox.com/v1/usernames/users', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ usernames: [username], excludeBannedUsers: false }),
-    });
-    if (!res.ok) return null;
-    const json = await res.json();
-    const user = json.data?.[0];
+    const json = await robloxProxy('/v1/usernames/users', 'POST', { usernames: [username], excludeBannedUsers: false }) as { data?: { id: number; name: string; displayName: string }[] } | null;
+    const user = json?.data?.[0];
     if (!user) return null;
     return { id: user.id, name: user.name, displayName: user.displayName };
   } catch { return null; }
@@ -43,10 +49,8 @@ async function lookupRobloxUser(username: string): Promise<RobloxUser | null> {
 
 async function fetchRobloxBio(userId: number): Promise<string | null> {
   try {
-    const res = await fetch(`https://users.roblox.com/v1/users/${userId}`);
-    if (!res.ok) return null;
-    const json = await res.json();
-    return json.description ?? '';
+    const json = await robloxProxy(`/v1/users/${userId}`) as { description?: string } | null;
+    return json?.description ?? '';
   } catch { return null; }
 }
 

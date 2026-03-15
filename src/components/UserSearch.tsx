@@ -48,25 +48,31 @@ function timeAgo(iso: string): string {
   return `${Math.floor(diff / 86400)}d ago`;
 }
 
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+
+async function robloxProxy(path: string): Promise<unknown> {
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/roblox-proxy`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path }),
+  });
+  if (!res.ok) return null;
+  return res.json();
+}
+
 async function fetchRobloxProfile(userId: number): Promise<RobloxProfile | null> {
   try {
-    const [userRes, thumbRes] = await Promise.all([
-      fetch(`https://users.roblox.com/v1/users/${userId}`),
-      fetch(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${userId}&size=150x150&format=Png&isCircular=false`),
+    const [userData, thumbData] = await Promise.all([
+      robloxProxy(`/v1/users/${userId}`) as Promise<{ displayName?: string; name?: string; description?: string; created?: string; isBanned?: boolean } | null>,
+      robloxProxy(`/v1/users/avatar-headshot?userIds=${userId}&size=150x150&format=Png&isCircular=false`) as Promise<{ data?: { imageUrl?: string }[] } | null>,
     ]);
-    if (!userRes.ok) return null;
-    const userData = await userRes.json();
-    let avatarUrl: string | null = null;
-    if (thumbRes.ok) {
-      const thumbData = await thumbRes.json();
-      avatarUrl = thumbData?.data?.[0]?.imageUrl ?? null;
-    }
+    if (!userData) return null;
     return {
-      displayName: userData.displayName ?? userData.name,
-      description: userData.description ?? '',
-      created: userData.created ?? '',
-      isBanned: userData.isBanned ?? false,
-      avatarUrl,
+      displayName: (userData as { displayName?: string; name?: string }).displayName ?? (userData as { name?: string }).name ?? '',
+      description: (userData as { description?: string }).description ?? '',
+      created: (userData as { created?: string }).created ?? '',
+      isBanned: (userData as { isBanned?: boolean }).isBanned ?? false,
+      avatarUrl: (thumbData as { data?: { imageUrl?: string }[] } | null)?.data?.[0]?.imageUrl ?? null,
     };
   } catch {
     return null;
