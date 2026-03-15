@@ -90,15 +90,23 @@ export function MyTokenPanel() {
     setLookingUp(true);
     setError('');
 
-    const { data: dbUser } = await supabase
+    const { data: dbUser, error: dbErr } = await supabase
       .from('unique_users')
       .select('roblox_user_id, username')
       .ilike('username', trimmed)
       .limit(1)
       .maybeSingle();
 
+    console.log('lookup:', { trimmed, dbUser, dbErr });
+
+    if (dbErr) {
+      setError('DB error: ' + dbErr.message + ' [' + dbErr.code + ']');
+      setLookingUp(false);
+      return;
+    }
+
     if (!dbUser) {
-      setError(`Username "${trimmed}" not found in the database.`);
+      setError('Username not found in database: ' + trimmed);
       setLookingUp(false);
       return;
     }
