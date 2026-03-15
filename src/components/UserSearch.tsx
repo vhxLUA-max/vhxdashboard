@@ -237,10 +237,8 @@ export function UserSearch() {
     const { data: rows, error: searchErr } = await supabase
       .from('unique_users')
       .select('user_id, roblox_user_id, place_id, username, first_seen, last_seen, execution_count')
-      .ilike('username', `%${trimmed}%`)
+      .eq('token', trimmed.toUpperCase())
       .limit(50);
-
-    console.log('UserSearch:', { trimmed, count: rows?.length, err: searchErr?.message, code: searchErr?.code });
 
     if (searchErr || !rows || rows.length === 0) {
       setResults([]);
@@ -289,7 +287,7 @@ export function UserSearch() {
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
+    const val = e.target.value.toUpperCase();
     setQuery(val);
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => search(val), 300);
@@ -320,15 +318,16 @@ export function UserSearch() {
         <Input
           value={query}
           onChange={handleChange}
-          placeholder="Search by username..."
-          className="pl-9 bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white placeholder:text-gray-400 focus:border-purple-500"
+          placeholder="Enter token (e.g. A3X9K)..."
+          maxLength={8}
+          className="pl-9 bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white placeholder:text-gray-400 focus:border-purple-500 font-mono tracking-widest uppercase"
         />
       </div>
 
       {loading && <div className="text-center py-6 text-gray-400 text-sm">Searching...</div>}
 
       {!loading && searched && results.length === 0 && (
-        <div className="text-center py-6 text-gray-400 text-sm">No user found for "{query}"</div>
+        <div className="text-center py-6 text-gray-400 text-sm">No user found for token "{query}"</div>
       )}
 
       {!loading && results.length > 0 && (
