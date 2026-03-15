@@ -234,13 +234,15 @@ export function UserSearch() {
     setSearched(true);
     setSelectedUser(null);
 
-    const { data: rows } = await supabase
+    const { data: rows, error: searchErr } = await supabase
       .from('unique_users')
-      .select('*')
+      .select('user_id, roblox_user_id, place_id, username, first_seen, last_seen, execution_count')
       .ilike('username', `%${trimmed}%`)
       .limit(50);
 
-    if (!rows || rows.length === 0) {
+    console.log('UserSearch:', { trimmed, count: rows?.length, err: searchErr?.message, code: searchErr?.code });
+
+    if (searchErr || !rows || rows.length === 0) {
       setResults([]);
       setLoading(false);
       return;
