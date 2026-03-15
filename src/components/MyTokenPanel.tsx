@@ -36,15 +36,6 @@ async function robloxProxy(path: string, method = 'GET', body?: unknown): Promis
   return res.json();
 }
 
-async function lookupRobloxUser(username: string): Promise<RobloxUser | null> {
-  try {
-    const json = await robloxProxy('/v1/usernames/users', 'POST', { usernames: [username], excludeBannedUsers: false }) as { data?: { id: number; name: string; displayName: string }[] } | null;
-    const user = json?.data?.[0];
-    if (!user) return null;
-    return { id: user.id, name: user.name, displayName: user.displayName };
-  } catch { return null; }
-}
-
 async function fetchRobloxBio(userId: number): Promise<string | null> {
   try {
     const json = await robloxProxy(`/v1/users/${userId}`) as { description?: string } | null;
