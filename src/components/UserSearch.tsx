@@ -48,10 +48,8 @@ function timeAgo(iso: string): string {
   return `${Math.floor(diff / 86400)}d ago`;
 }
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
-
 async function robloxProxy(path: string): Promise<unknown> {
-  const res = await fetch(`${SUPABASE_URL}/functions/v1/roblox-proxy`, {
+  const res = await fetch('/api/roblox', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ path }),
