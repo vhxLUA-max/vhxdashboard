@@ -17,7 +17,10 @@ export async function checkUsernameAvailable(username: string): Promise<boolean>
     .ilike('username', username.trim())
     .limit(1)
     .maybeSingle();
-  if (error) console.warn('checkUsernameAvailable error:', error.message, error.code);
+  if (error) {
+    console.warn('checkUsernameAvailable error:', error.message, error.code);
+    return true;
+  }
   return !data;
 }
 
