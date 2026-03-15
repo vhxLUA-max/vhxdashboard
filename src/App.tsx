@@ -1,8 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useSupabaseDashboard } from '@/hooks/useSupabaseDashboard';
 import { supabase } from '@/lib/supabase';
-import { logout } from '@/lib/auth';
-import type { AuthState } from '@/lib/auth';
 import type { DateRange } from '@/types';
 import { Header } from '@/components/Header';
 import { MetricCard } from '@/components/MetricCard';
@@ -12,9 +10,6 @@ import { QuickStatsPanel } from '@/components/QuickStatsPanel';
 import { UserSearch } from '@/components/UserSearch';
 import { WebhookTab } from '@/components/WebhookTab';
 import { MyTokenPanel } from '@/components/MyTokenPanel';
-import { LoginModal } from '@/components/LoginModal';
-import { ChangePasswordModal } from '@/components/ChangePasswordModal';
-import { LockedTab } from '@/components/LockedTab';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -50,72 +45,21 @@ function useLiveCounter() {
 type SidebarTab = 'stats' | 'search' | 'webhook' | 'token';
 
 function App() {
-  const [dateRange, setDateRange]   = useState<DateRange>('24h');
+  const [dateRange, setDateRange] = useState<DateRange>('24h');
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>('stats');
-  const [showLogin, setShowLogin]             = useState(false);
-  const [showChangePassword, setShowChangePassword] = useState(() => {
-    const isReset = new URLSearchParams(window.location.search).get('reset') === 'true';
-    if (isReset) window.history.replaceState({}, '', window.location.pathname);
-    return isReset;
-  });
-  const [auth, setAuth] = useState<AuthState>({ isLoggedIn: false, username: null, email: null });
-  const [authReady, setAuthReady] = useState(false);
   const { data, loading, error, refresh } = useSupabaseDashboard(dateRange);
   const handleRefresh = useCallback(() => refresh(), [refresh]);
   const connected = isConfigured();
   const liveCount = useLiveCounter();
 
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_OUT' || !session) {
-        setAuth({ isLoggedIn: false, username: null, email: null });
-      } else if (session) {
-        setAuth({
-          isLoggedIn: true,
-          username: session.user.user_metadata?.username ?? null,
-          email: session.user.email ?? null,
-        });
-      }
-      setAuthReady(true);
-    });
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const handleLoginSuccess = () => setShowLogin(false);
-
-  const handleLogout = async () => {
-    await logout();
-  };
-
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
-      <Header
-        isConnected={connected}
-        isLoggedIn={auth.isLoggedIn}
-        username={auth.username}
-        onLogin={() => setShowLogin(true)}
-        onLogout={handleLogout}
-        onChangePassword={() => setShowChangePassword(true)}
-      />
-
-      {showLogin && (
-        <LoginModal
-          onSuccess={handleLoginSuccess}
-          onClose={() => setShowLogin(false)}
-        />
-      )}
-
-      {showChangePassword && (
-        <ChangePasswordModal
-          username={auth.username ?? auth.email ?? ''}
-          onClose={() => setShowChangePassword(false)}
-        />
-      )}
+    <div className="min-h-screen bg-white dark:bg-gray-950 text-gray-900 dark:text-white">
+      <Header isConnected={connected} />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <div>
-            <h2 className="text-xl font-semibold text-white">Dashboard Overview</h2>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Dashboard Overview</h2>
             <p className="text-sm text-gray-500 mt-1">Monitor your execution metrics and performance</p>
           </div>
           <div className="flex items-center gap-3">
@@ -131,7 +75,7 @@ function App() {
               size="icon"
               onClick={handleRefresh}
               disabled={loading}
-              className="border-gray-700 text-gray-300 hover:bg-gray-800 hover:text-white"
+              className="border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </Button>
@@ -156,7 +100,7 @@ function App() {
 
               <div>
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                     <Gamepad2 className="w-5 h-5 text-indigo-400" />
                     Supported Games
                   </h3>
@@ -170,7 +114,7 @@ function App() {
             </div>
 
             <div className="space-y-4">
-              <div className="flex gap-1 bg-gray-900 border border-gray-800 rounded-lg p-1 overflow-x-auto">
+              <div className="flex gap-1 bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg p-1 overflow-x-auto">
                 {([
                   { id: 'stats',   label: 'Stats',   icon: BarChart3 },
                   { id: 'search',  label: 'Search',  icon: Search    },
@@ -181,7 +125,9 @@ function App() {
                     key={tab.id}
                     onClick={() => setSidebarTab(tab.id)}
                     className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-md text-xs font-medium transition-all whitespace-nowrap min-w-0 ${
-                      sidebarTab === tab.id ? 'bg-gray-800 text-white' : 'text-gray-500 hover:text-gray-300'
+                      sidebarTab === tab.id
+                        ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm'
+                        : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
                     }`}
                   >
                     <tab.icon className="w-3.5 h-3.5 flex-shrink-0" />
@@ -191,49 +137,31 @@ function App() {
               </div>
 
               <ErrorBoundary fallback={
-                <div className="bg-gray-900 rounded-xl border border-rose-500/20 p-6 text-center">
+                <div className="bg-gray-100 dark:bg-gray-900 rounded-xl border border-rose-500/20 p-6 text-center">
                   <p className="text-sm text-rose-400">This panel crashed. Try switching tabs.</p>
                 </div>
               }>
                 {sidebarTab === 'stats' && (
-                  <div className="bg-gray-900 rounded-xl border border-gray-800 p-6">
-                    <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                  <div className="bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
                       <BarChart3 className="w-5 h-5 text-blue-400" />
                       Quick Stats
                     </h3>
                     <QuickStatsPanel data={data} loading={loading} />
                   </div>
                 )}
-
-                {sidebarTab === 'search' && (
-                  !authReady ? null :
-                  auth.isLoggedIn
-                    ? <UserSearch />
-                    : <LockedTab label="User Search" onLogin={() => setShowLogin(true)} />
-                )}
-
-                {sidebarTab === 'webhook' && (
-                  !authReady ? null :
-                  auth.isLoggedIn
-                    ? <WebhookTab />
-                    : <LockedTab label="Webhook" onLogin={() => setShowLogin(true)} />
-                )}
-
-                {sidebarTab === 'token' && (
-                  !authReady ? null :
-                  auth.isLoggedIn
-                    ? <MyTokenPanel />
-                    : <LockedTab label="My Token" onLogin={() => setShowLogin(true)} />
-                )}
+                {sidebarTab === 'search' && <UserSearch />}
+                {sidebarTab === 'webhook' && <WebhookTab />}
+                {sidebarTab === 'token' && <MyTokenPanel />}
               </ErrorBoundary>
             </div>
           </div>
         )}
       </main>
 
-      <footer className="border-t border-gray-800 mt-16">
+      <footer className="border-t border-gray-200 dark:border-gray-800 mt-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <p className="text-sm text-gray-500 text-center">Execution Analytics Dashboard</p>
+          <p className="text-sm text-gray-400 text-center">Execution Analytics Dashboard</p>
         </div>
       </footer>
     </div>
