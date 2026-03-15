@@ -89,23 +89,33 @@ export function MyTokenPanel() {
     if (!trimmed) return;
     setLookingUp(true);
     setError('');
-    const user = await lookupRobloxUser(trimmed);
-    if (!user) {
-      setError(`Roblox user "${trimmed}" not found.`);
+
+    const { data: dbUser } = await supabase
+      .from('unique_users')
+      .select('roblox_user_id, username')
+      .ilike('username', trimmed)
+      .limit(1)
+      .maybeSingle();
+
+    if (!dbUser) {
+      setError(`Username "${trimmed}" not found in the database.`);
       setLookingUp(false);
       return;
     }
+
     const { data: existing } = await supabase
       .from('user_tokens')
       .select('user_id')
-      .eq('roblox_user_id', user.id)
+      .eq('roblox_user_id', dbUser.roblox_user_id)
       .maybeSingle();
+
     if (existing) {
       setError('This Roblox account is already linked to another token.');
       setLookingUp(false);
       return;
     }
-    setRobloxUser(user);
+
+    setRobloxUser({ id: dbUser.roblox_user_id, name: dbUser.username, displayName: dbUser.username });
     setVerifyCode(generateVerifyCode());
     setStep('verify');
     setLookingUp(false);
