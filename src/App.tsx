@@ -15,7 +15,7 @@ import { GameBreakdownChart } from '@/components/GameBreakdownChart';
 import { ExecutionHeatmap } from '@/components/ExecutionHeatmap';
 import { TopUsersLeaderboard } from '@/components/TopUsersLeaderboard';
 import { ExecutionRateBadge } from '@/components/ExecutionRateBadge';
-import { Activity, Users, Clock, RefreshCw, BarChart3, Gamepad2, Search, Webhook, Key, ShieldCheck, Megaphone, Code, Loader2, Palette } from 'lucide-react';
+import { Activity, Users, Clock, RefreshCw, BarChart3, Gamepad2, Search, Webhook, Key, ShieldCheck, Megaphone, Code, Loader2, Palette, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LoginModal } from '@/components/LoginModal';
 import { logout } from '@/lib/auth';
@@ -29,6 +29,8 @@ const ScriptsTab       = lazy(() => import('@/components/ScriptsTab').then(m => 
 const ThemeManager     = lazy(() => import('@/components/ThemeManager').then(m => ({ default: m.ThemeManager })));
 const StatusTab        = lazy(() => import('@/components/StatusTab').then(m => ({ default: m.StatusTab })));
 const ChangelogTab     = lazy(() => import('@/components/ChangelogTab').then(m => ({ default: m.ChangelogTab })));
+const AdminPanel       = lazy(() => import('@/components/AdminPanel').then(m => ({ default: m.AdminPanel })));
+import { AnnouncementBanner } from '@/components/AnnouncementBanner';
 
 function timeAgo(iso: string): string {
   const diff = (Date.now() - new Date(iso).getTime()) / 1000;
@@ -54,7 +56,7 @@ function useLiveCounter() {
   return count;
 }
 
-type SidebarTab = 'stats' | 'search' | 'webhook' | 'token' | 'scripts' | 'status' | 'changelog' | 'themes';
+type SidebarTab = 'stats' | 'search' | 'webhook' | 'token' | 'scripts' | 'status' | 'changelog' | 'themes' | 'admin';
 
 const TABS = [
   { id: 'stats',     label: 'Stats',     icon: BarChart3   },
@@ -65,6 +67,7 @@ const TABS = [
   { id: 'themes',    label: 'Themes',    icon: Palette     },
   { id: 'status',    label: 'Status',    icon: ShieldCheck },
   { id: 'changelog', label: 'Changelog', icon: Megaphone   },
+  { id: 'admin',     label: 'Admin',     icon: Shield      },
 ] as const;
 
 const TabFallback = () => (
@@ -132,6 +135,8 @@ function App() {
         <LoginModal onSuccess={() => setShowLogin(false)} onClose={() => setShowLogin(false)} />
       )}
 
+      <AnnouncementBanner />
+
       {showChangePw && adminUsername && (
         <Suspense fallback={null}>
           <ChangePasswordModal username={adminUsername} onClose={() => setShowChangePw(false)} />
@@ -147,7 +152,11 @@ function App() {
               title={`${tab.label} (${i + 1})`}
               className={`relative flex flex-col items-center gap-1.5 px-2 py-3 rounded-xl text-[10px] font-medium transition-all ${
                 activeTab === tab.id
-                  ? 'bg-white dark:bg-gray-800 text-indigo-500 dark:text-indigo-400 shadow-sm border border-gray-200 dark:border-gray-700'
+                  ? tab.id === 'admin'
+                    ? 'bg-rose-500/10 text-rose-400 shadow-sm border border-rose-500/30'
+                    : 'bg-white dark:bg-gray-800 text-indigo-500 dark:text-indigo-400 shadow-sm border border-gray-200 dark:border-gray-700'
+                  : tab.id === 'admin'
+                  ? 'text-rose-500/60 hover:text-rose-400 hover:bg-rose-500/5'
                   : 'text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-white dark:hover:bg-gray-800/60'
               }`}
             >
@@ -247,6 +256,7 @@ function App() {
                     {activeTab === 'themes'    && <ThemeManager />}
                     {activeTab === 'status'    && <StatusTab executions={data?.recentExecutions ?? []} />}
                     {activeTab === 'changelog' && <ChangelogTab />}
+                    {activeTab === 'admin'     && <AdminPanel />}
                   </div>
                 </Suspense>
               </ErrorBoundary>
