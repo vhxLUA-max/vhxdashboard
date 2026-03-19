@@ -1,59 +1,43 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Trophy } from 'lucide-react';
 
-const MEDAL = ['🥇', '🥈', '🥉'];
-const ADMIN_USERNAME = import.meta.env.VITE_ADMIN_USERNAME ?? 'vhxLUA-max';
+const MEDAL       = ['🥇', '🥈', '🥉'];
+const ADMIN_NAME  = (import.meta.env.VITE_ADMIN_USERNAME ?? 'vhxLUA-max').toLowerCase();
 
 type AggUser = { roblox_user_id: number; username: string; total: number };
 
 export function TopUsersLeaderboard({ adminUsername }: { adminUsername: string | null }) {
-  const [users, setUsers] = useState<AggUser[]>([]);
+  const [users, setUsers]   = useState<AggUser[]>([]);
   const [loading, setLoading] = useState(true);
+  const isAdmin = adminUsername?.toLowerCase() === ADMIN_NAME;
 
-  const isAdmin = adminUsername?.toLowerCase() === ADMIN_USERNAME.toLowerCase();
+  const fetch = useCallback(async () => {
+    const [{ data: userRows }] = await Promise.all([
+      supabase.from('unique_users').select('roblox_user_id,username,execution_count'),
+      supabase.from('game_executions').select('place_id,count'),
+    ]);
+    if (!userRows) { setLoading(false); return; }
+
+    const agg: Record<number, AggUser> = {};
+    for (const row of userRows) {
+      const id = row.roblox_user_id;
+      if (!agg[id]) agg[id] = { roblox_user_id: id, username: row.username, total: 0 };
+      agg[id].total += row.execution_count ?? 0;
+    }
+    setUsers(Object.values(agg).sort((a, b) => b.total - a.total).slice(0, 10));
+    setLoading(false);
+  }, []);
 
   useEffect(() => {
     if (!isAdmin) { setLoading(false); return; }
-
-    const fetch = async () => {
-      const { data: userRows } = await supabase
-        .from('unique_users')
-        .select('roblox_user_id, username, place_id, execution_count');
-
-      const { data: execRows } = await supabase
-        .from('game_executions')
-        .select('place_id, count');
-
-      if (!userRows) { setLoading(false); return; }
-
-      const execMap: Record<number, number> = {};
-      for (const e of execRows ?? []) execMap[e.place_id] = e.count;
-
-      const totalExecs = Object.values(execMap).reduce((s, v) => s + v, 0);
-
-      const agg: Record<number, AggUser> = {};
-      for (const row of userRows) {
-        const id = row.roblox_user_id;
-        if (!agg[id]) agg[id] = { roblox_user_id: id, username: row.username, total: 0 };
-        const placeTotal = execMap[row.place_id] ?? 0;
-        const userShare = totalExecs > 0 && placeTotal > 0
-          ? Math.round((row.execution_count / placeTotal) * placeTotal)
-          : row.execution_count ?? 0;
-        agg[id].total += userShare;
-      }
-
-      setUsers(Object.values(agg).sort((a, b) => b.total - a.total).slice(0, 10));
-      setLoading(false);
-    };
-
     fetch();
     const ch = supabase.channel('leaderboard')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'unique_users' }, fetch)
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [isAdmin]);
+  }, [isAdmin, fetch]);
 
   if (!isAdmin) return null;
 
@@ -79,7 +63,7 @@ export function TopUsersLeaderboard({ adminUsername }: { adminUsername: string |
         <div className="space-y-2">
           {users.map((u, i) => (
             <div key={u.roblox_user_id} className="flex items-center gap-3 p-3 bg-gray-950 rounded-lg border border-gray-800">
-              <span className="text-sm w-5 text-center">{MEDAL[i] ?? <span className="text-gray-500">{i + 1}</span>}</span>
+              <span className="text-sm w-5 text-center">{MEDAL[i] ?? <span className="text-gray-500 text-xs">{i + 1}</span>}</span>
               <span className="flex-1 text-sm text-white truncate">{u.username ?? `User ${u.roblox_user_id}`}</span>
               <span className="text-xs text-indigo-400 font-medium">{u.total.toLocaleString()}</span>
             </div>

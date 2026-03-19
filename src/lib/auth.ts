@@ -6,46 +6,36 @@ export type AuthState = {
   email: string | null;
 };
 
-function toInternalEmail(username: string): string {
-  return `${username.trim().toLowerCase()}@vhx.internal`;
-}
-
-export async function checkUsernameAvailable(username: string): Promise<boolean> {
-  const { data, error } = await supabase
-    .from('unique_users')
-    .select('username')
-    .ilike('username', username.trim())
-    .limit(1)
-    .maybeSingle();
-  if (error) {
-    console.warn('checkUsernameAvailable error:', error.message, error.code);
-    return true;
-  }
-  return !data;
-}
+const toEmail = (u: string) => `${u.trim().toLowerCase()}@vhx.local`;
 
 export async function register(username: string, password: string): Promise<{ success: boolean; error?: string }> {
-  const email = toInternalEmail(username);
-  const { error: signUpError } = await supabase.auth.signUp({
-    email,
+  const { error } = await supabase.auth.signUp({
+    email: toEmail(username),
     password,
     options: { data: { username: username.trim().toLowerCase() } },
   });
-  if (signUpError) {
-    if (signUpError.message.toLowerCase().includes('already')) return { success: false, error: 'Username already taken.' };
-    return { success: false, error: signUpError.message };
-  }
-  const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-  if (signInError) return { success: false, error: 'Account created but could not sign in. Please try signing in.' };
+  if (error) return { success: false, error: error.message.includes('already') ? 'Username already taken.' : error.message };
   return { success: true };
 }
 
-export async function login(username: string, password: string): Promise<{ success: boolean; error?: string }> {
-  const { error } = await supabase.auth.signInWithPassword({
-    email: toInternalEmail(username),
-    password,
-  });
+export async function login(usernameOrEmail: string, password: string): Promise<{ success: boolean; error?: string }> {
+  const email = usernameOrEmail.includes('@') ? usernameOrEmail.trim().toLowerCase() : toEmail(usernameOrEmail);
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) return { success: false, error: 'Invalid username or password.' };
+  return { success: true };
+}
+
+export async function checkUsernameAvailable(username: string): Promise<boolean> {
+  const email = toEmail(username);
+  const { error } = await supabase.auth.signInWithPassword({ email, password: '___invalid___' });
+  return error?.message?.includes('Invalid') ?? true;
+}
+
+export async function forgotPassword(email: string): Promise<{ success: boolean; error?: string }> {
+  const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
+    redirectTo: `${window.location.origin}?reset=true`,
+  });
+  if (error) return { success: false, error: error.message };
   return { success: true };
 }
 
@@ -57,15 +47,4 @@ export async function updatePassword(newPassword: string): Promise<{ success: bo
 
 export async function logout() {
   await supabase.auth.signOut();
-}
-
-export async function getSession(): Promise<AuthState> {
-  const { data } = await supabase.auth.getSession();
-  const session = data.session;
-  if (!session) return { isLoggedIn: false, username: null, email: null };
-  return {
-    isLoggedIn: true,
-    username: session.user.user_metadata?.username ?? null,
-    email: session.user.email ?? null,
-  };
 }

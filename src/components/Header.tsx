@@ -1,4 +1,4 @@
-import { Activity, Database, Sun, Moon, Monitor, LogIn, LogOut } from 'lucide-react';
+import { Activity, Database, Sun, Moon, Monitor, LogIn, LogOut, KeyRound } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 
@@ -7,9 +7,10 @@ interface HeaderProps {
   username?: string | null;
   onLoginClick?: () => void;
   onLogout?: () => void;
+  onChangePassword?: () => void;
 }
 
-export function Header({ isConnected = true, username, onLoginClick, onLogout }: HeaderProps) {
+export function Header({ isConnected = true, username, onLoginClick, onLogout, onChangePassword }: HeaderProps) {
   const { theme, setTheme } = useTheme();
   const nextTheme = () => {
     if (theme === 'dark') setTheme('light');
@@ -62,13 +63,12 @@ export function Header({ isConnected = true, username, onLoginClick, onLogout }:
             {username ? (
               <div className="flex items-center gap-2">
                 <span className="text-xs text-gray-400 hidden sm:inline">@{username}</span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={onLogout}
-                  title="Sign out"
-                  className="text-gray-500 hover:text-rose-400 hover:bg-gray-100 dark:hover:bg-gray-800 w-8 h-8"
-                >
+                <Button variant="ghost" size="icon" onClick={onChangePassword} title="Change password"
+                  className="text-gray-500 hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-800 w-8 h-8">
+                  <KeyRound className="w-4 h-4" />
+                </Button>
+                <Button variant="ghost" size="icon" onClick={onLogout} title="Sign out"
+                  className="text-gray-500 hover:text-rose-400 hover:bg-gray-100 dark:hover:bg-gray-800 w-8 h-8">
                   <LogOut className="w-4 h-4" />
                 </Button>
               </div>

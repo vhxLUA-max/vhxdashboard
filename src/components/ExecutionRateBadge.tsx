@@ -3,29 +3,28 @@ import { supabase } from '@/lib/supabase';
 import { Zap } from 'lucide-react';
 
 export function ExecutionRateBadge() {
-  const [rate, setRate] = useState<number>(0);
-  const prevCount = useRef<number | null>(null);
-  const prevTime = useRef<number>(Date.now());
+  const [rate, setRate]       = useState(0);
+  const prevCount             = useRef<number | null>(null);
+  const prevTime              = useRef(Date.now());
 
   useEffect(() => {
     const getTotal = async () => {
       const { data } = await supabase.from('game_executions').select('count');
-      return data ? data.reduce((s: number, e: { count: number }) => s + e.count, 0) : 0;
+      return data?.reduce((s: number, e: { count: number }) => s + e.count, 0) ?? 0;
     };
 
-    getTotal().then(total => { prevCount.current = total; });
+    getTotal().then(t => { prevCount.current = t; });
 
     const ch = supabase.channel('exec-rate')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'game_executions' }, async () => {
-        const now = Date.now();
+        const now   = Date.now();
         const total = await getTotal();
         if (prevCount.current !== null) {
-          const delta = total - prevCount.current;
           const elapsed = (now - prevTime.current) / 60000;
-          if (elapsed > 0) setRate(Math.round(delta / elapsed));
+          if (elapsed > 0) setRate(Math.round((total - prevCount.current) / elapsed));
         }
         prevCount.current = total;
-        prevTime.current = now;
+        prevTime.current  = now;
       })
       .subscribe();
 

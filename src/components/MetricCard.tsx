@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { LucideIcon } from 'lucide-react';
 
@@ -10,7 +11,7 @@ interface MetricCardProps {
   loading?: boolean;
 }
 
-export function MetricCard({ title, value, subtitle, icon: Icon, trend = 'neutral', loading = false }: MetricCardProps) {
+export const MetricCard = memo(function MetricCard({ title, value, subtitle, icon: Icon, trend = 'neutral', loading = false }: MetricCardProps) {
   if (loading) {
     return (
       <div className="bg-white dark:bg-gray-900 rounded-xl p-6 border border-gray-200 dark:border-gray-800">
@@ -49,3 +50,4 @@ export function MetricCard({ title, value, subtitle, icon: Icon, trend = 'neutra
     </div>
   );
 }
+);

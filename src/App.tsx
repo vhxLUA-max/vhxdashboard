@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, lazy, Suspense } from 'react';
 import { useSupabaseDashboard } from '@/hooks/useSupabaseDashboard';
 import { supabase } from '@/lib/supabase';
 import type { DateRange } from '@/types';
@@ -6,9 +6,6 @@ import { Header } from '@/components/Header';
 import { MetricCard } from '@/components/MetricCard';
 import { DateRangeFilter } from '@/components/DateRangeFilter';
 import { RecentActivityList } from '@/components/RecentActivityList';
-import { UserSearch } from '@/components/UserSearch';
-import { WebhookTab } from '@/components/WebhookTab';
-import { MyTokenPanel } from '@/components/MyTokenPanel';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -17,18 +14,23 @@ import { ExecutionsChart } from '@/components/ExecutionsChart';
 import { GameBreakdownChart } from '@/components/GameBreakdownChart';
 import { TopUsersLeaderboard } from '@/components/TopUsersLeaderboard';
 import { ExecutionRateBadge } from '@/components/ExecutionRateBadge';
-import { StatusTab } from '@/components/StatusTab';
-import { ChangelogTab } from '@/components/ChangelogTab';
-import { ScriptsTab } from '@/components/ScriptsTab';
-import { Activity, Users, Clock, RefreshCw, BarChart3, Gamepad2, Search, Webhook, Key, ShieldCheck, Megaphone, Code } from 'lucide-react';
+import { Activity, Users, Clock, RefreshCw, BarChart3, Gamepad2, Search, Webhook, Key, ShieldCheck, Megaphone, Code, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LoginModal } from '@/components/LoginModal';
 import { logout } from '@/lib/auth';
 
+const ChangePasswordModal = lazy(() => import('@/components/ChangePasswordModal').then(m => ({ default: m.ChangePasswordModal })));
+const UserSearch          = lazy(() => import('@/components/UserSearch').then(m => ({ default: m.UserSearch })));
+const WebhookTab       = lazy(() => import('@/components/WebhookTab').then(m => ({ default: m.WebhookTab })));
+const MyTokenPanel     = lazy(() => import('@/components/MyTokenPanel').then(m => ({ default: m.MyTokenPanel })));
+const ScriptsTab       = lazy(() => import('@/components/ScriptsTab').then(m => ({ default: m.ScriptsTab })));
+const StatusTab        = lazy(() => import('@/components/StatusTab').then(m => ({ default: m.StatusTab })));
+const ChangelogTab     = lazy(() => import('@/components/ChangelogTab').then(m => ({ default: m.ChangelogTab })));
+
 function timeAgo(iso: string): string {
   const diff = (Date.now() - new Date(iso).getTime()) / 1000;
-  if (diff < 60) return `${Math.floor(diff)}s ago`;
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 60)    return `${Math.floor(diff)}s ago`;
+  if (diff < 3600)  return `${Math.floor(diff / 60)}m ago`;
   if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
   return `${Math.floor(diff / 86400)}d ago`;
 }
@@ -36,16 +38,15 @@ function timeAgo(iso: string): string {
 function useLiveCounter() {
   const [count, setCount] = useState<number | null>(null);
   useEffect(() => {
-    const fetchCount = async () => {
+    const fetch = async () => {
       const { data } = await supabase.from('game_executions').select('count');
       if (data) setCount(data.reduce((s: number, e: { count: number }) => s + e.count, 0));
     };
-    fetchCount();
-    const channel = supabase
-      .channel('live-executions')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'game_executions' }, fetchCount)
+    fetch();
+    const ch = supabase.channel('live-executions')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'game_executions' }, fetch)
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    return () => { supabase.removeChannel(ch); };
   }, []);
   return count;
 }
@@ -60,17 +61,24 @@ const TABS = [
   { id: 'scripts',   label: 'Scripts',   icon: Code        },
   { id: 'status',    label: 'Status',    icon: ShieldCheck },
   { id: 'changelog', label: 'Changelog', icon: Megaphone   },
-] as { id: SidebarTab; label: string; icon: React.ElementType }[];
+] as const;
+
+const TabFallback = () => (
+  <div className="flex items-center justify-center py-16">
+    <Loader2 className="w-5 h-5 text-gray-500 animate-spin" />
+  </div>
+);
 
 function App() {
-  const [dateRange, setDateRange]     = useState<DateRange>('24h');
-  const [activeTab, setActiveTab]     = useState<SidebarTab>('stats');
+  const [dateRange, setDateRange]         = useState<DateRange>('24h');
+  const [activeTab, setActiveTab]         = useState<SidebarTab>('stats');
   const [adminUsername, setAdminUsername] = useState<string | null>(null);
-  const [showLogin, setShowLogin]     = useState(false);
+  const [showLogin, setShowLogin]         = useState(false);
+  const [showChangePw, setShowChangePw]   = useState(false);
   const { data, loading, error, refresh } = useSupabaseDashboard(dateRange);
   const handleRefresh = useCallback(() => refresh(), [refresh]);
-  const connected = isConfigured();
-  const liveCount = useLiveCounter();
+  const connected     = isConfigured();
+  const liveCount     = useLiveCounter();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -79,17 +87,35 @@ function App() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
       setAdminUsername(session?.user?.user_metadata?.username ?? null);
     });
+    if (new URLSearchParams(window.location.search).get('reset') === 'true') {
+      setShowChangePw(true);
+      window.history.replaceState({}, '', window.location.pathname);
+    }
     return () => subscription.unsubscribe();
   }, []);
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950 text-gray-900 dark:text-white flex flex-col">
-      <Header isConnected={connected} username={adminUsername} onLoginClick={() => setShowLogin(true)} onLogout={async () => { await logout(); setAdminUsername(null); }} />
-      {showLogin && <LoginModal onSuccess={() => setShowLogin(false)} onClose={() => setShowLogin(false)} />}
+      <Header
+        isConnected={connected}
+        username={adminUsername}
+        onLoginClick={() => setShowLogin(true)}
+        onLogout={async () => { await logout(); setAdminUsername(null); }}
+        onChangePassword={() => setShowChangePw(true)}
+      />
+
+      {showLogin && (
+        <LoginModal onSuccess={() => setShowLogin(false)} onClose={() => setShowLogin(false)} />
+      )}
+
+      {showChangePw && adminUsername && (
+        <Suspense fallback={null}>
+          <ChangePasswordModal username={adminUsername} onClose={() => setShowChangePw(false)} />
+        </Suspense>
+      )}
 
       <div className="flex flex-1">
-        {/* Left nav sidebar */}
-        <aside className="hidden lg:flex flex-col gap-1 w-20 shrink-0 border-r border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 px-2 py-6 sticky top-16 h-[calc(100vh-4rem)]">
+        <aside className="hidden lg:flex flex-col gap-1 w-20 shrink-0 border-r border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 px-2 py-6 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto">
           {TABS.map(tab => (
             <button
               key={tab.id}
@@ -109,6 +135,7 @@ function App() {
 
         <div className="flex-1 min-w-0">
           <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
+
             {activeTab === 'stats' && (
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
                 <div>
@@ -124,31 +151,20 @@ function App() {
                   )}
                   <ExecutionRateBadge />
                   <DateRangeFilter value={dateRange} onChange={setDateRange} />
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={handleRefresh}
-                    disabled={loading}
-                    className="border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-                  >
+                  <Button variant="outline" size="icon" onClick={handleRefresh} disabled={loading}
+                    className="border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800">
                     <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
                   </Button>
                 </div>
               </div>
             )}
 
-            {/* Mobile tab bar */}
             <div className="flex lg:hidden gap-1 bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-1 mb-6 overflow-x-auto">
               {TABS.map(tab => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
+                <button key={tab.id} onClick={() => setActiveTab(tab.id)}
                   className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${
-                    activeTab === tab.id
-                      ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm'
-                      : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
-                  }`}
-                >
+                    activeTab === tab.id ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                  }`}>
                   <tab.icon className="w-3.5 h-3.5" />
                   {tab.label}
                 </button>
@@ -156,9 +172,7 @@ function App() {
             </div>
 
             {error && !loading && (
-              <div className="mb-8">
-                <ErrorState message={error.message} onRetry={handleRefresh} />
-              </div>
+              <div className="mb-8"><ErrorState message={error.message} onRetry={handleRefresh} /></div>
             )}
 
             {!error && (
@@ -171,17 +185,16 @@ function App() {
                   <div className="space-y-8">
                     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
                       <MetricCard title="Total Executions" value={data?.totalExecutions.toLocaleString() ?? '-'} subtitle={`In last ${dateRange}`} icon={Activity} loading={loading} />
-                      <MetricCard title="Unique Users" value={data?.uniqueUsers.toLocaleString() ?? '-'} subtitle={`Active in last ${dateRange}`} icon={Users} loading={loading} />
-                      <MetricCard title="Active Scripts" value="3" subtitle="Deployed scripts" icon={Gamepad2} loading={loading} />
-                      <MetricCard title="Last Execution" value={data?.lastExecutedAt ? timeAgo(data.lastExecutedAt) : '-'} subtitle="Most recent activity" icon={Clock} loading={loading} />
+                      <MetricCard title="Unique Users"     value={data?.uniqueUsers.toLocaleString() ?? '-'}     subtitle={`Active in last ${dateRange}`} icon={Users} loading={loading} />
+                      <MetricCard title="Active Scripts"   value="3"                                             subtitle="Deployed scripts" icon={Gamepad2} loading={loading} />
+                      <MetricCard title="Last Execution"   value={data?.lastExecutedAt ? timeAgo(data.lastExecutedAt) : '-'} subtitle="Most recent activity" icon={Clock} loading={loading} />
                     </div>
 
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-4">
-                        <Gamepad2 className="w-5 h-5 text-indigo-400" />
-                        Supported Games
+                        <Gamepad2 className="w-5 h-5 text-indigo-400" /> Supported Games
                       </h3>
-                      {!loading && data && data.recentExecutions.length === 0
+                      {!loading && data?.recentExecutions.length === 0
                         ? <EmptyState />
                         : <RecentActivityList executions={data?.recentExecutions ?? []} loading={loading} />
                       }
@@ -196,12 +209,14 @@ function App() {
                   </div>
                 )}
 
-                {activeTab === 'search'    && <UserSearch />}
-                {activeTab === 'webhook'   && <WebhookTab />}
-                {activeTab === 'token'     && <MyTokenPanel />}
-                {activeTab === 'scripts'   && <ScriptsTab />}
-                {activeTab === 'status'    && <StatusTab executions={data?.recentExecutions ?? []} />}
-                {activeTab === 'changelog' && <ChangelogTab />}
+                <Suspense fallback={<TabFallback />}>
+                  {activeTab === 'search'    && <UserSearch />}
+                  {activeTab === 'webhook'   && <WebhookTab />}
+                  {activeTab === 'token'     && <MyTokenPanel />}
+                  {activeTab === 'scripts'   && <ScriptsTab />}
+                  {activeTab === 'status'    && <StatusTab executions={data?.recentExecutions ?? []} />}
+                  {activeTab === 'changelog' && <ChangelogTab />}
+                </Suspense>
               </ErrorBoundary>
             )}
           </main>
