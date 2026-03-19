@@ -39,8 +39,11 @@ import { AnnouncementBanner } from '@/components/AnnouncementBanner';
 
 function timeAgo(iso: string): string {
   const diff = (Date.now() - new Date(iso).getTime()) / 1000;
-  if (diff < 60)    return `${Math.floor(diff)}s ago`;
-  if (diff < 3600)  return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 3600) {
+    const m = Math.floor(diff / 60);
+    const s = Math.floor(diff % 60);
+    return m > 0 ? `${m}m ${s}s ago` : `${s}s ago`;
+  }
   if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
   return `${Math.floor(diff / 86400)}d ago`;
 }
@@ -149,6 +152,16 @@ function useLiveLastExecution() {
   return useLiveTimeAgo(iso);
 }
 
+const ADMIN_USERNAMES = ['vhxlua-max', 'vhxlua'];
+
+async function checkIsAdmin(userId: string, username: string | null): Promise<boolean> {
+  try {
+    const { data } = await supabase.from('admins').select('user_id').eq('user_id', userId).maybeSingle();
+    if (data) return true;
+  } catch { /* fall through */ }
+  return ADMIN_USERNAMES.includes(username?.toLowerCase() ?? '');
+}
+
 type SidebarTab = 'stats' | 'search' | 'webhook' | 'token' | 'scripts' | 'themes' | 'feedback' | 'status' | 'changelog' | 'admin';
 
 const TABS = [
@@ -201,25 +214,21 @@ function App() {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
-        const u = session.user?.user_metadata?.username ?? null;
+        const u  = session.user?.user_metadata?.username ?? null;
         const av = session.user?.user_metadata?.avatar_url ?? null;
         setAdminUsername(u);
         setAvatarUrl(av);
-        if (session.user) {
-          supabase.from('admins').select('user_id').eq('user_id', session.user.id).maybeSingle()
-            .then(({ data }) => setIsAdmin(!!data));
-        }
+        checkIsAdmin(session.user.id, u).then(setIsAdmin);
       }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
-      const u = session?.user?.user_metadata?.username ?? null;
+      const u  = session?.user?.user_metadata?.username ?? null;
       const av = session?.user?.user_metadata?.avatar_url ?? null;
       setAdminUsername(u);
       setAvatarUrl(av);
       if (session?.user) {
-        supabase.from('admins').select('user_id').eq('user_id', session.user.id).maybeSingle()
-          .then(({ data }) => setIsAdmin(!!data));
+        checkIsAdmin(session.user.id, u).then(setIsAdmin);
       } else {
         setIsAdmin(false);
       }
