@@ -120,3 +120,64 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 .tab-animate { animation: tab-in 0.18s ease-out both; }
+
+/* ── Global background overrides — makes ALL Tailwind gray classes theme-aware ── */
+.bg-white,
+.dark .bg-white { background-color: var(--color-surface) !important; }
+
+.bg-gray-50,
+.dark .bg-gray-50 { background-color: var(--color-surface) !important; }
+
+.bg-gray-100,
+.dark .bg-gray-100 { background-color: var(--color-surface2) !important; }
+
+.bg-gray-800,
+.dark .bg-gray-800 { background-color: var(--color-surface2) !important; }
+
+.bg-gray-900,
+.dark .bg-gray-900 { background-color: var(--color-surface) !important; }
+
+.bg-gray-950,
+.dark .bg-gray-950 { background-color: var(--color-bg) !important; }
+
+/* Text colors */
+.text-white,
+.dark .text-white { color: var(--color-text) !important; }
+
+.text-gray-900,
+.dark .text-gray-900 { color: var(--color-text) !important; }
+
+.text-gray-300,
+.dark .text-gray-300 { color: var(--color-muted) !important; }
+
+.text-gray-400,
+.dark .text-gray-400 { color: var(--color-muted) !important; }
+
+.text-gray-500,
+.dark .text-gray-500 { color: var(--color-muted) !important; }
+
+/* Border colors */
+.border-gray-700,
+.dark .border-gray-700 { border-color: var(--color-border) !important; }
+
+.border-gray-800,
+.dark .border-gray-800 { border-color: var(--color-border) !important; }
+
+.border-gray-200,
+.dark .border-gray-200 { border-color: var(--color-border) !important; }
+
+/* Hover states */
+.hover\:bg-gray-800:hover,
+.dark .hover\:bg-gray-800:hover { background-color: var(--color-surface2) !important; }
+
+.hover\:bg-white:hover,
+.dark .hover\:bg-white:hover { background-color: var(--color-surface) !important; }
+
+.dark\:hover\:bg-gray-800\/60:hover { background-color: color-mix(in srgb, var(--color-surface2) 60%, transparent) !important; }
+
+/* Header sticky background */
+.bg-white\/80,
+.dark .bg-gray-950\/80 { background-color: color-mix(in srgb, var(--color-bg) 85%, transparent) !important; backdrop-filter: blur(12px); }
+
+/* Root background */
+html, body { background-color: var(--color-bg) !important; color: var(--color-text) !important; }
