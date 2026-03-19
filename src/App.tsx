@@ -56,6 +56,7 @@ function useLiveTimeAgo(iso: string | null | undefined): string {
   return display;
 }
 
+// All-time total executions (live)
 function useLiveCounter() {
   const [count, setCount] = useState<number | null>(null);
   useEffect(() => {
@@ -64,7 +65,7 @@ function useLiveCounter() {
       if (data) setCount(data.reduce((s: number, e: { count: number }) => s + (e.count ?? 0), 0));
     };
     fetch();
-    const ch = supabase.channel('live-executions')
+    const ch = supabase.channel('live-total')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'game_executions' }, fetch)
       .subscribe();
     return () => { supabase.removeChannel(ch); };
@@ -72,24 +73,80 @@ function useLiveCounter() {
   return count;
 }
 
+// Today's executions (live, resets at midnight)
 function useLive24h() {
   const [count, setCount] = useState<number | null>(null);
   useEffect(() => {
     const fetch = async () => {
       const { data } = await supabase.from('game_executions').select('daily_count,daily_reset_at');
-      if (data) {
-        const today = new Date().toISOString().slice(0, 10);
-        setCount(data.reduce((s: number, e: { daily_count?: number; daily_reset_at?: string }) =>
-          s + (e.daily_reset_at === today ? (e.daily_count ?? 0) : 0), 0));
-      }
+      if (!data) return;
+      const today = new Date().toISOString().slice(0, 10);
+      setCount(data.reduce((s: number, e: { daily_count?: number; daily_reset_at?: string }) =>
+        s + (e.daily_reset_at?.slice(0, 10) === today ? (e.daily_count ?? 0) : 0), 0));
     };
     fetch();
+    const poll = setInterval(fetch, 15000);
     const ch = supabase.channel('live-24h')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'game_executions' }, fetch)
+      .subscribe();
+    return () => { clearInterval(poll); supabase.removeChannel(ch); };
+  }, []);
+  return count;
+}
+
+// Active unique users in last 24h (live)
+function useLiveUniqueUsers() {
+  const [count, setCount] = useState<number | null>(null);
+  useEffect(() => {
+    const fetch = async () => {
+      const since = new Date(Date.now() - 86400000).toISOString();
+      const { data } = await supabase.from('unique_users').select('roblox_user_id').gte('last_seen', since);
+      if (data) setCount(new Set(data.map((u: { roblox_user_id: number }) => u.roblox_user_id)).size);
+    };
+    fetch();
+    const poll = setInterval(fetch, 30000);
+    const ch = supabase.channel('live-users')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'unique_users' }, fetch)
+      .subscribe();
+    return () => { clearInterval(poll); supabase.removeChannel(ch); };
+  }, []);
+  return count;
+}
+
+// New users today (first_seen today, live)
+function useLiveNewUsers() {
+  const [count, setCount] = useState<number | null>(null);
+  useEffect(() => {
+    const fetch = async () => {
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      const { data } = await supabase.from('unique_users').select('roblox_user_id').gte('first_seen', today.toISOString());
+      if (data) setCount(new Set(data.map((u: { roblox_user_id: number }) => u.roblox_user_id)).size);
+    };
+    fetch();
+    const poll = setInterval(fetch, 60000);
+    const ch = supabase.channel('live-new-users')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'unique_users' }, fetch)
+      .subscribe();
+    return () => { clearInterval(poll); supabase.removeChannel(ch); };
+  }, []);
+  return count;
+}
+
+// Most recent execution timestamp (live)
+function useLiveLastExecution() {
+  const [iso, setIso] = useState<string | null>(null);
+  useEffect(() => {
+    const fetch = async () => {
+      const { data } = await supabase.from('game_executions').select('last_executed_at').order('last_executed_at', { ascending: false }).limit(1);
+      if (data?.[0]) setIso(data[0].last_executed_at);
+    };
+    fetch();
+    const ch = supabase.channel('live-last-exec')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'game_executions' }, fetch)
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, []);
-  return count;
+  return useLiveTimeAgo(iso);
 }
 
 type SidebarTab = 'stats' | 'search' | 'webhook' | 'token' | 'scripts' | 'themes' | 'feedback' | 'status' | 'changelog' | 'admin';
@@ -125,9 +182,11 @@ function App() {
   const handleRefresh = useCallback(() => refresh(), [refresh]);
   const visibleTabs = TABS.filter(t => t.id !== 'admin' || isAdmin);
   const connected     = isConfigured();
-  const liveCount     = useLiveCounter();
-  const live24h       = useLive24h();
-  const lastExecution = useLiveTimeAgo(data?.lastExecutedAt);
+  const liveCount      = useLiveCounter();
+  const live24h        = useLive24h();
+  const liveUsers      = useLiveUniqueUsers();
+  const liveNewUsers   = useLiveNewUsers();
+  const lastExecution  = useLiveLastExecution();
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -282,10 +341,10 @@ function App() {
                 {activeTab === 'stats' && (
                   <div key="stats" className="tab-animate space-y-8">
                     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-                      <MetricCard title="Total Executions" value={(dateRange === '24h' ? live24h : data?.totalExecutions)?.toLocaleString() ?? '-'} subtitle={`In last ${dateRange}`} icon={Activity} loading={loading} />
-                      <MetricCard title="Unique Users"     value={data?.uniqueUsers.toLocaleString() ?? '-'}     subtitle={`Active in last ${dateRange}`} icon={Users} loading={loading} />
-                      <MetricCard title="New Users Today"  value={data?.newUsersToday.toLocaleString() ?? '-'}   subtitle="First seen today" icon={Users} loading={loading} />
-                      <MetricCard title="Last Execution"   value={lastExecution} subtitle="Most recent activity" icon={Clock} loading={loading} />
+                      <MetricCard title="Total Executions" value={(dateRange === '24h' ? live24h : liveCount)?.toLocaleString() ?? '-'} subtitle={dateRange === '24h' ? 'Today' : `In last ${dateRange}`} icon={Activity} loading={false} />
+                      <MetricCard title="Unique Users"     value={liveUsers?.toLocaleString() ?? '-'}     subtitle="Active in last 24h" icon={Users} loading={false} />
+                      <MetricCard title="New Users Today"  value={liveNewUsers?.toLocaleString() ?? '-'}  subtitle="First seen today" icon={Users} loading={false} />
+                      <MetricCard title="Last Execution"   value={lastExecution} subtitle="Most recent activity" icon={Clock} loading={false} />
                     </div>
 
                     <div>

@@ -3,38 +3,55 @@ import { supabase } from '@/lib/supabase';
 import { Zap } from 'lucide-react';
 
 export function ExecutionRateBadge() {
-  const [rate, setRate]       = useState(0);
-  const prevCount             = useRef<number | null>(null);
-  const prevTime              = useRef(Date.now());
+  const [rate, setRate] = useState<number | null>(null);
+  const history         = useRef<{ count: number; time: number }[]>([]);
+  const WINDOW_MS       = 5 * 60 * 1000; // 5-min rolling window
+
+  const getTotal = async () => {
+    const { data } = await supabase.from('game_executions').select('count');
+    return data?.reduce((s: number, e: { count: number }) => s + (e.count ?? 0), 0) ?? 0;
+  };
+
+  const recalcRate = (currentCount: number) => {
+    const now  = Date.now();
+    const snap = { count: currentCount, time: now };
+    history.current.push(snap);
+    // Keep only last 5 minutes
+    history.current = history.current.filter(h => now - h.time <= WINDOW_MS);
+    if (history.current.length < 2) return;
+    const oldest  = history.current[0];
+    const elapsed = (now - oldest.time) / 60000;
+    if (elapsed > 0) setRate(Math.round((currentCount - oldest.count) / elapsed));
+  };
 
   useEffect(() => {
-    const getTotal = async () => {
-      const { data } = await supabase.from('game_executions').select('count');
-      return data?.reduce((s: number, e: { count: number }) => s + e.count, 0) ?? 0;
-    };
+    // Seed initial count
+    getTotal().then(t => { history.current = [{ count: t, time: Date.now() }]; setRate(0); });
 
-    getTotal().then(t => { prevCount.current = t; });
+    // Poll every 10s for smoother rate
+    const poll = setInterval(async () => {
+      const t = await getTotal();
+      recalcRate(t);
+    }, 10000);
 
+    // Also update instantly on realtime event
     const ch = supabase.channel('exec-rate')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'game_executions' }, async () => {
-        const now   = Date.now();
-        const total = await getTotal();
-        if (prevCount.current !== null) {
-          const elapsed = (now - prevTime.current) / 60000;
-          if (elapsed > 0) setRate(Math.round((total - prevCount.current) / elapsed));
-        }
-        prevCount.current = total;
-        prevTime.current  = now;
+        const t = await getTotal();
+        recalcRate(t);
       })
       .subscribe();
 
-    return () => { supabase.removeChannel(ch); };
+    return () => { clearInterval(poll); supabase.removeChannel(ch); };
   }, []);
 
   return (
-    <div className="flex items-center gap-2 px-3 py-1.5 bg-violet-500/10 border border-violet-500/20 rounded-lg">
-      <Zap className="w-3.5 h-3.5 text-violet-400" />
-      <span className="text-xs font-medium text-violet-400">{rate}/min</span>
+    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border"
+      style={{ backgroundColor: 'color-mix(in srgb, var(--color-accent) 10%, transparent)', borderColor: 'color-mix(in srgb, var(--color-accent) 25%, transparent)' }}>
+      <Zap className="w-3.5 h-3.5" style={{ color: 'var(--color-accent)' }} />
+      <span className="text-xs font-medium" style={{ color: 'var(--color-accent)' }}>
+        {rate === null ? '...' : `${rate}/min`}
+      </span>
     </div>
   );
 }
