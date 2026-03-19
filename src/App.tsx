@@ -223,7 +223,7 @@ function App() {
     const onTouchStart = (e: TouchEvent) => { startX = e.touches[0].clientX; };
     const onTouchEnd = (e: TouchEvent) => {
       const diff = startX - e.changedTouches[0].clientX;
-      if (Math.abs(diff) < 60) return;
+      if (Math.abs(diff) < 120) return;
       const idx = visibleTabs.findIndex(t => t.id === activeTab);
       if (diff > 0 && idx < visibleTabs.length - 1) switchTab(visibleTabs[idx + 1].id);
       else if (diff < 0 && idx > 0) switchTab(visibleTabs[idx - 1].id);
