@@ -15,7 +15,7 @@ import { GameBreakdownChart } from '@/components/GameBreakdownChart';
 import { ExecutionHeatmap } from '@/components/ExecutionHeatmap';
 import { TopUsersLeaderboard } from '@/components/TopUsersLeaderboard';
 import { ExecutionRateBadge } from '@/components/ExecutionRateBadge';
-import { Activity, Users, Clock, RefreshCw, BarChart3, Gamepad2, Search, Webhook, Key, ShieldCheck, Megaphone, Code, Loader2, Palette, Shield } from 'lucide-react';
+import { Activity, Users, Clock, RefreshCw, BarChart3, Gamepad2, Search, Webhook, Key, ShieldCheck, Megaphone, Code, Loader2, Palette, Shield, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LoginModal } from '@/components/LoginModal';
 import { logout } from '@/lib/auth';
@@ -30,6 +30,7 @@ const ThemeManager     = lazy(() => import('@/components/ThemeManager').then(m =
 const StatusTab        = lazy(() => import('@/components/StatusTab').then(m => ({ default: m.StatusTab })));
 const ChangelogTab     = lazy(() => import('@/components/ChangelogTab').then(m => ({ default: m.ChangelogTab })));
 const AdminPanel       = lazy(() => import('@/components/AdminPanel').then(m => ({ default: m.AdminPanel })));
+const FeedbackTab      = lazy(() => import('@/components/FeedbackTab').then(m => ({ default: m.FeedbackTab })));
 import { AnnouncementBanner } from '@/components/AnnouncementBanner';
 
 function timeAgo(iso: string): string {
@@ -56,20 +57,21 @@ function useLiveCounter() {
   return count;
 }
 
-type SidebarTab = 'stats' | 'search' | 'webhook' | 'token' | 'scripts' | 'status' | 'changelog' | 'themes' | 'admin';
+type SidebarTab = 'stats' | 'search' | 'webhook' | 'token' | 'scripts' | 'themes' | 'feedback' | 'status' | 'changelog' | 'admin';
 
 const ADMIN_USERS = ['vhxlua-max', 'vhxlua'];
 
 const TABS = [
-  { id: 'stats',     label: 'Stats',     icon: BarChart3   },
-  { id: 'search',    label: 'Search',    icon: Search      },
-  { id: 'webhook',   label: 'Webhook',   icon: Webhook     },
-  { id: 'token',     label: 'Token',     icon: Key         },
-  { id: 'scripts',   label: 'Scripts',   icon: Code        },
-  { id: 'themes',    label: 'Themes',    icon: Palette     },
-  { id: 'status',    label: 'Status',    icon: ShieldCheck },
-  { id: 'changelog', label: 'Changelog', icon: Megaphone   },
-  { id: 'admin',     label: 'Admin',     icon: Shield      },
+  { id: 'stats',     label: 'Stats',     icon: BarChart3    },
+  { id: 'search',    label: 'Search',    icon: Search       },
+  { id: 'webhook',   label: 'Webhook',   icon: Webhook      },
+  { id: 'token',     label: 'Token',     icon: Key          },
+  { id: 'scripts',   label: 'Scripts',   icon: Code         },
+  { id: 'themes',    label: 'Themes',    icon: Palette      },
+  { id: 'feedback',  label: 'Feedback',  icon: MessageSquare},
+  { id: 'status',    label: 'Status',    icon: ShieldCheck  },
+  { id: 'changelog', label: 'Changelog', icon: Megaphone    },
+  { id: 'admin',     label: 'Admin',     icon: Shield       },
 ] as const;
 
 const TabFallback = () => (
@@ -258,6 +260,7 @@ function App() {
                     {activeTab === 'token'     && <MyTokenPanel />}
                     {activeTab === 'scripts'   && <ScriptsTab />}
                     {activeTab === 'themes'    && <ThemeManager />}
+                    {activeTab === 'feedback'  && <FeedbackTab />}
                     {activeTab === 'status'    && <StatusTab executions={data?.recentExecutions ?? []} />}
                     {activeTab === 'changelog' && <ChangelogTab />}
                     {activeTab === 'admin'     && <AdminPanel />}
