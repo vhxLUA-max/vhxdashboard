@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { MessageSquare, Bug, Lightbulb, Star, Send, Loader2, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { supabase } from '@/lib/supabase';
 
 type FeedbackType = 'bug' | 'suggestion' | 'praise' | 'other';
 
@@ -19,13 +20,13 @@ export function FeedbackTab() {
   const [hover, setHover]     = useState(0);
   const [loading, setLoading] = useState(false);
   const [sent, setSent]       = useState(false);
+  const [username, setUsername] = useState<string | null>(null);
 
-  const username = (() => {
-    try {
-      const s = sessionStorage.getItem('vhx_session');
-      return s ? JSON.parse(s).username : null;
-    } catch { return null; }
-  })();
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUsername(session?.user?.user_metadata?.username ?? null);
+    });
+  }, []);
 
   const handleSubmit = async () => {
     if (!message.trim()) { toast.error('Please write a message'); return; }

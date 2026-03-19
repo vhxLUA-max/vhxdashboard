@@ -103,26 +103,28 @@ function App() {
   }, []);
 
   useEffect(() => {
+    // Immediately read existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) setAdminUsername(session.user?.user_metadata?.username ?? null);
+    });
+
+    // Then keep in sync with auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
       setAdminUsername(session?.user?.user_metadata?.username ?? null);
       if (session?.expires_at) {
         const msLeft = session.expires_at * 1000 - Date.now();
         const warnAt = msLeft - 5 * 60 * 1000;
-        if (warnAt > 0) {
-          const t = setTimeout(() => {
-            toast.warning('Your session expires in 5 minutes. Save your work.', { duration: 10000 });
-          }, warnAt);
-          return () => clearTimeout(t);
-        }
+        if (warnAt > 0) setTimeout(() => {
+          toast.warning('Your session expires in 5 minutes.', { duration: 10000 });
+        }, warnAt);
       }
     });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
-      setAdminUsername(session?.user?.user_metadata?.username ?? null);
-    });
+
     if (new URLSearchParams(window.location.search).get('reset') === 'true') {
       setShowChangePw(true);
       window.history.replaceState({}, '', window.location.pathname);
     }
+
     return () => subscription.unsubscribe();
   }, []);
 
