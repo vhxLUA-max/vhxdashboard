@@ -8,8 +8,10 @@ export default async function handler(req, res) {
 
   const { path, method = 'GET', body } = req.body;
 
-  const domain = path.startsWith('/v1/users/avatar')
+  const domain = path.startsWith('/v1/games/icons') || path.startsWith('/v1/games/thumbnails')
     ? 'https://thumbnails.roblox.com'
+    : path.startsWith('/universes/')
+    ? 'https://apis.roblox.com'
     : 'https://users.roblox.com';
 
   try {
