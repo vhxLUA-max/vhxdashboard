@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Copy, Check, Loader2, Gamepad2, Users, ThumbsUp, Star, ExternalLink, ArrowLeft } from 'lucide-react';
+import { Copy, Check, Loader2, Gamepad2, Users, ThumbsUp, Star, ExternalLink, ArrowLeft, Play } from 'lucide-react';
 
 const LOADER = `loadstring(game:HttpGet("https://raw.githubusercontent.com/vhxLUA-max/vhxframeworks/refs/heads/main/main.lua"))()`;
 const UNC_LOADER = `loadstring(game:HttpGet("https://raw.githubusercontent.com/vhxLUA-max/vhxframeworks/refs/heads/main/unctester"))()`;
@@ -140,17 +140,27 @@ function GameDetailPanel({ info, placeId, loader, onBack }: { info: GameInfo; pl
             <p className="text-xs text-gray-500 leading-relaxed line-clamp-4">{info.description}</p>
           ) : null}
 
-          <button
-            onClick={copy}
-            className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all border ${
-              copied
-                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
-                : 'bg-indigo-600 hover:bg-indigo-500 border-indigo-600 text-white'
-            }`}
-          >
-            {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-            {copied ? 'Copied!' : 'Copy Script'}
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={copy}
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all border ${
+                copied
+                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                  : 'bg-indigo-600 hover:bg-indigo-500 border-indigo-600 text-white'
+              }`}
+            >
+              {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+              {copied ? 'Copied!' : 'Copy Script'}
+            </button>
+            <a
+              href={`https://www.roblox.com/games/${placeId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:border-emerald-500/40 hover:text-emerald-400 transition-all"
+            >
+              <Play className="w-4 h-4" /> Play
+            </a>
+          </div>
         </div>
       </div>
     </div>

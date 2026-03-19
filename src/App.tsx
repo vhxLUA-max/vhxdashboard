@@ -109,31 +109,33 @@ function App() {
 
         <div className="flex-1 min-w-0">
           <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Dashboard Overview</h2>
-                <p className="text-sm text-gray-500 mt-1">Monitor your execution metrics and performance</p>
+            {activeTab === 'stats' && (
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Dashboard Overview</h2>
+                  <p className="text-sm text-gray-500 mt-1">Monitor your execution metrics and performance</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  {liveCount !== null && (
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      <span className="text-xs font-medium text-emerald-400">{liveCount.toLocaleString()} live</span>
+                    </div>
+                  )}
+                  <ExecutionRateBadge />
+                  <DateRangeFilter value={dateRange} onChange={setDateRange} />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={handleRefresh}
+                    disabled={loading}
+                    className="border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                  </Button>
+                </div>
               </div>
-              <div className="flex items-center gap-3">
-                {liveCount !== null && (
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    <span className="text-xs font-medium text-emerald-400">{liveCount.toLocaleString()} live</span>
-                  </div>
-                )}
-                <ExecutionRateBadge />
-                <DateRangeFilter value={dateRange} onChange={setDateRange} />
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={handleRefresh}
-                  disabled={loading}
-                  className="border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-                >
-                  <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                </Button>
-              </div>
-            </div>
+            )}
 
             {/* Mobile tab bar */}
             <div className="flex lg:hidden gap-1 bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-1 mb-6 overflow-x-auto">
