@@ -28,8 +28,8 @@ export function Header({ isConnected = true, username, onLoginClick, onLogout, o
               <Activity className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-lg font-semibold text-gray-900 dark:text-white">Execution Analytics</h1>
-              <p className="text-xs text-gray-500">Real-time monitoring dashboard</p>
+              <h1 className="text-lg font-semibold text-gray-900 dark:text-white">vhxLUA Hub</h1>
+              <p className="text-xs text-gray-500">Scripts · Analytics · Tools</p>
             </div>
           </div>
 
