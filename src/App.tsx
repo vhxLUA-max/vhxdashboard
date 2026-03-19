@@ -13,7 +13,6 @@ import { LiveRecentActivity } from '@/components/LiveRecentActivity';
 import { LiveCharts } from '@/components/LiveCharts';
 import { ExecutionHeatmap } from '@/components/ExecutionHeatmap';
 import { RatingsPanel } from '@/components/RatingsPanel';
-import { TopUsersLeaderboard } from '@/components/TopUsersLeaderboard';
 import { ExecutionRateBadge } from '@/components/ExecutionRateBadge';
 import { Activity, Users, Clock, RefreshCw, BarChart3, Gamepad2, Search, Webhook, Key, ShieldCheck, Megaphone, Code, Loader2, Palette, Shield, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -390,7 +389,6 @@ function App() {
                       <RatingsPanel />
                     </div>
 
-                    <TopUsersLeaderboard />
                   </div>
                 )}
 
