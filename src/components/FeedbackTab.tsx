@@ -22,11 +22,13 @@ export function FeedbackTab() {
   const [sent, setSent]       = useState(false);
   const [username, setUsername]   = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [userId, setUserId]       = useState<string | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUsername(session?.user?.user_metadata?.username ?? null);
       setAvatarUrl(session?.user?.user_metadata?.avatar_url ?? null);
+      setUserId(session?.user?.id ?? null);
     });
   }, []);
 
@@ -39,7 +41,7 @@ export function FeedbackTab() {
       const res = await fetch('/api/feedback', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type, message: message.trim(), username, rating: rating || null, avatarUrl }),
+        body: JSON.stringify({ type, message: message.trim(), username, rating: rating || null, avatarUrl, userId }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'Failed to send');

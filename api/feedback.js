@@ -19,9 +19,31 @@ export default async function handler(req, res) {
   }
   RATE_LIMIT.set(ip, now);
 
-  const { type, message, username, rating, avatarUrl } = req.body ?? {};
+  const { type, message, username, rating, avatarUrl, userId } = req.body ?? {};
   if (!message?.trim()) return res.status(400).json({ error: 'Message is required.' });
   if (message.length > 1000) return res.status(400).json({ error: 'Message too long.' });
+
+  // Save to Supabase
+  const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+  const SUPABASE_KEY = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+  if (SUPABASE_URL && SUPABASE_KEY) {
+    await fetch(`${SUPABASE_URL}/rest/v1/feedback`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal',
+      },
+      body: JSON.stringify({
+        user_id: userId ?? null,
+        username: username ?? null,
+        type: type ?? 'other',
+        message: message.trim(),
+        rating: rating ?? null,
+      }),
+    }).catch(() => {});
+  }
 
   const t = type ?? 'other';
 

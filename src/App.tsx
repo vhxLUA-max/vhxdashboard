@@ -13,6 +13,7 @@ import { isConfigured } from '@/lib/supabase';
 import { ExecutionsChart } from '@/components/ExecutionsChart';
 import { GameBreakdownChart } from '@/components/GameBreakdownChart';
 import { ExecutionHeatmap } from '@/components/ExecutionHeatmap';
+import { RatingsPanel } from '@/components/RatingsPanel';
 import { TopUsersLeaderboard } from '@/components/TopUsersLeaderboard';
 import { ExecutionRateBadge } from '@/components/ExecutionRateBadge';
 import { Activity, Users, Clock, RefreshCw, BarChart3, Gamepad2, Search, Webhook, Key, ShieldCheck, Megaphone, Code, Loader2, Palette, Shield, MessageSquare } from 'lucide-react';
@@ -269,8 +270,11 @@ function App() {
                       <GameBreakdownChart executions={data?.recentExecutions ?? []} loading={loading} />
                     </div>
 
-                    <div className="bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6">
-                      <ExecutionHeatmap executions={data?.allExecutions ?? []} loading={loading} />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                      <div className="bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6">
+                        <ExecutionHeatmap executions={data?.allExecutions ?? []} loading={loading} />
+                      </div>
+                      <RatingsPanel />
                     </div>
 
                     <TopUsersLeaderboard adminUsername={adminUsername} />
