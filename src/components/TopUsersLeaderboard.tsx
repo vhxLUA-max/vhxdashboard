@@ -1,40 +1,46 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Trophy } from 'lucide-react';
+import { Trophy, Ban } from 'lucide-react';
 
 const MEDAL = ['🥇', '🥈', '🥉'];
 
-type AggUser = { roblox_user_id: number; username: string; total: number };
+type AggUser = { roblox_user_id: number; username: string; total: number; banned: boolean };
 
 export function TopUsersLeaderboard() {
   const [users, setUsers]     = useState<AggUser[]>([]);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
-    const { data } = await supabase
-      .from('unique_users')
-      .select('roblox_user_id,username,execution_count');
+    const [{ data: rows }, { data: bans }] = await Promise.all([
+      supabase.from('unique_users').select('roblox_user_id,username,execution_count'),
+      supabase.from('banned_users').select('roblox_user_id'),
+    ]);
 
-    if (!data) { setLoading(false); return; }
+    if (!rows) { setLoading(false); return; }
+
+    const bannedSet = new Set((bans ?? []).map((b: { roblox_user_id: number }) => b.roblox_user_id));
 
     const agg: Record<number, AggUser> = {};
-    for (const row of data) {
+    for (const row of rows) {
       const id = row.roblox_user_id;
       if (!id) continue;
-      if (!agg[id]) agg[id] = { roblox_user_id: id, username: row.username, total: 0 };
+      if (!agg[id]) agg[id] = { roblox_user_id: id, username: row.username, total: 0, banned: bannedSet.has(id) };
       agg[id].total += row.execution_count ?? 0;
     }
+
     setUsers(Object.values(agg).sort((a, b) => b.total - a.total).slice(0, 10));
     setLoading(false);
   }, []);
 
   useEffect(() => {
     load();
+    const poll = setInterval(load, 15000);
     const ch = supabase.channel('leaderboard')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'unique_users' }, load)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'banned_users' }, load)
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    return () => { clearInterval(poll); supabase.removeChannel(ch); };
   }, [load]);
 
   return (
@@ -58,10 +64,27 @@ export function TopUsersLeaderboard() {
       ) : (
         <div className="space-y-2">
           {users.map((u, i) => (
-            <div key={u.roblox_user_id} className="flex items-center gap-3 p-3 rounded-lg border" style={{ backgroundColor: 'var(--color-surface2)', borderColor: 'var(--color-border)' }}>
-              <span className="text-sm w-5 text-center">{MEDAL[i] ?? <span className="text-xs" style={{ color: 'var(--color-muted)' }}>{i + 1}</span>}</span>
-              <span className="flex-1 text-sm truncate" style={{ color: 'var(--color-text)' }}>{u.username ?? `User ${u.roblox_user_id}`}</span>
-              <span className="text-xs font-medium" style={{ color: 'var(--color-accent)' }}>{u.total.toLocaleString()}</span>
+            <div key={u.roblox_user_id}
+              className="flex items-center gap-3 p-3 rounded-lg border transition-all"
+              style={{
+                backgroundColor: u.banned ? 'rgba(239,68,68,0.05)' : 'var(--color-surface2)',
+                borderColor: u.banned ? 'rgba(239,68,68,0.25)' : 'var(--color-border)',
+              }}>
+              <span className="text-sm w-5 text-center shrink-0">
+                {MEDAL[i] ?? <span className="text-xs" style={{ color: 'var(--color-muted)' }}>{i + 1}</span>}
+              </span>
+              <span className="flex-1 text-sm truncate" style={{ color: u.banned ? '#f87171' : 'var(--color-text)', textDecoration: u.banned ? 'line-through' : 'none' }}>
+                {u.username ?? `User ${u.roblox_user_id}`}
+              </span>
+              {u.banned && (
+                <span className="flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full shrink-0"
+                  style={{ backgroundColor: 'rgba(239,68,68,0.12)', color: '#f87171', border: '1px solid rgba(239,68,68,0.3)' }}>
+                  <Ban className="w-2.5 h-2.5" /> banned
+                </span>
+              )}
+              <span className="text-xs font-medium shrink-0" style={{ color: u.banned ? '#f87171' : 'var(--color-accent)' }}>
+                {u.total.toLocaleString()}
+              </span>
             </div>
           ))}
         </div>

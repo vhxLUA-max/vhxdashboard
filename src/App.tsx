@@ -152,6 +152,8 @@ function useLiveLastExecution() {
 
 const ADMIN_USERNAMES = ['vhxlua-max', 'vhxlua'];
 
+type SidebarTab = 'stats' | 'search' | 'webhook' | 'token' | 'scripts' | 'themes' | 'feedback' | 'status' | 'changelog' | 'admin';
+
 async function checkIsAdmin(userId: string, username: string | null): Promise<boolean> {
   try {
     const { data } = await supabase.from('admins').select('user_id').eq('user_id', userId).maybeSingle();
@@ -160,7 +162,22 @@ async function checkIsAdmin(userId: string, username: string | null): Promise<bo
   return ADMIN_USERNAMES.includes(username?.toLowerCase() ?? '');
 }
 
-type SidebarTab = 'stats' | 'search' | 'webhook' | 'token' | 'scripts' | 'themes' | 'feedback' | 'status' | 'changelog' | 'admin';
+// All executions for charts/heatmap (live)
+function useLiveAllExecutions() {
+  const [execs, setExecs] = useState<import('@/types').GameExecution[]>([]);
+  useEffect(() => {
+    const fetch = async () => {
+      const { data } = await supabase.from('game_executions').select('place_id,count,last_executed_at,game_name').order('last_executed_at', { ascending: false });
+      if (data) setExecs(data);
+    };
+    fetch();
+    const ch = supabase.channel('live-all-execs')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'game_executions' }, fetch)
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, []);
+  return execs;
+}
 
 const TABS = [
   { id: 'stats',     label: 'Stats',     icon: BarChart3    },
@@ -189,10 +206,11 @@ function App() {
   const [isAdmin, setIsAdmin]             = useState(false);
   const [showLogin, setShowLogin]         = useState(false);
   const [showAccount, setShowAccount]     = useState(false);
-  const { data, loading, error, refresh } = useSupabaseDashboard(dateRange);
+  const { loading, error, refresh } = useSupabaseDashboard(dateRange);
   const handleRefresh = useCallback(() => refresh(), [refresh]);
   const visibleTabs = TABS.filter(t => t.id !== 'admin' || isAdmin);
   const connected     = isConfigured();
+  const liveAllExecs   = useLiveAllExecutions();
   const liveCount      = useLiveCounter();
   const live24h        = useLive24h();
   const liveUsers      = useLiveUniqueUsers();
@@ -353,7 +371,7 @@ function App() {
                       <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-4">
                         <Gamepad2 className="w-5 h-5 text-indigo-400" /> Supported Games
                       </h3>
-                      {!loading && data?.recentExecutions.length === 0
+                      {liveAllExecs.length === 0 && !loading
                         ? <EmptyState />
                         : <LiveRecentActivity />
                       }
@@ -363,7 +381,7 @@ function App() {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                       <div className="bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6">
-                        <ExecutionHeatmap executions={data?.allExecutions ?? []} loading={loading} />
+                        <ExecutionHeatmap executions={liveAllExecs} loading={false} />
                       </div>
                       <RatingsPanel />
                     </div>
