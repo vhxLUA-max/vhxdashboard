@@ -28,6 +28,7 @@ export function useSupabaseDashboard(dateRange: DateRange): UseSupabaseDashboard
         { data: filteredExecData, error: filteredErr },
         { data: allExecData,      error: execError },
         { data: userData,         error: userError },
+        { data: recentUsers,      error: recentUserErr },
       ] = await Promise.all([
         supabase
           .from('game_executions')
@@ -42,17 +43,25 @@ export function useSupabaseDashboard(dateRange: DateRange): UseSupabaseDashboard
           .from('unique_users')
           .select('roblox_user_id, user_id')
           .gte('last_seen', since),
+        supabase
+          .from('unique_users')
+          .select('execution_count')
+          .gte('last_seen', getStartDate('24h')),
       ]);
 
-      if (filteredErr) throw new Error(filteredErr.message);
-      if (execError)   throw new Error(execError.message);
-      if (userError)   throw new Error(userError.message);
+      if (filteredErr)    throw new Error(filteredErr.message);
+      if (execError)      throw new Error(execError.message);
+      if (userError)      throw new Error(userError.message);
+      if (recentUserErr)  throw new Error(recentUserErr.message);
 
       const filteredExecutions: GameExecution[] = filteredExecData ?? [];
       const allExecutions: GameExecution[]      = allExecData ?? [];
       const activeUsers: Pick<UniqueUser, 'roblox_user_id' | 'user_id'>[] = userData ?? [];
 
-      const totalExecutions = filteredExecutions.reduce((s, e) => s + e.count, 0);
+      const last24hExecutions = (recentUsers ?? []).reduce((s: number, u: { execution_count: number }) => s + (u.execution_count ?? 0), 0);
+      const totalExecutions   = dateRange === '24h'
+        ? last24hExecutions
+        : filteredExecutions.reduce((s, e) => s + e.count, 0);
       const distinctUsers   = new Set(activeUsers.map(u => u.roblox_user_id ?? u.user_id)).size;
       const activeGames     = new Set(filteredExecutions.map(e => e.place_id)).size;
       const lastExecutedAt  = allExecutions[0]?.last_executed_at ?? null;
