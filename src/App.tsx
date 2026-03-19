@@ -135,7 +135,7 @@ function App() {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6">
-                <ExecutionsChart executions={data?.recentExecutions ?? []} dateRange={dateRange} loading={loading} />
+                <ExecutionsChart executions={data?.allExecutions ?? []} dateRange={dateRange} loading={loading} />
                 <GameBreakdownChart executions={data?.recentExecutions ?? []} loading={loading} />
               </div>
 

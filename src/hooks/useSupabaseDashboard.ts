@@ -25,9 +25,15 @@ export function useSupabaseDashboard(dateRange: DateRange): UseSupabaseDashboard
       const since = getStartDate(dateRange);
 
       const [
-        { data: allExecData, error: execError },
-        { data: userData,    error: userError },
+        { data: filteredExecData, error: filteredErr },
+        { data: allExecData,      error: execError },
+        { data: userData,         error: userError },
       ] = await Promise.all([
+        supabase
+          .from('game_executions')
+          .select('*')
+          .gte('last_executed_at', since)
+          .order('last_executed_at', { ascending: false }),
         supabase
           .from('game_executions')
           .select('*')
@@ -38,33 +44,26 @@ export function useSupabaseDashboard(dateRange: DateRange): UseSupabaseDashboard
           .gte('last_seen', since),
       ]);
 
-      if (execError) throw new Error(execError.message);
-      if (userError) throw new Error(userError.message);
+      if (filteredErr) throw new Error(filteredErr.message);
+      if (execError)   throw new Error(execError.message);
+      if (userError)   throw new Error(userError.message);
 
-      const allExecutions: GameExecution[] = allExecData ?? [];
+      const filteredExecutions: GameExecution[] = filteredExecData ?? [];
+      const allExecutions: GameExecution[]      = allExecData ?? [];
       const activeUsers: Pick<UniqueUser, 'roblox_user_id' | 'user_id'>[] = userData ?? [];
 
-      // All-time total — count is cumulative per game row
-      const totalExecutions = allExecutions.reduce((s, e) => s + e.count, 0);
-
-      // Unique users active in the selected date range
-      const distinctUsers = new Set(activeUsers.map(u => u.roblox_user_id ?? u.user_id)).size;
-
-      // Games that had any execution within the selected range
-      const activeGames = new Set(
-        allExecutions
-          .filter(e => e.last_executed_at >= since)
-          .map(e => e.place_id)
-      ).size;
-
-      const lastExecutedAt = allExecutions[0]?.last_executed_at ?? null;
+      const totalExecutions = filteredExecutions.reduce((s, e) => s + e.count, 0);
+      const distinctUsers   = new Set(activeUsers.map(u => u.roblox_user_id ?? u.user_id)).size;
+      const activeGames     = new Set(filteredExecutions.map(e => e.place_id)).size;
+      const lastExecutedAt  = allExecutions[0]?.last_executed_at ?? null;
 
       setData({
         totalExecutions,
         uniqueUsers: distinctUsers,
         activeGames: activeGames || allExecutions.length,
         lastExecutedAt,
-        recentExecutions: allExecutions,
+        recentExecutions: filteredExecutions,
+        allExecutions,
         recentUsers: [],
       });
     } catch (err) {
@@ -74,9 +73,7 @@ export function useSupabaseDashboard(dateRange: DateRange): UseSupabaseDashboard
     }
   }, [dateRange]);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   useEffect(() => {
     const channel = supabase

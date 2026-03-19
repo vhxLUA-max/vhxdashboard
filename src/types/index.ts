@@ -21,6 +21,7 @@ export interface DashboardData {
   activeGames: number;
   lastExecutedAt: string | null;
   recentExecutions: GameExecution[];
+  allExecutions: GameExecution[];
   recentUsers: UniqueUser[];
 }
 
