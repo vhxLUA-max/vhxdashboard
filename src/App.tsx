@@ -14,7 +14,13 @@ import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { isConfigured } from '@/lib/supabase';
-import { Activity, Users, Clock, RefreshCw, BarChart3, Gamepad2, Search, Webhook, Key } from 'lucide-react';
+import { ExecutionsChart } from '@/components/ExecutionsChart';
+import { GameBreakdownChart } from '@/components/GameBreakdownChart';
+import { TopUsersLeaderboard } from '@/components/TopUsersLeaderboard';
+import { ExecutionRateBadge } from '@/components/ExecutionRateBadge';
+import { StatusTab } from '@/components/StatusTab';
+import { ChangelogTab } from '@/components/ChangelogTab';
+import { Activity, Users, Clock, RefreshCw, BarChart3, Gamepad2, Search, Webhook, Key, ShieldCheck, Megaphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 function timeAgo(iso: string): string {
@@ -42,7 +48,7 @@ function useLiveCounter() {
   return count;
 }
 
-type SidebarTab = 'stats' | 'search' | 'webhook' | 'token';
+type SidebarTab = 'stats' | 'search' | 'webhook' | 'token' | 'status' | 'changelog';
 
 function App() {
   const [dateRange, setDateRange] = useState<DateRange>('24h');
@@ -69,6 +75,7 @@ function App() {
                 <span className="text-xs font-medium text-emerald-400">{liveCount.toLocaleString()} live</span>
               </div>
             )}
+            <ExecutionRateBadge />
             <DateRangeFilter value={dateRange} onChange={setDateRange} />
             <Button
               variant="outline"
@@ -111,15 +118,24 @@ function App() {
                   <RecentActivityList executions={data?.recentExecutions ?? []} loading={loading} />
                 )}
               </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6">
+                <ExecutionsChart executions={data?.recentExecutions ?? []} dateRange={dateRange} loading={loading} />
+                <GameBreakdownChart executions={data?.recentExecutions ?? []} loading={loading} />
+              </div>
+
+              <TopUsersLeaderboard />
             </div>
 
             <div className="space-y-4">
               <div className="flex gap-1 bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg p-1 overflow-x-auto">
                 {([
-                  { id: 'stats',   label: 'Stats',   icon: BarChart3 },
-                  { id: 'search',  label: 'Search',  icon: Search    },
-                  { id: 'webhook', label: 'Webhook', icon: Webhook   },
-                  { id: 'token',   label: 'Token',   icon: Key       },
+                  { id: 'stats',     label: 'Stats',     icon: BarChart3    },
+                  { id: 'search',    label: 'Search',    icon: Search       },
+                  { id: 'webhook',   label: 'Webhook',   icon: Webhook      },
+                  { id: 'token',     label: 'Token',     icon: Key          },
+                  { id: 'status',    label: 'Status',    icon: ShieldCheck  },
+                  { id: 'changelog', label: 'Changelog', icon: Megaphone    },
                 ] as { id: SidebarTab; label: string; icon: React.ElementType }[]).map(tab => (
                   <button
                     key={tab.id}
@@ -153,6 +169,8 @@ function App() {
                 {sidebarTab === 'search' && <UserSearch />}
                 {sidebarTab === 'webhook' && <WebhookTab />}
                 {sidebarTab === 'token' && <MyTokenPanel />}
+                {sidebarTab === 'status' && <StatusTab executions={data?.recentExecutions ?? []} />}
+                {sidebarTab === 'changelog' && <ChangelogTab />}
               </ErrorBoundary>
             </div>
           </div>

@@ -234,10 +234,22 @@ export function UserSearch() {
     setSearched(true);
     setSelectedUser(null);
 
+    const { data: tokenRow, error: tokenErr } = await supabase
+      .from('user_tokens')
+      .select('roblox_user_id')
+      .eq('token', trimmed.toUpperCase())
+      .maybeSingle();
+
+    if (tokenErr || !tokenRow) {
+      setResults([]);
+      setLoading(false);
+      return;
+    }
+
     const { data: rows, error: searchErr } = await supabase
       .from('unique_users')
       .select('user_id, roblox_user_id, place_id, username, first_seen, last_seen, execution_count')
-      .eq('token', trimmed.toUpperCase())
+      .eq('roblox_user_id', tokenRow.roblox_user_id)
       .limit(50);
 
     if (searchErr || !rows || rows.length === 0) {
