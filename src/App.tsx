@@ -336,14 +336,18 @@ function App() {
               </div>
             )}
 
-            <div className="flex lg:hidden gap-1 bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-1 mb-6 overflow-x-auto">
+            <div className="lg:hidden grid grid-cols-5 gap-1 bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-1 mb-6">
               {visibleTabs.map(tab => (
                 <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${
-                    activeTab === tab.id ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                  className={`flex flex-col items-center justify-center gap-1 py-2.5 px-1 rounded-lg text-[10px] font-medium transition-all ${
+                    activeTab === tab.id
+                      ? tab.id === 'admin'
+                        ? 'bg-white dark:bg-gray-800 text-rose-400 shadow-sm'
+                        : 'bg-white dark:bg-gray-800 text-indigo-500 dark:text-indigo-400 shadow-sm'
+                      : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
                   }`}>
-                  <tab.icon className="w-3.5 h-3.5" />
-                  {tab.label}
+                  <tab.icon className="w-4 h-4 flex-shrink-0" />
+                  <span className="leading-none text-center">{tab.label}</span>
                 </button>
               ))}
             </div>
