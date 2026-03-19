@@ -92,74 +92,78 @@ function GameDetailPanel({ info, placeId, loader, onBack }: { info: GameInfo; pl
       </button>
 
       <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
-        {info.thumbUrl ? (
-          <img src={info.thumbUrl} alt={info.name} className="w-full aspect-video object-contain bg-gray-800" />
-        ) : (
-          <div className="w-full aspect-video flex items-center justify-center bg-gray-800">
-            <Gamepad2 className="w-12 h-12 text-gray-600" />
-          </div>
-        )}
-
-        <div className="p-5 space-y-4">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white">{info.name}</h2>
-              {likePercent !== null && (
-                <div className="flex items-center gap-1.5 mt-1">
-                  <ThumbsUp className="w-3 h-3 text-emerald-400" />
-                  <span className="text-xs text-emerald-400 font-medium">{likePercent}% positive</span>
-                  <span className="text-xs text-gray-600">({formatNum(info.likeCount + info.dislikeCount)} votes)</span>
-                </div>
-              )}
-            </div>
-            <a
-              href={`https://www.roblox.com/games/${placeId}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-shrink-0 flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
-            >
-              View on Roblox <ExternalLink className="w-3 h-3" />
-            </a>
-          </div>
-
-          <div className="grid grid-cols-3 gap-3">
-            {[
-              { icon: Users,   label: 'Playing',   value: formatNum(info.playing)  },
-              { icon: Star,    label: 'Visits',     value: formatNum(info.visits)   },
-              { icon: ThumbsUp,label: 'Favorites',  value: formatNum(info.favoriteCount) },
-            ].map(stat => (
-              <div key={stat.label} className="bg-gray-100 dark:bg-gray-800 rounded-lg p-3 text-center">
-                <stat.icon className="w-4 h-4 text-indigo-400 mx-auto mb-1" />
-                <p className="text-sm font-bold text-gray-900 dark:text-white">{stat.value}</p>
-                <p className="text-[10px] text-gray-500">{stat.label}</p>
+        <div className="flex flex-col sm:flex-row gap-0">
+          <div className="sm:w-48 shrink-0 bg-gray-800">
+            {info.thumbUrl ? (
+              <img src={info.thumbUrl} alt={info.name} className="w-full sm:h-full aspect-square object-contain" />
+            ) : (
+              <div className="w-full aspect-square flex items-center justify-center">
+                <Gamepad2 className="w-12 h-12 text-gray-600" />
               </div>
-            ))}
+            )}
           </div>
 
-          {info.description ? (
-            <p className="text-xs text-gray-500 leading-relaxed line-clamp-4">{info.description}</p>
-          ) : null}
+          <div className="flex-1 p-5 space-y-4 min-w-0">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h2 className="text-base font-bold text-gray-900 dark:text-white truncate">{info.name}</h2>
+                {likePercent !== null && (
+                  <div className="flex items-center gap-1.5 mt-1">
+                    <ThumbsUp className="w-3 h-3 text-emerald-400 shrink-0" />
+                    <span className="text-xs text-emerald-400 font-medium">{likePercent}%</span>
+                    <span className="text-xs text-gray-500">{formatNum(info.likeCount + info.dislikeCount)} votes</span>
+                  </div>
+                )}
+              </div>
+              <a
+                href={`https://www.roblox.com/games/${placeId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="shrink-0 flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
+              >
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
 
-          <div className="flex gap-2">
-            <button
-              onClick={copy}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all border ${
-                copied
-                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
-                  : 'bg-indigo-600 hover:bg-indigo-500 border-indigo-600 text-white'
-              }`}
-            >
-              {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-              {copied ? 'Copied!' : 'Copy Script'}
-            </button>
-            <a
-              href={`https://www.roblox.com/games/${placeId}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:border-emerald-500/40 hover:text-emerald-400 transition-all"
-            >
-              <Play className="w-4 h-4" /> Play
-            </a>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { icon: Users,    label: 'Playing',   value: formatNum(info.playing)          },
+                { icon: Star,     label: 'Visits',     value: formatNum(info.visits)            },
+                { icon: ThumbsUp, label: 'Favorites',  value: formatNum(info.favoriteCount)     },
+              ].map(stat => (
+                <div key={stat.label} className="bg-gray-100 dark:bg-gray-800 rounded-lg p-2.5 text-center">
+                  <stat.icon className="w-3.5 h-3.5 text-indigo-400 mx-auto mb-1" />
+                  <p className="text-xs font-bold text-gray-900 dark:text-white">{stat.value}</p>
+                  <p className="text-[10px] text-gray-500">{stat.label}</p>
+                </div>
+              ))}
+            </div>
+
+            {info.description ? (
+              <p className="text-xs text-gray-500 leading-relaxed line-clamp-3">{info.description}</p>
+            ) : null}
+
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={copy}
+                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-semibold transition-all border ${
+                  copied
+                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                    : 'bg-indigo-600 hover:bg-indigo-500 border-indigo-600 text-white'
+                }`}
+              >
+                {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                {copied ? 'Copied!' : 'Copy Script'}
+              </button>
+              <a
+                href={`https://www.roblox.com/games/${placeId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:border-emerald-500/40 hover:text-emerald-400 transition-all"
+              >
+                <Play className="w-3.5 h-3.5" /> Play
+              </a>
+            </div>
           </div>
         </div>
       </div>
