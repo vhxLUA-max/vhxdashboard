@@ -89,18 +89,31 @@ export function WebhookTab() {
     const toastId = toast.loading('Sending report...');
 
     try {
+      const { data: tokenRow } = await supabase
+        .from('user_tokens')
+        .select('roblox_user_id, roblox_username')
+        .eq('token', token.trim().toUpperCase())
+        .maybeSingle();
+
+      if (!tokenRow) {
+        toast.error('Token not found. Verify your Roblox account in the Token tab first.', { id: toastId });
+        return;
+      }
+
       const { data: rows } = await supabase
-        .from('unique_users').select('*')
-        .eq('token', token.trim().toUpperCase()).limit(50);
+        .from('unique_users')
+        .select('*')
+        .eq('roblox_user_id', tokenRow.roblox_user_id)
+        .limit(50);
 
       if (!rows || rows.length === 0) {
-        toast.error('Token not found. Run the script in-game first.', { id: toastId });
+        toast.error('No execution data found. Run a script in-game first.', { id: toastId });
         return;
       }
 
       const users        = rows as UserRow[];
-      const robloxUserId = users[0].roblox_user_id ?? users[0].user_id;
-      const displayName  = users[0].username;
+      const robloxUserId = tokenRow.roblox_user_id;
+      const displayName  = tokenRow.roblox_username;
       const placeIds     = [...new Set(users.map(u => u.place_id))];
 
       const { data: executions } = await supabase
@@ -191,7 +204,7 @@ export function WebhookTab() {
               value={token}
               onChange={e => setToken(e.target.value.toUpperCase())}
               placeholder="e.g. VOID3847"
-              maxLength={8}
+              maxLength={10}
               className="bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white placeholder:text-gray-400 focus:border-indigo-500 font-mono tracking-widest"
             />
             <Button onClick={handleSaveToken} disabled={token.length < 4} variant="outline" size="icon"

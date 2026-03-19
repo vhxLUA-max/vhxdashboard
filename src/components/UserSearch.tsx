@@ -362,8 +362,8 @@ export function UserSearch() {
         <Input
           value={query}
           onChange={handleChange}
-          placeholder="Enter token (e.g. A3X9K)..."
-          maxLength={8}
+          placeholder="Enter token (e.g. VOID3847)..."
+          maxLength={10}
           className="pl-9 bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white placeholder:text-gray-400 focus:border-purple-500 font-mono tracking-widest uppercase"
         />
       </div>
