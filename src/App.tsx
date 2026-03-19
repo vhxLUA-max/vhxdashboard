@@ -72,6 +72,26 @@ function useLiveCounter() {
   return count;
 }
 
+function useLive24h() {
+  const [count, setCount] = useState<number | null>(null);
+  useEffect(() => {
+    const fetch = async () => {
+      const { data } = await supabase.from('game_executions').select('daily_count,daily_reset_at');
+      if (data) {
+        const today = new Date().toISOString().slice(0, 10);
+        setCount(data.reduce((s: number, e: { daily_count?: number; daily_reset_at?: string }) =>
+          s + (e.daily_reset_at === today ? (e.daily_count ?? 0) : 0), 0));
+      }
+    };
+    fetch();
+    const ch = supabase.channel('live-24h')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'game_executions' }, fetch)
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, []);
+  return count;
+}
+
 type SidebarTab = 'stats' | 'search' | 'webhook' | 'token' | 'scripts' | 'themes' | 'feedback' | 'status' | 'changelog' | 'admin';
 
 const TABS = [
@@ -106,6 +126,7 @@ function App() {
   const visibleTabs = TABS.filter(t => t.id !== 'admin' || isAdmin);
   const connected     = isConfigured();
   const liveCount     = useLiveCounter();
+  const live24h       = useLive24h();
   const lastExecution = useLiveTimeAgo(data?.lastExecutedAt);
 
   useEffect(() => {
@@ -261,7 +282,7 @@ function App() {
                 {activeTab === 'stats' && (
                   <div key="stats" className="tab-animate space-y-8">
                     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-                      <MetricCard title="Total Executions" value={data?.totalExecutions.toLocaleString() ?? '-'} subtitle={`In last ${dateRange}`} icon={Activity} loading={loading} />
+                      <MetricCard title="Total Executions" value={(dateRange === '24h' ? live24h : data?.totalExecutions)?.toLocaleString() ?? '-'} subtitle={`In last ${dateRange}`} icon={Activity} loading={loading} />
                       <MetricCard title="Unique Users"     value={data?.uniqueUsers.toLocaleString() ?? '-'}     subtitle={`Active in last ${dateRange}`} icon={Users} loading={loading} />
                       <MetricCard title="New Users Today"  value={data?.newUsersToday.toLocaleString() ?? '-'}   subtitle="First seen today" icon={Users} loading={loading} />
                       <MetricCard title="Last Execution"   value={lastExecution} subtitle="Most recent activity" icon={Clock} loading={loading} />
@@ -289,7 +310,7 @@ function App() {
                       <RatingsPanel />
                     </div>
 
-                    <TopUsersLeaderboard adminUsername={adminUsername} />
+                    <TopUsersLeaderboard />
                   </div>
                 )}
 
