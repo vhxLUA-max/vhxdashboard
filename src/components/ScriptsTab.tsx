@@ -76,14 +76,14 @@ export function ScriptsTab() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
         {GAMES.map(game => (
           <div
             key={game.placeId}
-            className="group bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden hover:border-indigo-500/30 transition-all"
+            className="group bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden hover:border-indigo-500/40 hover:shadow-lg hover:shadow-indigo-500/5 transition-all"
           >
-            <div className="relative h-36 bg-gray-200 dark:bg-gray-800">
-              {thumbLoading ? (
+            <div className="relative aspect-square bg-gray-200 dark:bg-gray-800">
+              {thumbLoading && game.placeId !== 0 ? (
                 <div className="absolute inset-0 flex items-center justify-center">
                   <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
                 </div>
@@ -91,28 +91,27 @@ export function ScriptsTab() {
                 <img
                   src={thumbs[game.placeId]!}
                   alt={game.name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
                 />
               ) : (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <Gamepad2 className="w-8 h-8 text-gray-600" />
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
+                  <Gamepad2 className="w-10 h-10 text-gray-600" />
                 </div>
               )}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-              <p className="absolute bottom-2 left-3 text-sm font-semibold text-white drop-shadow">{game.name}</p>
             </div>
 
-            <div className="p-3 flex justify-end">
+            <div className="p-3 space-y-2">
+              <p className="text-xs font-semibold text-gray-900 dark:text-white truncate">{game.name}</p>
               <button
                 onClick={() => copy(game)}
-                className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-medium transition-all border ${
+                className={`w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${
                   copied === game.placeId
                     ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
                     : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-indigo-500/40 hover:text-indigo-400'
                 }`}
               >
                 {copied === game.placeId ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                {copied === game.placeId ? 'Copied!' : 'Copy Script'}
+                {copied === game.placeId ? 'Copied!' : 'Copy'}
               </button>
             </div>
           </div>
