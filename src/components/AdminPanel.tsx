@@ -105,15 +105,16 @@ export function AdminPanel() {
 
   const loadAccounts = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await supabase.auth.admin?.listUsers?.() ?? { data: null, error: null };
-    if (error) { toast.error('Failed to load accounts'); setLoading(false); return; }
-    const users = (data as { users: { id: string; email?: string; user_metadata: { username?: string }; created_at: string; last_sign_in_at?: string }[] })?.users ?? [];
-    setAccounts(users.map(u => ({
-      id: u.id,
-      email: u.email ?? '',
-      username: u.user_metadata?.username ?? '—',
-      created_at: u.created_at,
-      last_sign_in_at: u.last_sign_in_at ?? null,
+    const { data } = await supabase
+      .from('user_tokens')
+      .select('user_id, roblox_username, roblox_user_id, updated_at')
+      .order('updated_at', { ascending: false });
+    setAccounts((data ?? []).map((u: { user_id: string; roblox_username: string; roblox_user_id: number; updated_at: string }) => ({
+      id: u.user_id,
+      email: '',
+      username: u.roblox_username,
+      created_at: u.updated_at,
+      last_sign_in_at: u.updated_at,
     })));
     setLoading(false);
   }, []);
@@ -302,7 +303,7 @@ export function AdminPanel() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate" style={{ color: 'var(--color-text)' }}>@{a.username}</p>
-                <p className="text-[10px]" style={{ color: 'var(--color-muted)' }}>{a.email} · joined {timeAgo(a.created_at)}</p>
+                <p className="text-[10px]" style={{ color: 'var(--color-muted)' }}>linked {timeAgo(a.created_at)}</p>
               </div>
               <p className="text-[10px] shrink-0" style={{ color: 'var(--color-muted)' }}>
                 {a.last_sign_in_at ? `last seen ${timeAgo(a.last_sign_in_at)}` : 'never signed in'}

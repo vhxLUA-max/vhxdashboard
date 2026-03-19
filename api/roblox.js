@@ -7,24 +7,34 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
 
   const { path, method = 'GET', body } = req.body;
+  if (!path) return res.status(400).json({ error: 'Missing path' });
 
   let domain;
-  if (path.startsWith('/v1/users/avatar') || path.startsWith('/v1/users/avatar-headshot') || path.includes('avatar-headshot')) {
+  if (
+    path.startsWith('/v1/users/avatar') ||
+    path.startsWith('/v1/users/avatar-headshot') ||
+    path.includes('avatar-headshot') ||
+    path.startsWith('/v1/games/icons') ||
+    path.startsWith('/v1/games/thumbnails')
+  ) {
     domain = 'https://thumbnails.roblox.com';
-  } else if (path.startsWith('/v1/users/') || path.startsWith('/v1/users')) {
+  } else if (
+    path.startsWith('/v1/users') ||
+    path.startsWith('/v1/usernames')
+  ) {
     domain = 'https://users.roblox.com';
-  } else if (path.startsWith('/v1/games/icons') || path.startsWith('/v1/games/thumbnails')) {
-    domain = 'https://thumbnails.roblox.com';
   } else if (path.startsWith('/universes/')) {
     domain = 'https://apis.roblox.com';
-  } else {
+  } else if (path.startsWith('/v1/games') || path.startsWith('/v2/games')) {
     domain = 'https://games.roblox.com';
+  } else {
+    domain = 'https://apis.roblox.com';
   }
 
   try {
     const robloxRes = await fetch(`${domain}${path}`, {
       method,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
       body: body ? JSON.stringify(body) : undefined,
     });
     const data = await robloxRes.json();
