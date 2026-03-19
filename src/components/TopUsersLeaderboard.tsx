@@ -16,21 +16,38 @@ export function TopUsersLeaderboard({ adminUsername }: { adminUsername: string |
 
   useEffect(() => {
     if (!isAdmin) { setLoading(false); return; }
+
     const fetch = async () => {
-      const { data } = await supabase
+      const { data: userRows } = await supabase
         .from('unique_users')
-        .select('roblox_user_id, username, execution_count');
-      if (data) {
-        const agg: Record<number, AggUser> = {};
-        for (const row of data) {
-          const id = row.roblox_user_id;
-          if (!agg[id]) agg[id] = { roblox_user_id: id, username: row.username, total: 0 };
-          agg[id].total += row.execution_count ?? 0;
-        }
-        setUsers(Object.values(agg).sort((a, b) => b.total - a.total).slice(0, 10));
+        .select('roblox_user_id, username, place_id, execution_count');
+
+      const { data: execRows } = await supabase
+        .from('game_executions')
+        .select('place_id, count');
+
+      if (!userRows) { setLoading(false); return; }
+
+      const execMap: Record<number, number> = {};
+      for (const e of execRows ?? []) execMap[e.place_id] = e.count;
+
+      const totalExecs = Object.values(execMap).reduce((s, v) => s + v, 0);
+
+      const agg: Record<number, AggUser> = {};
+      for (const row of userRows) {
+        const id = row.roblox_user_id;
+        if (!agg[id]) agg[id] = { roblox_user_id: id, username: row.username, total: 0 };
+        const placeTotal = execMap[row.place_id] ?? 0;
+        const userShare = totalExecs > 0 && placeTotal > 0
+          ? Math.round((row.execution_count / placeTotal) * placeTotal)
+          : row.execution_count ?? 0;
+        agg[id].total += userShare;
       }
+
+      setUsers(Object.values(agg).sort((a, b) => b.total - a.total).slice(0, 10));
       setLoading(false);
     };
+
     fetch();
     const ch = supabase.channel('leaderboard')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'unique_users' }, fetch)

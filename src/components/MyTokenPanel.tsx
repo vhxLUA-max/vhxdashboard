@@ -129,13 +129,14 @@ export function MyTokenPanel() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated.');
       const newToken = await ensureUniqueToken();
-      const { error: upsertErr } = await supabase.from('user_tokens').upsert({
+      await supabase.from('user_tokens').delete().eq('user_id', user.id);
+      const { error: upsertErr } = await supabase.from('user_tokens').insert({
         user_id: user.id,
         token: newToken,
         roblox_username: robloxUser.name,
         roblox_user_id: robloxUser.id,
         updated_at: new Date().toISOString(),
-      }, { onConflict: 'user_id' });
+      });
       if (upsertErr) throw new Error(upsertErr.message);
       setTokenRow({ token: newToken, roblox_username: robloxUser.name, roblox_user_id: robloxUser.id });
       setStep('done');
