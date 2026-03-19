@@ -3,8 +3,11 @@ import { createRoot } from 'react-dom/client';
 import { ThemeProvider } from 'next-themes';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { Toaster } from 'sonner';
+import { initTheme } from '@/components/ThemeManager';
 import './index.css';
 import App from './App.tsx';
+
+initTheme();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

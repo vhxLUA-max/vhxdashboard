@@ -20,9 +20,6 @@ import { Button } from '@/components/ui/button';
 import { LoginModal } from '@/components/LoginModal';
 import { logout } from '@/lib/auth';
 import { toast } from 'sonner';
-import { initTheme } from '@/components/ThemeManager';
-
-initTheme();
 
 const ChangePasswordModal = lazy(() => import('@/components/ChangePasswordModal').then(m => ({ default: m.ChangePasswordModal })));
 const UserSearch          = lazy(() => import('@/components/UserSearch').then(m => ({ default: m.UserSearch })));
