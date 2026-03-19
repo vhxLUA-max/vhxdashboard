@@ -219,21 +219,6 @@ function App() {
   const [showShortcuts, setShowShortcuts] = useState(false);
 
   useEffect(() => {
-    let startX = 0;
-    const onTouchStart = (e: TouchEvent) => { startX = e.touches[0].clientX; };
-    const onTouchEnd = (e: TouchEvent) => {
-      const diff = startX - e.changedTouches[0].clientX;
-      if (Math.abs(diff) < 120) return;
-      const idx = visibleTabs.findIndex(t => t.id === activeTab);
-      if (diff > 0 && idx < visibleTabs.length - 1) switchTab(visibleTabs[idx + 1].id);
-      else if (diff < 0 && idx > 0) switchTab(visibleTabs[idx - 1].id);
-    };
-    window.addEventListener('touchstart', onTouchStart, { passive: true });
-    window.addEventListener('touchend', onTouchEnd, { passive: true });
-    return () => { window.removeEventListener('touchstart', onTouchStart); window.removeEventListener('touchend', onTouchEnd); };
-  }, [activeTab, visibleTabs, switchTab]);
-
-  useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       if (e.key === '?') { setShowShortcuts(v => !v); return; }
@@ -372,7 +357,6 @@ function App() {
 
             <div className="lg:hidden flex items-center justify-between mb-2 px-1">
               <span className="text-xs font-semibold" style={{ color: 'var(--color-text)' }}>{visibleTabs.find(t => t.id === activeTab)?.label}</span>
-              <span className="text-[10px]" style={{ color: 'var(--color-muted)' }}>swipe to navigate</span>
             </div>
             <div className="lg:hidden grid grid-cols-5 gap-1 bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-1 mb-6">
               {visibleTabs.map(tab => (
