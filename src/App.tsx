@@ -19,7 +19,8 @@ import { TopUsersLeaderboard } from '@/components/TopUsersLeaderboard';
 import { ExecutionRateBadge } from '@/components/ExecutionRateBadge';
 import { StatusTab } from '@/components/StatusTab';
 import { ChangelogTab } from '@/components/ChangelogTab';
-import { Activity, Users, Clock, RefreshCw, BarChart3, Gamepad2, Search, Webhook, Key, ShieldCheck, Megaphone } from 'lucide-react';
+import { ScriptsTab } from '@/components/ScriptsTab';
+import { Activity, Users, Clock, RefreshCw, BarChart3, Gamepad2, Search, Webhook, Key, ShieldCheck, Megaphone, Code } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LoginModal } from '@/components/LoginModal';
 import { logout } from '@/lib/auth';
@@ -49,13 +50,14 @@ function useLiveCounter() {
   return count;
 }
 
-type SidebarTab = 'stats' | 'search' | 'webhook' | 'token' | 'status' | 'changelog';
+type SidebarTab = 'stats' | 'search' | 'webhook' | 'token' | 'scripts' | 'status' | 'changelog';
 
 const TABS = [
   { id: 'stats',     label: 'Stats',     icon: BarChart3   },
   { id: 'search',    label: 'Search',    icon: Search      },
   { id: 'webhook',   label: 'Webhook',   icon: Webhook     },
   { id: 'token',     label: 'Token',     icon: Key         },
+  { id: 'scripts',   label: 'Scripts',   icon: Code        },
   { id: 'status',    label: 'Status',    icon: ShieldCheck },
   { id: 'changelog', label: 'Changelog', icon: Megaphone   },
 ] as { id: SidebarTab; label: string; icon: React.ElementType }[];
@@ -195,6 +197,7 @@ function App() {
                 {activeTab === 'search'    && <UserSearch />}
                 {activeTab === 'webhook'   && <WebhookTab />}
                 {activeTab === 'token'     && <MyTokenPanel />}
+                {activeTab === 'scripts'   && <ScriptsTab />}
                 {activeTab === 'status'    && <StatusTab executions={data?.recentExecutions ?? []} />}
                 {activeTab === 'changelog' && <ChangelogTab />}
               </ErrorBoundary>
