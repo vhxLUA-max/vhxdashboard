@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { supabase } from '@/lib/supabase';
 import type { UniqueUser, GameExecution } from '@/types';
 import { Users, Clock, Calendar, Gamepad2, ArrowLeft, ExternalLink, Shield, Activity, Hash, Download, ArrowUpDown } from 'lucide-react';
@@ -186,10 +187,24 @@ function UserProfilePanel({ user, onBack }: { user: UserResult; onBack: () => vo
         <div>
           <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 flex items-center gap-1.5">
             <Activity className="w-3.5 h-3.5 text-indigo-400" />
-            Game History
+            Execution History
           </p>
+          {user.places.length > 0 && (
+            <div className="mb-3 bg-white dark:bg-gray-950 rounded-lg border border-gray-200 dark:border-gray-800 p-3">
+              <ResponsiveContainer width="100%" height={100}>
+                <BarChart data={user.places.map(p => ({ name: p.game_name?.split(' ')[0] ?? `P${p.place_id}`, execs: p.user_execution_count }))} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
+                  <XAxis dataKey="name" tick={{ fill: '#6b7280', fontSize: 9 }} />
+                  <YAxis tick={{ fill: '#6b7280', fontSize: 9 }} allowDecimals={false} />
+                  <Tooltip contentStyle={{ backgroundColor: '#111827', border: '1px solid #374151', borderRadius: 8, fontSize: 11 }} labelStyle={{ color: '#f9fafb' }} itemStyle={{ color: '#818cf8' }} />
+                  <Bar dataKey="execs" radius={[4, 4, 0, 0]}>
+                    {user.places.map((_, i) => <Cell key={i} fill={i === 0 ? '#6366f1' : i === 1 ? '#10b981' : '#f59e0b'} />)}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
           <div className="space-y-2">
-            {user.places.map((place) => (
+            {user.places.sort((a, b) => b.user_execution_count - a.user_execution_count).map((place) => (
               <div key={place.place_id} className="flex items-center justify-between bg-white dark:bg-gray-950 rounded-lg px-3 py-2 border border-gray-200 dark:border-gray-800">
                 <div className="flex items-center gap-2 min-w-0">
                   <Gamepad2 className="w-3.5 h-3.5 text-indigo-400 flex-shrink-0" />
