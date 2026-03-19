@@ -45,12 +45,23 @@ function timeAgo(iso: string): string {
   return `${Math.floor(diff / 86400)}d ago`;
 }
 
+function useLiveTimeAgo(iso: string | null | undefined): string {
+  const [display, setDisplay] = useState(() => iso ? timeAgo(iso) : '-');
+  useEffect(() => {
+    if (!iso) { setDisplay('-'); return; }
+    setDisplay(timeAgo(iso));
+    const interval = setInterval(() => setDisplay(timeAgo(iso)), 1000);
+    return () => clearInterval(interval);
+  }, [iso]);
+  return display;
+}
+
 function useLiveCounter() {
   const [count, setCount] = useState<number | null>(null);
   useEffect(() => {
     const fetch = async () => {
       const { data } = await supabase.from('game_executions').select('count');
-      if (data) setCount(data.reduce((s: number, e: { count: number }) => s + e.count, 0));
+      if (data) setCount(data.reduce((s: number, e: { count: number }) => s + (e.count ?? 0), 0));
     };
     fetch();
     const ch = supabase.channel('live-executions')
@@ -95,6 +106,7 @@ function App() {
   const visibleTabs = TABS.filter(t => t.id !== 'admin' || isAdmin);
   const connected     = isConfigured();
   const liveCount     = useLiveCounter();
+  const lastExecution = useLiveTimeAgo(data?.lastExecutedAt);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -252,7 +264,7 @@ function App() {
                       <MetricCard title="Total Executions" value={data?.totalExecutions.toLocaleString() ?? '-'} subtitle={`In last ${dateRange}`} icon={Activity} loading={loading} />
                       <MetricCard title="Unique Users"     value={data?.uniqueUsers.toLocaleString() ?? '-'}     subtitle={`Active in last ${dateRange}`} icon={Users} loading={loading} />
                       <MetricCard title="New Users Today"  value={data?.newUsersToday.toLocaleString() ?? '-'}   subtitle="First seen today" icon={Users} loading={loading} />
-                      <MetricCard title="Last Execution"   value={data?.lastExecutedAt ? timeAgo(data.lastExecutedAt) : '-'} subtitle="Most recent activity" icon={Clock} loading={loading} />
+                      <MetricCard title="Last Execution"   value={lastExecution} subtitle="Most recent activity" icon={Clock} loading={loading} />
                     </div>
 
                     <div>

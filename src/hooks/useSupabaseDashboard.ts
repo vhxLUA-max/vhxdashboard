@@ -22,7 +22,6 @@ export function useSupabaseDashboard(dateRange: DateRange): UseSupabaseDashboard
   const fetchData = useCallback(async () => {
     abortRef.current?.abort();
     abortRef.current = new AbortController();
-
     setLoading(true);
     setError(null);
 
@@ -34,13 +33,11 @@ export function useSupabaseDashboard(dateRange: DateRange): UseSupabaseDashboard
         { data: filteredExecData, error: e1 },
         { data: allExecData,      error: e2 },
         { data: userData,         error: e3 },
-        { data: recentUsers,      error: e4 },
-        { data: newUsersData,     error: e5 },
+        { data: newUsersData,     error: e4 },
       ] = await Promise.all([
         supabase.from('game_executions').select('place_id,count,last_executed_at,game_name').gte('last_executed_at', since).order('last_executed_at', { ascending: false }),
         supabase.from('game_executions').select('place_id,count,last_executed_at,game_name').order('last_executed_at', { ascending: false }),
         supabase.from('unique_users').select('roblox_user_id,user_id').gte('last_seen', since),
-        supabase.from('unique_users').select('execution_count').gte('last_seen', since24),
         supabase.from('unique_users').select('roblox_user_id').gte('first_seen', since24),
       ]);
 
@@ -48,16 +45,14 @@ export function useSupabaseDashboard(dateRange: DateRange): UseSupabaseDashboard
       if (e2) throw new Error(e2.message);
       if (e3) throw new Error(e3.message);
       if (e4) throw new Error(e4.message);
-      if (e5) throw new Error(e5.message);
 
       const filtered: GameExecution[] = filteredExecData ?? [];
       const all: GameExecution[]      = allExecData ?? [];
       const active: Pick<UniqueUser, 'roblox_user_id' | 'user_id'>[] = userData ?? [];
 
-      const last24h       = (recentUsers ?? []).reduce((s: number, u: { execution_count: number }) => s + (u.execution_count ?? 0), 0);
-      const totalExec     = dateRange === '24h' ? last24h : filtered.reduce((s, e) => s + e.count, 0);
+      // Total executions: sum game_executions.count filtered by date range (accurate)
+      const totalExec     = filtered.reduce((s, e) => s + e.count, 0);
       const distinctUsers = new Set(active.map(u => u.roblox_user_id ?? u.user_id)).size;
-
       const newUsersToday = new Set((newUsersData ?? []).map((u: { roblox_user_id: number }) => u.roblox_user_id)).size;
 
       setData({
