@@ -9,7 +9,7 @@ const GAMES = [
   { placeId: 138013005633222, loader: LOADER     },
   { placeId: 119987266683883, loader: LOADER     },
   { placeId: 136801880565837, loader: LOADER     },
-  { placeId: 0,               loader: UNC_LOADER },
+  { placeId: 123974602339071, loader: UNC_LOADER },
 ];
 
 type GameInfo = {
@@ -175,10 +175,6 @@ export function ScriptsTab() {
 
   useEffect(() => {
     GAMES.forEach(async game => {
-      if (game.placeId === 0) {
-        setCards(prev => ({ ...prev, [0]: { loading: false, info: { universeId: 0, name: 'UNC Tester', description: 'Universal Naming Convention tester — check executor compatibility.', playing: 0, visits: 0, maxPlayers: 0, favoriteCount: 0, thumbUrl: null, likeCount: 0, dislikeCount: 0 } } }));
-        return;
-      }
       setCards(prev => ({ ...prev, [game.placeId]: { loading: true, info: null } }));
       const info = await fetchGameInfo(game.placeId);
       setCards(prev => ({ ...prev, [game.placeId]: { loading: false, info } }));
