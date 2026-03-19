@@ -43,7 +43,7 @@ async function fetchRobloxBio(userId: number): Promise<string | null> {
   } catch { return null; }
 }
 
-type TokenRow = { token: string; roblox_username: string; roblox_user_id: number };
+type TokenRow = { token: string; roblox_username: string; roblox_user_id: number; updated_at?: string };
 type Step = 'username' | 'verify' | 'done';
 
 export function MyTokenPanel() {
@@ -67,7 +67,7 @@ export function MyTokenPanel() {
     if (!user) { setLoading(false); return; }
     const { data, error: err } = await supabase
       .from('user_tokens')
-      .select('token, roblox_username, roblox_user_id')
+      .select('token, roblox_username, roblox_user_id, updated_at')
       .eq('user_id', user.id)
       .maybeSingle();
     if (err) setError(err.message);
@@ -225,6 +225,16 @@ export function MyTokenPanel() {
               <p className="text-2xl font-bold tracking-[0.3em] text-amber-400 font-mono select-all">
                 {tokenRow.token}
               </p>
+              {tokenRow.updated_at && (
+                <p className="text-[10px] text-gray-500 mt-1">
+                  Generated {(() => {
+                    const diff = (Date.now() - new Date(tokenRow.updated_at!).getTime()) / 1000;
+                    if (diff < 3600)  return `${Math.floor(diff / 60)}m ago`;
+                    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+                    return `${Math.floor(diff / 86400)}d ago`;
+                  })()}
+                </p>
+              )}
             </div>
             <button
               onClick={copyToken}

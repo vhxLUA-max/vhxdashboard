@@ -12,18 +12,24 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { isConfigured } from '@/lib/supabase';
 import { ExecutionsChart } from '@/components/ExecutionsChart';
 import { GameBreakdownChart } from '@/components/GameBreakdownChart';
+import { ExecutionHeatmap } from '@/components/ExecutionHeatmap';
 import { TopUsersLeaderboard } from '@/components/TopUsersLeaderboard';
 import { ExecutionRateBadge } from '@/components/ExecutionRateBadge';
-import { Activity, Users, Clock, RefreshCw, BarChart3, Gamepad2, Search, Webhook, Key, ShieldCheck, Megaphone, Code, Loader2 } from 'lucide-react';
+import { Activity, Users, Clock, RefreshCw, BarChart3, Gamepad2, Search, Webhook, Key, ShieldCheck, Megaphone, Code, Loader2, Palette } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LoginModal } from '@/components/LoginModal';
 import { logout } from '@/lib/auth';
+import { toast } from 'sonner';
+import { initTheme } from '@/components/ThemeManager';
+
+initTheme();
 
 const ChangePasswordModal = lazy(() => import('@/components/ChangePasswordModal').then(m => ({ default: m.ChangePasswordModal })));
 const UserSearch          = lazy(() => import('@/components/UserSearch').then(m => ({ default: m.UserSearch })));
 const WebhookTab       = lazy(() => import('@/components/WebhookTab').then(m => ({ default: m.WebhookTab })));
 const MyTokenPanel     = lazy(() => import('@/components/MyTokenPanel').then(m => ({ default: m.MyTokenPanel })));
 const ScriptsTab       = lazy(() => import('@/components/ScriptsTab').then(m => ({ default: m.ScriptsTab })));
+const ThemeManager     = lazy(() => import('@/components/ThemeManager').then(m => ({ default: m.ThemeManager })));
 const StatusTab        = lazy(() => import('@/components/StatusTab').then(m => ({ default: m.StatusTab })));
 const ChangelogTab     = lazy(() => import('@/components/ChangelogTab').then(m => ({ default: m.ChangelogTab })));
 
@@ -51,7 +57,7 @@ function useLiveCounter() {
   return count;
 }
 
-type SidebarTab = 'stats' | 'search' | 'webhook' | 'token' | 'scripts' | 'status' | 'changelog';
+type SidebarTab = 'stats' | 'search' | 'webhook' | 'token' | 'scripts' | 'status' | 'changelog' | 'themes';
 
 const TABS = [
   { id: 'stats',     label: 'Stats',     icon: BarChart3   },
@@ -59,6 +65,7 @@ const TABS = [
   { id: 'webhook',   label: 'Webhook',   icon: Webhook     },
   { id: 'token',     label: 'Token',     icon: Key         },
   { id: 'scripts',   label: 'Scripts',   icon: Code        },
+  { id: 'themes',    label: 'Themes',    icon: Palette     },
   { id: 'status',    label: 'Status',    icon: ShieldCheck },
   { id: 'changelog', label: 'Changelog', icon: Megaphone   },
 ] as const;
@@ -81,8 +88,28 @@ function App() {
   const liveCount     = useLiveCounter();
 
   useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      const idx = parseInt(e.key) - 1;
+      if (idx >= 0 && idx < TABS.length) setActiveTab(TABS[idx].id);
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
+
+  useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setAdminUsername(session?.user?.user_metadata?.username ?? null);
+      if (session?.expires_at) {
+        const msLeft = session.expires_at * 1000 - Date.now();
+        const warnAt = msLeft - 5 * 60 * 1000;
+        if (warnAt > 0) {
+          const t = setTimeout(() => {
+            toast.warning('Your session expires in 5 minutes. Save your work.', { duration: 10000 });
+          }, warnAt);
+          return () => clearTimeout(t);
+        }
+      }
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
       setAdminUsername(session?.user?.user_metadata?.username ?? null);
@@ -116,12 +143,12 @@ function App() {
 
       <div className="flex flex-1">
         <aside className="hidden lg:flex flex-col gap-1 w-20 shrink-0 border-r border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 px-2 py-6 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto">
-          {TABS.map(tab => (
+          {TABS.map((tab, i) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              title={tab.label}
-              className={`flex flex-col items-center gap-1.5 px-2 py-3 rounded-xl text-[10px] font-medium transition-all ${
+              title={`${tab.label} (${i + 1})`}
+              className={`relative flex flex-col items-center gap-1.5 px-2 py-3 rounded-xl text-[10px] font-medium transition-all ${
                 activeTab === tab.id
                   ? 'bg-white dark:bg-gray-800 text-indigo-500 dark:text-indigo-400 shadow-sm border border-gray-200 dark:border-gray-700'
                   : 'text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-white dark:hover:bg-gray-800/60'
@@ -129,6 +156,7 @@ function App() {
             >
               <tab.icon className="w-5 h-5 flex-shrink-0" />
               {tab.label}
+              <span className="absolute top-1.5 right-1.5 text-[8px] text-gray-600 font-mono">{i + 1}</span>
             </button>
           ))}
         </aside>
@@ -182,11 +210,11 @@ function App() {
                 </div>
               }>
                 {activeTab === 'stats' && (
-                  <div className="space-y-8">
+                  <div key="stats" className="tab-animate space-y-8">
                     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
                       <MetricCard title="Total Executions" value={data?.totalExecutions.toLocaleString() ?? '-'} subtitle={`In last ${dateRange}`} icon={Activity} loading={loading} />
                       <MetricCard title="Unique Users"     value={data?.uniqueUsers.toLocaleString() ?? '-'}     subtitle={`Active in last ${dateRange}`} icon={Users} loading={loading} />
-                      <MetricCard title="Active Scripts"   value="3"                                             subtitle="Deployed scripts" icon={Gamepad2} loading={loading} />
+                      <MetricCard title="New Users Today"  value={data?.newUsersToday.toLocaleString() ?? '-'}   subtitle="First seen today" icon={Users} loading={loading} />
                       <MetricCard title="Last Execution"   value={data?.lastExecutedAt ? timeAgo(data.lastExecutedAt) : '-'} subtitle="Most recent activity" icon={Clock} loading={loading} />
                     </div>
 
@@ -205,17 +233,24 @@ function App() {
                       <GameBreakdownChart executions={data?.recentExecutions ?? []} loading={loading} />
                     </div>
 
+                    <div className="bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6">
+                      <ExecutionHeatmap executions={data?.allExecutions ?? []} loading={loading} />
+                    </div>
+
                     <TopUsersLeaderboard adminUsername={adminUsername} />
                   </div>
                 )}
 
                 <Suspense fallback={<TabFallback />}>
-                  {activeTab === 'search'    && <UserSearch />}
-                  {activeTab === 'webhook'   && <WebhookTab />}
-                  {activeTab === 'token'     && <MyTokenPanel />}
-                  {activeTab === 'scripts'   && <ScriptsTab />}
-                  {activeTab === 'status'    && <StatusTab executions={data?.recentExecutions ?? []} />}
-                  {activeTab === 'changelog' && <ChangelogTab />}
+                  <div key={activeTab} className="tab-animate">
+                    {activeTab === 'search'    && <UserSearch />}
+                    {activeTab === 'webhook'   && <WebhookTab />}
+                    {activeTab === 'token'     && <MyTokenPanel />}
+                    {activeTab === 'scripts'   && <ScriptsTab />}
+                    {activeTab === 'themes'    && <ThemeManager />}
+                    {activeTab === 'status'    && <StatusTab executions={data?.recentExecutions ?? []} />}
+                    {activeTab === 'changelog' && <ChangelogTab />}
+                  </div>
                 </Suspense>
               </ErrorBoundary>
             )}

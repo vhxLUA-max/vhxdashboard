@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Copy, Check, Loader2, Gamepad2, Users, ThumbsUp, Star, ExternalLink, ArrowLeft, Play } from 'lucide-react';
+import { toast } from 'sonner';
 
 const LOADER = `loadstring(game:HttpGet("https://raw.githubusercontent.com/vhxLUA-max/vhxframeworks/refs/heads/main/main.lua"))()`;
 const UNC_LOADER = `loadstring(game:HttpGet("https://raw.githubusercontent.com/vhxLUA-max/vhxframeworks/refs/heads/main/unctester"))()`;
@@ -82,6 +83,7 @@ function GameDetailPanel({ info, placeId, loader, onBack }: { info: GameInfo; pl
   const copy = () => {
     navigator.clipboard.writeText(loader);
     setCopied(true);
+    toast.success(`${info.name} script copied!`);
     setTimeout(() => setCopied(false), 2000);
   };
 

@@ -1,8 +1,9 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { UniqueUser, GameExecution } from '@/types';
-import { Users, Clock, Calendar, Gamepad2, ArrowLeft, ExternalLink, Shield, Activity, Hash } from 'lucide-react';
+import { Users, Clock, Calendar, Gamepad2, ArrowLeft, ExternalLink, Shield, Activity, Hash, Download, ArrowUpDown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { toast } from 'sonner';
 
 type PlaceEntry = {
   place_id: number;
@@ -214,12 +215,43 @@ function UserProfilePanel({ user, onBack }: { user: UserResult; onBack: () => vo
 }
 
 export function UserSearch() {
-  const [query, setQuery] = useState('');
-  const [results, setResults] = useState<UserResult[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [searched, setSearched] = useState(false);
+  const [query, setQuery]           = useState('');
+  const [results, setResults]       = useState<UserResult[]>([]);
+  const [loading, setLoading]       = useState(false);
+  const [searched, setSearched]     = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserResult | null>(null);
+  const [sortBy, setSortBy]         = useState<'executions' | 'recent'>('executions');
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const sortedResults = useMemo(() => {
+    return [...results].sort((a, b) =>
+      sortBy === 'executions'
+        ? b.total_executions - a.total_executions
+        : new Date(b.latest_seen).getTime() - new Date(a.latest_seen).getTime()
+    );
+  }, [results, sortBy]);
+
+  const exportCSV = () => {
+    if (!results.length) return;
+    const rows = [
+      ['Username', 'Roblox ID', 'Total Executions', 'Games', 'First Seen', 'Last Seen'],
+      ...results.map(u => [
+        u.username,
+        u.roblox_user_id,
+        u.total_executions,
+        u.places.length,
+        u.earliest_seen,
+        u.latest_seen,
+      ]),
+    ];
+    const csv  = rows.map(r => r.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.download = `vhx-users-${query}.csv`; a.click();
+    URL.revokeObjectURL(url);
+    toast.success('CSV exported');
+  };
 
   const search = useCallback(async (value: string) => {
     const trimmed = value.trim();
@@ -343,8 +375,26 @@ export function UserSearch() {
       )}
 
       {!loading && results.length > 0 && (
-        <div className="space-y-2">
-          {results.map((user) => (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5">
+              {(['executions', 'recent'] as const).map(s => (
+                <button key={s} onClick={() => setSortBy(s)}
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium transition-all ${
+                    sortBy === s ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                  }`}>
+                  <ArrowUpDown className="w-3 h-3" />
+                  {s === 'executions' ? 'Most Execs' : 'Most Recent'}
+                </button>
+              ))}
+            </div>
+            <button onClick={exportCSV}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:text-indigo-400 hover:border-indigo-500/40 transition-all">
+              <Download className="w-3 h-3" /> Export CSV
+            </button>
+          </div>
+          <div className="space-y-2">
+            {sortedResults.map((user) => (
             <button
               key={user.roblox_user_id}
               onClick={() => setSelectedUser(user)}
@@ -367,6 +417,7 @@ export function UserSearch() {
               </div>
             </button>
           ))}
+          </div>
         </div>
       )}
     </div>

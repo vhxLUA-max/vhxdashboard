@@ -23,6 +23,7 @@ export interface DashboardData {
   recentExecutions: GameExecution[];
   allExecutions: GameExecution[];
   recentUsers: UniqueUser[];
+  newUsersToday: number;
 }
 
 export type DateRange = '24h' | '7d' | '30d' | '90d';
