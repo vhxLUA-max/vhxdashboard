@@ -1,16 +1,29 @@
 import { useState, useEffect } from 'react';
-import { Copy, Check, Loader2, Gamepad2 } from 'lucide-react';
+import { Copy, Check, Loader2, Gamepad2, X, Users, ThumbsUp, Star, ExternalLink, ArrowLeft } from 'lucide-react';
 
 const LOADER = `loadstring(game:HttpGet("https://raw.githubusercontent.com/vhxLUA-max/vhxframeworks/refs/heads/main/main.lua"))()`;
 const UNC_LOADER = `loadstring(game:HttpGet("https://raw.githubusercontent.com/vhxLUA-max/vhxframeworks/refs/heads/main/unctester"))()`;
 
 const GAMES = [
-  { name: 'Pixel Blade',                  placeId: 18172550962,     loader: LOADER     },
-  { name: 'Loot Hero',                    placeId: 138013005633222, loader: LOADER     },
-  { name: 'Survive LAVA for Brainrots!',  placeId: 119987266683883, loader: LOADER     },
-  { name: 'Flick',                        placeId: 136801880565837, loader: LOADER     },
-  { name: 'Baseplate',                    placeId: 0,               loader: UNC_LOADER },
+  { placeId: 18172550962,     loader: LOADER     },
+  { placeId: 138013005633222, loader: LOADER     },
+  { placeId: 119987266683883, loader: LOADER     },
+  { placeId: 136801880565837, loader: LOADER     },
+  { placeId: 0,               loader: UNC_LOADER },
 ];
+
+type GameInfo = {
+  universeId: number;
+  name: string;
+  description: string;
+  playing: number;
+  visits: number;
+  maxPlayers: number;
+  thumbUrl: string | null;
+  favoriteCount: number;
+  likeCount: number;
+  dislikeCount: number;
+};
 
 async function robloxProxy(path: string): Promise<unknown> {
   const res = await fetch('/api/roblox', {
@@ -22,100 +35,197 @@ async function robloxProxy(path: string): Promise<unknown> {
   return res.json();
 }
 
-async function fetchThumb(placeId: number): Promise<string | null> {
+async function fetchGameInfo(placeId: number): Promise<GameInfo | null> {
   try {
     const uni = await robloxProxy(`/universes/v1/places/${placeId}/universe`) as { universeId?: number } | null;
     if (!uni?.universeId) return null;
-    const thumb = await robloxProxy(`/v1/games/icons?universeIds=${uni.universeId}&returnPolicy=PlaceHolder&size=512x512&format=Png&isCircular=false`) as { data?: { imageUrl?: string }[] } | null;
-    return thumb?.data?.[0]?.imageUrl ?? null;
+    const uid = uni.universeId;
+
+    const [details, thumb, votes] = await Promise.all([
+      robloxProxy(`/v1/games?universeIds=${uid}`) as Promise<{ data?: { name?: string; description?: string; playing?: number; visits?: number; maxPlayers?: number; favoritedCount?: number }[] } | null>,
+      robloxProxy(`/v1/games/icons?universeIds=${uid}&returnPolicy=PlaceHolder&size=512x512&format=Png&isCircular=false`) as Promise<{ data?: { imageUrl?: string }[] } | null>,
+      robloxProxy(`/v1/games/votes?universeIds=${uid}`) as Promise<{ data?: { upVotes?: number; downVotes?: number }[] } | null>,
+    ]);
+
+    const d = (details as { data?: { name?: string; description?: string; playing?: number; visits?: number; maxPlayers?: number; favoritedCount?: number }[] })?.data?.[0];
+    if (!d) return null;
+
+    return {
+      universeId: uid,
+      name: d.name ?? 'Unknown',
+      description: d.description ?? '',
+      playing: d.playing ?? 0,
+      visits: d.visits ?? 0,
+      maxPlayers: d.maxPlayers ?? 0,
+      favoriteCount: d.favoritedCount ?? 0,
+      thumbUrl: (thumb as { data?: { imageUrl?: string }[] })?.data?.[0]?.imageUrl ?? null,
+      likeCount: (votes as { data?: { upVotes?: number }[] })?.data?.[0]?.upVotes ?? 0,
+      dislikeCount: (votes as { data?: { downVotes?: number }[] })?.data?.[0]?.downVotes ?? 0,
+    };
   } catch {
     return null;
   }
 }
 
-export function ScriptsTab() {
-  const [thumbs, setThumbs]   = useState<Record<number, string | null>>({});
-  const [thumbLoading, setThumbLoading] = useState(true);
-  const [copied, setCopied]   = useState<number | 'all' | null>(null);
+function formatNum(n: number): string {
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + 'M';
+  if (n >= 1_000) return (n / 1_000).toFixed(1) + 'K';
+  return n.toString();
+}
 
-  useEffect(() => {
-    let cancelled = false;
-    Promise.all(GAMES.filter(g => g.placeId !== 0).map(async g => ({ placeId: g.placeId, url: await fetchThumb(g.placeId) }))).then(results => {
-      if (cancelled) return;
-      const map: Record<number, string | null> = {};
-      results.forEach(r => { map[r.placeId] = r.url; });
-      setThumbs(map);
-      setThumbLoading(false);
-    });
-    return () => { cancelled = true; };
-  }, []);
+function GameDetailPanel({ info, placeId, loader, onBack }: { info: GameInfo; placeId: number; loader: string; onBack: () => void }) {
+  const [copied, setCopied] = useState(false);
+  const likePercent = info.likeCount + info.dislikeCount > 0
+    ? Math.round((info.likeCount / (info.likeCount + info.dislikeCount)) * 100)
+    : null;
 
-  const copy = (game: typeof GAMES[number]) => {
-    navigator.clipboard.writeText(game.loader);
-    setCopied(game.placeId);
-    setTimeout(() => setCopied(null), 2000);
+  const copy = () => {
+    navigator.clipboard.writeText(loader);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Scripts</h2>
-          <p className="text-sm text-gray-500 mt-0.5">One loader works for all supported games</p>
-        </div>
-        <button
-          onClick={() => copy(GAMES[0])}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all border ${
-            copied === 'all'
-              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
-              : 'bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-indigo-500/50 hover:text-indigo-400'
-          }`}
-        >
-          {copied === 'all' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-          {copied === 'all' ? 'Copied!' : 'Copy Script'}
-        </button>
-      </div>
+    <div className="space-y-5">
+      <button onClick={onBack} className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white transition-colors">
+        <ArrowLeft className="w-3.5 h-3.5" /> Back to scripts
+      </button>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-        {GAMES.map(game => (
-          <div
-            key={game.placeId}
-            className="group bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden hover:border-indigo-500/40 hover:shadow-lg hover:shadow-indigo-500/5 transition-all"
-          >
-            <div className="relative aspect-square bg-gray-200 dark:bg-gray-800">
-              {thumbLoading && game.placeId !== 0 ? (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
-                </div>
-              ) : thumbs[game.placeId] ? (
-                <img
-                  src={thumbs[game.placeId]!}
-                  alt={game.name}
-                  className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
-                />
-              ) : (
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
-                  <Gamepad2 className="w-10 h-10 text-gray-600" />
+      <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
+        {info.thumbUrl ? (
+          <img src={info.thumbUrl} alt={info.name} className="w-full aspect-video object-contain bg-gray-800" />
+        ) : (
+          <div className="w-full aspect-video flex items-center justify-center bg-gray-800">
+            <Gamepad2 className="w-12 h-12 text-gray-600" />
+          </div>
+        )}
+
+        <div className="p-5 space-y-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white">{info.name}</h2>
+              {likePercent !== null && (
+                <div className="flex items-center gap-1.5 mt-1">
+                  <ThumbsUp className="w-3 h-3 text-emerald-400" />
+                  <span className="text-xs text-emerald-400 font-medium">{likePercent}% positive</span>
+                  <span className="text-xs text-gray-600">({formatNum(info.likeCount + info.dislikeCount)} votes)</span>
                 </div>
               )}
             </div>
-
-            <div className="p-3 space-y-2">
-              <p className="text-xs font-semibold text-gray-900 dark:text-white truncate">{game.name}</p>
-              <button
-                onClick={() => copy(game)}
-                className={`w-full flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${
-                  copied === game.placeId
-                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
-                    : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-indigo-500/40 hover:text-indigo-400'
-                }`}
-              >
-                {copied === game.placeId ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                {copied === game.placeId ? 'Copied!' : 'Copy'}
-              </button>
-            </div>
+            <a
+              href={`https://www.roblox.com/games/${placeId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-shrink-0 flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
+            >
+              View on Roblox <ExternalLink className="w-3 h-3" />
+            </a>
           </div>
-        ))}
+
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { icon: Users,   label: 'Playing',   value: formatNum(info.playing)  },
+              { icon: Star,    label: 'Visits',     value: formatNum(info.visits)   },
+              { icon: ThumbsUp,label: 'Favorites',  value: formatNum(info.favoriteCount) },
+            ].map(stat => (
+              <div key={stat.label} className="bg-gray-100 dark:bg-gray-800 rounded-lg p-3 text-center">
+                <stat.icon className="w-4 h-4 text-indigo-400 mx-auto mb-1" />
+                <p className="text-sm font-bold text-gray-900 dark:text-white">{stat.value}</p>
+                <p className="text-[10px] text-gray-500">{stat.label}</p>
+              </div>
+            ))}
+          </div>
+
+          {info.description ? (
+            <p className="text-xs text-gray-500 leading-relaxed line-clamp-4">{info.description}</p>
+          ) : null}
+
+          <button
+            onClick={copy}
+            className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all border ${
+              copied
+                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                : 'bg-indigo-600 hover:bg-indigo-500 border-indigo-600 text-white'
+            }`}
+          >
+            {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+            {copied ? 'Copied!' : 'Copy Script'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+type CardState = { loading: boolean; info: GameInfo | null };
+
+export function ScriptsTab() {
+  const [cards, setCards]       = useState<Record<number, CardState>>({});
+  const [selected, setSelected] = useState<typeof GAMES[number] | null>(null);
+
+  useEffect(() => {
+    GAMES.forEach(async game => {
+      if (game.placeId === 0) {
+        setCards(prev => ({ ...prev, [0]: { loading: false, info: { universeId: 0, name: 'UNC Tester', description: 'Universal Naming Convention tester — check executor compatibility.', playing: 0, visits: 0, maxPlayers: 0, favoriteCount: 0, thumbUrl: null, likeCount: 0, dislikeCount: 0 } } }));
+        return;
+      }
+      setCards(prev => ({ ...prev, [game.placeId]: { loading: true, info: null } }));
+      const info = await fetchGameInfo(game.placeId);
+      setCards(prev => ({ ...prev, [game.placeId]: { loading: false, info } }));
+    });
+  }, []);
+
+  if (selected) {
+    const card = cards[selected.placeId];
+    if (card?.info) {
+      return <GameDetailPanel info={card.info} placeId={selected.placeId} loader={selected.loader} onBack={() => setSelected(null)} />;
+    }
+  }
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Scripts</h2>
+        <p className="text-sm text-gray-500 mt-0.5">Click a game to view info and copy the script</p>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+        {GAMES.map(game => {
+          const card = cards[game.placeId];
+          const loading = card?.loading ?? true;
+          const info = card?.info ?? null;
+
+          return (
+            <button
+              key={game.placeId}
+              onClick={() => setSelected(game)}
+              disabled={loading}
+              className="group text-left bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden hover:border-indigo-500/40 hover:shadow-lg hover:shadow-indigo-500/5 transition-all disabled:opacity-60 disabled:cursor-wait"
+            >
+              <div className="aspect-square bg-gray-200 dark:bg-gray-800 relative">
+                {loading ? (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
+                  </div>
+                ) : info?.thumbUrl ? (
+                  <img src={info.thumbUrl} alt={info.name} className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300" />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <Gamepad2 className="w-10 h-10 text-gray-600" />
+                  </div>
+                )}
+              </div>
+              <div className="p-2.5">
+                <p className="text-xs font-semibold text-gray-900 dark:text-white truncate">
+                  {loading ? <span className="block h-3 w-20 bg-gray-700 rounded animate-pulse" /> : (info?.name ?? 'Unknown')}
+                </p>
+                {!loading && info && (
+                  <p className="text-[10px] text-gray-500 mt-0.5">{formatNum(info.playing)} playing</p>
+                )}
+              </div>
+            </button>
+          );
+        })}
       </div>
     </div>
   );

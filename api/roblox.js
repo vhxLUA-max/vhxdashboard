@@ -8,11 +8,14 @@ export default async function handler(req, res) {
 
   const { path, method = 'GET', body } = req.body;
 
-  const domain = path.startsWith('/v1/games/icons') || path.startsWith('/v1/games/thumbnails')
-    ? 'https://thumbnails.roblox.com'
-    : path.startsWith('/universes/')
-    ? 'https://apis.roblox.com'
-    : 'https://users.roblox.com';
+  let domain;
+  if (path.startsWith('/v1/games/icons') || path.startsWith('/v1/games/thumbnails')) {
+    domain = 'https://thumbnails.roblox.com';
+  } else if (path.startsWith('/universes/')) {
+    domain = 'https://apis.roblox.com';
+  } else {
+    domain = 'https://games.roblox.com';
+  }
 
   try {
     const robloxRes = await fetch(`${domain}${path}`, {
