@@ -375,18 +375,34 @@ export function UserSearch() {
       <div className="relative mb-4">
         <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
         <Input
+          autoFocus
           value={query}
           onChange={handleChange}
           placeholder="Enter token (e.g. VOID3847)..."
           maxLength={10}
-          className="pl-9 bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white placeholder:text-gray-400 focus:border-purple-500 font-mono tracking-widest uppercase"
+          className="pl-9 pr-8 bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white placeholder:text-gray-400 focus:border-purple-500 font-mono tracking-widest uppercase"
         />
+        {query && (
+          <button onClick={() => { setQuery(''); setResults([]); setSearched(false); }} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200 transition-colors">
+            ✕
+          </button>
+        )}
       </div>
 
       {loading && <div className="text-center py-6 text-gray-400 text-sm">Searching...</div>}
 
       {!loading && searched && results.length === 0 && (
-        <div className="text-center py-6 text-gray-400 text-sm">No user found for token "{query}"</div>
+        <div className="text-center py-8 space-y-1">
+          <p className="text-sm text-gray-400">No user found for token "{query}"</p>
+          <p className="text-xs text-gray-600">Make sure the token is correct — get yours in the Token tab</p>
+        </div>
+      )}
+
+      {!loading && !searched && !query && (
+        <div className="text-center py-8 space-y-1">
+          <p className="text-xs text-gray-500">Enter your token above to look up execution stats</p>
+          <p className="text-xs text-gray-600">Don't have a token? Go to the <span className="text-indigo-400">Token</span> tab to verify your Roblox account</p>
+        </div>
       )}
 
       {!loading && results.length > 0 && (

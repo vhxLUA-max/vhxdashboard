@@ -78,11 +78,12 @@ export function AdminPanel() {
 
 
   const [tokens, setTokens]       = useState<TokenRow[]>([]);
+  const [tokenFilter, setTokenFilter] = useState('');
   const [editingToken, setEditingToken] = useState<string | null>(null);
   const [newTokenVal, setNewTokenVal]   = useState('');
 
-
   const [bans, setBans]           = useState<BannedUser[]>([]);
+  const [banFilter, setBanFilter] = useState('');
   const [banInput, setBanInput]   = useState('');
   const [banReason, setBanReason] = useState('');
 
@@ -157,6 +158,7 @@ export function AdminPanel() {
   }, [tab, isAdmin, loadAccounts, loadTokens, loadBans, loadAnnouncements, loadAudit]);
 
   const resetToken = async (row: TokenRow) => {
+    if (!window.confirm(`Reset token for @${row.roblox_username}? Their current token will stop working.`)) return;
     const newTok = generateToken();
     const { error } = await supabase.from('user_tokens').update({ token: newTok, updated_at: new Date().toISOString() }).eq('user_id', row.user_id);
     if (error) { toast.error('Failed to reset token'); return; }
@@ -192,9 +194,11 @@ export function AdminPanel() {
     const dbUser = rows?.[0];
 
     if (!dbUser || !dbUser.roblox_user_id) {
-      toast.error(`"${username}" not found in the database. They must run a script in-game first.`);
+      toast.error(`"${username}" not found. They must run a script in-game first.`);
       return;
     }
+
+    if (!window.confirm(`Ban @${dbUser.username}? This will block them from all vhxLUA scripts.`)) return;
 
     const { error } = await supabase.from('banned_users').insert({
       roblox_user_id: dbUser.roblox_user_id,
@@ -209,6 +213,7 @@ export function AdminPanel() {
   };
 
   const unbanUser = async (ban: BannedUser) => {
+    if (!window.confirm(`Unban @${ban.username ?? ban.roblox_user_id}?`)) return;
     await supabase.from('banned_users').delete().eq('id', ban.id);
     await logAction('unban_user', { roblox_user_id: ban.roblox_user_id, username: ban.username });
     toast.success(`@${ban.username ?? ban.roblox_user_id} unbanned`);
@@ -238,6 +243,7 @@ export function AdminPanel() {
   };
 
   const deleteAnnouncement = async (a: Announcement) => {
+    if (!window.confirm('Delete this announcement?')) return;
     const { error } = await supabase.from('announcements').delete().eq('id', a.id);
     if (error) { toast.error('Delete failed: ' + error.message); return; }
     await logAction('delete_announcement', { id: a.id });
@@ -316,8 +322,11 @@ export function AdminPanel() {
 
       {!loading && tab === 'tokens' && (
         <div className="space-y-2">
-          <p className="text-xs" style={{ color: 'var(--color-muted)' }}>{tokens.length} verified tokens</p>
-          {tokens.map(row => (
+          <div className="flex items-center gap-2">
+            <p className="text-xs flex-1" style={{ color: 'var(--color-muted)' }}>{tokens.length} verified tokens</p>
+            <input value={tokenFilter} onChange={e => setTokenFilter(e.target.value)} placeholder="Filter by username..." className="rounded-lg px-2.5 py-1.5 text-xs border outline-none w-40" style={{ backgroundColor: 'var(--color-surface2)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }} />
+          </div>
+          {tokens.filter(r => !tokenFilter || r.roblox_username.toLowerCase().includes(tokenFilter.toLowerCase()) || r.token.toLowerCase().includes(tokenFilter.toLowerCase())).map(row => (
             <div key={row.user_id} className="p-3 rounded-lg border space-y-2" style={s2}>
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0">
@@ -404,8 +413,11 @@ export function AdminPanel() {
           </div>
 
           <div className="space-y-2">
-            <p className="text-xs" style={{ color: 'var(--color-muted)' }}>{bans.length} banned users</p>
-            {bans.map(b => (
+            <div className="flex items-center gap-2">
+              <p className="text-xs flex-1" style={{ color: 'var(--color-muted)' }}>{bans.length} banned users</p>
+              <input value={banFilter} onChange={e => setBanFilter(e.target.value)} placeholder="Filter by username..." className="rounded-lg px-2.5 py-1.5 text-xs border outline-none w-40" style={{ backgroundColor: 'var(--color-surface2)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }} />
+            </div>
+            {bans.filter(b => !banFilter || (b.username ?? '').toLowerCase().includes(banFilter.toLowerCase())).map(b => (
               <div key={b.id} className="flex items-center gap-3 p-3 rounded-lg border" style={s2}>
                 <Ban className="w-4 h-4 text-rose-400 shrink-0" />
                 <div className="flex-1 min-w-0">

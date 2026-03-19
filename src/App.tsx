@@ -20,6 +20,7 @@ import { Button } from '@/components/ui/button';
 import { LoginModal } from '@/components/LoginModal';
 import { logout } from '@/lib/auth';
 import { initTheme } from '@/components/ThemeManager';
+import { toast } from 'sonner';
 
 initTheme();
 
@@ -193,7 +194,12 @@ const TabFallback = () => (
 
 function App() {
   const [dateRange, setDateRange]         = useState<DateRange>('24h');
-  const [activeTab, setActiveTab]         = useState<SidebarTab>('stats');
+  const [activeTab, setActiveTab]         = useState<SidebarTab>(() => (localStorage.getItem('vhx_tab') as SidebarTab) ?? 'stats');
+
+  const switchTab = useCallback((tab: SidebarTab) => {
+    setActiveTab(tab);
+    localStorage.setItem('vhx_tab', tab);
+  }, []);
   const [adminUsername, setAdminUsername] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl]         = useState<string | null>(null);
   const [isAdmin, setIsAdmin]             = useState(false);
@@ -210,15 +216,33 @@ function App() {
   const lastExecution                     = useLiveLastExecution();
   const visibleTabs                       = TABS.filter(t => t.id !== 'admin' || isAdmin);
 
+  const [showShortcuts, setShowShortcuts] = useState(false);
+
+  useEffect(() => {
+    let startX = 0;
+    const onTouchStart = (e: TouchEvent) => { startX = e.touches[0].clientX; };
+    const onTouchEnd = (e: TouchEvent) => {
+      const diff = startX - e.changedTouches[0].clientX;
+      if (Math.abs(diff) < 60) return;
+      const idx = visibleTabs.findIndex(t => t.id === activeTab);
+      if (diff > 0 && idx < visibleTabs.length - 1) switchTab(visibleTabs[idx + 1].id);
+      else if (diff < 0 && idx > 0) switchTab(visibleTabs[idx - 1].id);
+    };
+    window.addEventListener('touchstart', onTouchStart, { passive: true });
+    window.addEventListener('touchend', onTouchEnd, { passive: true });
+    return () => { window.removeEventListener('touchstart', onTouchStart); window.removeEventListener('touchend', onTouchEnd); };
+  }, [activeTab, visibleTabs, switchTab]);
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.key === '?') { setShowShortcuts(v => !v); return; }
       const idx = parseInt(e.key) - 1;
-      if (idx >= 0 && idx < visibleTabs.length) setActiveTab(visibleTabs[idx].id);
+      if (idx >= 0 && idx < visibleTabs.length) switchTab(visibleTabs[idx].id as SidebarTab);
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [visibleTabs]);
+  }, [visibleTabs, switchTab]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -247,11 +271,11 @@ function App() {
         username={adminUsername}
         avatarUrl={avatarUrl}
         onLoginClick={() => setShowLogin(true)}
-        onLogout={async () => { await logout(); setAdminUsername(null); setAvatarUrl(null); setIsAdmin(false); }}
+        onLogout={async () => { await logout(); setAdminUsername(null); setAvatarUrl(null); setIsAdmin(false); toast.success('Signed out'); }}
         onAccountClick={() => setShowAccount(true)}
       />
 
-      {showLogin && <LoginModal onSuccess={() => setShowLogin(false)} onClose={() => setShowLogin(false)} />}
+      {showLogin && <LoginModal onSuccess={() => { setShowLogin(false); toast.success('Signed in'); }} onClose={() => setShowLogin(false)} />}
 
       {showAccount && adminUsername && (
         <Suspense fallback={null}>
@@ -270,7 +294,7 @@ function App() {
           {visibleTabs.map((tab, i) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => switchTab(tab.id)}
               title={`${tab.label} (${i + 1})`}
               className={`relative flex flex-col items-center gap-1.5 px-2 py-3 rounded-xl text-[10px] font-medium transition-all ${
                 activeTab === tab.id
@@ -287,7 +311,39 @@ function App() {
               <span className="absolute top-1.5 right-1.5 text-[8px] text-gray-600 font-mono">{i + 1}</span>
             </button>
           ))}
+          <button
+            onClick={() => setShowShortcuts(true)}
+            title="Keyboard shortcuts (?)"
+            className="mt-auto flex flex-col items-center gap-1 px-2 py-2 rounded-xl text-[9px] font-mono text-gray-600 hover:text-gray-400 transition-colors"
+          >
+            <span className="px-1.5 py-0.5 rounded border border-gray-700 text-[10px]">?</span>
+            keys
+          </button>
         </aside>
+
+        {showShortcuts && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setShowShortcuts(false)}>
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+            <div className="relative rounded-2xl border shadow-2xl p-6 w-full max-w-sm" style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }} onClick={e => e.stopPropagation()}>
+              <h3 className="text-sm font-semibold mb-4 flex items-center justify-between" style={{ color: 'var(--color-text)' }}>
+                Keyboard Shortcuts
+                <button onClick={() => setShowShortcuts(false)} style={{ color: 'var(--color-muted)' }}>✕</button>
+              </h3>
+              <div className="space-y-2">
+                {visibleTabs.map((tab, i) => (
+                  <div key={tab.id} className="flex items-center justify-between">
+                    <span className="text-xs" style={{ color: 'var(--color-muted)' }}>{tab.label}</span>
+                    <kbd className="px-2 py-0.5 rounded border text-[10px] font-mono" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text)', backgroundColor: 'var(--color-surface2)' }}>{i + 1}</kbd>
+                  </div>
+                ))}
+                <div className="flex items-center justify-between pt-2 border-t" style={{ borderColor: 'var(--color-border)' }}>
+                  <span className="text-xs" style={{ color: 'var(--color-muted)' }}>Toggle this panel</span>
+                  <kbd className="px-2 py-0.5 rounded border text-[10px] font-mono" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text)', backgroundColor: 'var(--color-surface2)' }}>?</kbd>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="flex-1 min-w-0">
           <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
@@ -314,9 +370,13 @@ function App() {
               </div>
             )}
 
+            <div className="lg:hidden flex items-center justify-between mb-2 px-1">
+              <span className="text-xs font-semibold" style={{ color: 'var(--color-text)' }}>{visibleTabs.find(t => t.id === activeTab)?.label}</span>
+              <span className="text-[10px]" style={{ color: 'var(--color-muted)' }}>swipe to navigate</span>
+            </div>
             <div className="lg:hidden grid grid-cols-5 gap-1 bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-1 mb-6">
               {visibleTabs.map(tab => (
-                <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+                <button key={tab.id} onClick={() => switchTab(tab.id)}
                   className={`flex flex-col items-center justify-center gap-1 py-2.5 px-1 rounded-lg text-[10px] font-medium transition-all ${
                     activeTab === tab.id
                       ? tab.id === 'admin'
