@@ -6,7 +6,6 @@ import { Header } from '@/components/Header';
 import { MetricCard } from '@/components/MetricCard';
 import { DateRangeFilter } from '@/components/DateRangeFilter';
 import { RecentActivityList } from '@/components/RecentActivityList';
-import { QuickStatsPanel } from '@/components/QuickStatsPanel';
 import { UserSearch } from '@/components/UserSearch';
 import { WebhookTab } from '@/components/WebhookTab';
 import { MyTokenPanel } from '@/components/MyTokenPanel';
