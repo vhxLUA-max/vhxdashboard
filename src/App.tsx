@@ -5,13 +5,12 @@ import type { DateRange } from '@/types';
 import { Header } from '@/components/Header';
 import { MetricCard } from '@/components/MetricCard';
 import { DateRangeFilter } from '@/components/DateRangeFilter';
-import { RecentActivityList } from '@/components/RecentActivityList';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { isConfigured } from '@/lib/supabase';
-import { ExecutionsChart } from '@/components/ExecutionsChart';
-import { GameBreakdownChart } from '@/components/GameBreakdownChart';
+import { LiveRecentActivity } from '@/components/LiveRecentActivity';
+import { LiveCharts } from '@/components/LiveCharts';
 import { ExecutionHeatmap } from '@/components/ExecutionHeatmap';
 import { RatingsPanel } from '@/components/RatingsPanel';
 import { TopUsersLeaderboard } from '@/components/TopUsersLeaderboard';
@@ -20,7 +19,6 @@ import { Activity, Users, Clock, RefreshCw, BarChart3, Gamepad2, Search, Webhook
 import { Button } from '@/components/ui/button';
 import { LoginModal } from '@/components/LoginModal';
 import { logout } from '@/lib/auth';
-import { toast } from 'sonner';
 import { initTheme } from '@/components/ThemeManager';
 const AccountManager = lazy(() => import('@/components/AccountManager').then(m => ({ default: m.AccountManager })));
 
@@ -232,11 +230,6 @@ function App() {
       } else {
         setIsAdmin(false);
       }
-      if (session?.expires_at) {
-        const msLeft = session.expires_at * 1000 - Date.now();
-        const warnAt = msLeft - 5 * 60 * 1000;
-        if (warnAt > 0) setTimeout(() => toast.warning('Your session expires in 5 minutes.', { duration: 10000 }), warnAt);
-      }
     });
 
     if (new URLSearchParams(window.location.search).get('reset') === 'true') {
@@ -362,14 +355,11 @@ function App() {
                       </h3>
                       {!loading && data?.recentExecutions.length === 0
                         ? <EmptyState />
-                        : <RecentActivityList executions={data?.recentExecutions ?? []} loading={loading} />
+                        : <LiveRecentActivity />
                       }
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6">
-                      <ExecutionsChart executions={data?.allExecutions ?? []} dateRange={dateRange} loading={loading} />
-                      <GameBreakdownChart executions={data?.recentExecutions ?? []} loading={loading} />
-                    </div>
+                    <LiveCharts dateRange={dateRange} />
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                       <div className="bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6">
@@ -390,7 +380,7 @@ function App() {
                     {activeTab === 'scripts'   && <ScriptsTab />}
                     {activeTab === 'themes'    && <ThemeManager />}
                     {activeTab === 'feedback'  && <FeedbackTab />}
-                    {activeTab === 'status'    && <StatusTab executions={data?.recentExecutions ?? []} />}
+                    {activeTab === 'status'    && <StatusTab />}
                     {activeTab === 'changelog' && <ChangelogTab />}
                     {activeTab === 'admin'     && <AdminPanel />}
                   </div>
