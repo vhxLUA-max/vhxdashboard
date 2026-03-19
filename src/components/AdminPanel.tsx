@@ -219,21 +219,23 @@ export function AdminPanel() {
       active: true,
       expires_at: newExpiry ? new Date(newExpiry).toISOString() : null,
     });
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error('Post failed: ' + error.message); return; }
     await logAction('post_announcement', { message: newMsg, type: newType });
-    toast.success('Announcement posted');
+    toast.success('Announcement posted — visible to all users now');
     setNewMsg(''); setNewExpiry('');
     loadAnnouncements();
   };
 
   const toggleAnnouncement = async (a: Announcement) => {
-    await supabase.from('announcements').update({ active: !a.active }).eq('id', a.id);
+    const { error } = await supabase.from('announcements').update({ active: !a.active }).eq('id', a.id);
+    if (error) { toast.error('Toggle failed: ' + error.message); return; }
     await logAction(a.active ? 'deactivate_announcement' : 'activate_announcement', { id: a.id });
     loadAnnouncements();
   };
 
   const deleteAnnouncement = async (a: Announcement) => {
-    await supabase.from('announcements').delete().eq('id', a.id);
+    const { error } = await supabase.from('announcements').delete().eq('id', a.id);
+    if (error) { toast.error('Delete failed: ' + error.message); return; }
     await logAction('delete_announcement', { id: a.id });
     toast.success('Announcement deleted');
     loadAnnouncements();

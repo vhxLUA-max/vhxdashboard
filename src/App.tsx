@@ -138,13 +138,13 @@ function App() {
         <LoginModal onSuccess={() => setShowLogin(false)} onClose={() => setShowLogin(false)} />
       )}
 
-      <AnnouncementBanner />
-
       {showChangePw && adminUsername && (
         <Suspense fallback={null}>
           <ChangePasswordModal username={adminUsername} onClose={() => setShowChangePw(false)} />
         </Suspense>
       )}
+
+      <AnnouncementBanner />
 
       <div className="flex flex-1">
         <aside className="hidden lg:flex flex-col gap-1 w-20 shrink-0 border-r border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 px-2 py-6 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto">
@@ -172,6 +172,7 @@ function App() {
 
         <div className="flex-1 min-w-0">
           <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
+            <AnnouncementBanner />
 
             {activeTab === 'stats' && (
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
