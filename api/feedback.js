@@ -19,7 +19,7 @@ export default async function handler(req, res) {
   }
   RATE_LIMIT.set(ip, now);
 
-  const { type, message, username, rating } = req.body ?? {};
+  const { type, message, username, rating, avatarUrl } = req.body ?? {};
   if (!message?.trim()) return res.status(400).json({ error: 'Message is required.' });
   if (message.length > 1000) return res.status(400).json({ error: 'Message too long.' });
 
@@ -48,6 +48,7 @@ export default async function handler(req, res) {
     embeds: [{
       description,
       color: COLORS[t] ?? COLORS.other,
+      ...(avatarUrl ? { thumbnail: { url: avatarUrl } } : {}),
       footer: {
         text: `vhxLUA Hub · ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`,
       },
