@@ -20,8 +20,11 @@ import { Button } from '@/components/ui/button';
 import { LoginModal } from '@/components/LoginModal';
 import { logout } from '@/lib/auth';
 import { toast } from 'sonner';
+import { initTheme } from '@/components/ThemeManager';
+const AccountManager = lazy(() => import('@/components/AccountManager').then(m => ({ default: m.AccountManager })));
 
-const ChangePasswordModal = lazy(() => import('@/components/ChangePasswordModal').then(m => ({ default: m.ChangePasswordModal })));
+initTheme();
+
 const UserSearch          = lazy(() => import('@/components/UserSearch').then(m => ({ default: m.UserSearch })));
 const WebhookTab       = lazy(() => import('@/components/WebhookTab').then(m => ({ default: m.WebhookTab })));
 const MyTokenPanel     = lazy(() => import('@/components/MyTokenPanel').then(m => ({ default: m.MyTokenPanel })));
@@ -59,8 +62,6 @@ function useLiveCounter() {
 
 type SidebarTab = 'stats' | 'search' | 'webhook' | 'token' | 'scripts' | 'themes' | 'feedback' | 'status' | 'changelog' | 'admin';
 
-const ADMIN_USERS = ['vhxlua-max', 'vhxlua'];
-
 const TABS = [
   { id: 'stats',     label: 'Stats',     icon: BarChart3    },
   { id: 'search',    label: 'Search',    icon: Search       },
@@ -76,7 +77,7 @@ const TABS = [
 
 const TabFallback = () => (
   <div className="flex items-center justify-center py-16">
-    <Loader2 className="w-5 h-5 text-gray-500 animate-spin" />
+    <Loader2 className="w-5 h-5 animate-spin" style={{ color: 'var(--color-muted)' }} />
   </div>
 );
 
@@ -84,11 +85,13 @@ function App() {
   const [dateRange, setDateRange]         = useState<DateRange>('24h');
   const [activeTab, setActiveTab]         = useState<SidebarTab>('stats');
   const [adminUsername, setAdminUsername] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl]         = useState<string | null>(null);
+  const [isAdmin, setIsAdmin]             = useState(false);
   const [showLogin, setShowLogin]         = useState(false);
-  const [showChangePw, setShowChangePw]   = useState(false);
+  const [showAccount, setShowAccount]     = useState(false);
   const { data, loading, error, refresh } = useSupabaseDashboard(dateRange);
   const handleRefresh = useCallback(() => refresh(), [refresh]);
-  const visibleTabs = TABS.filter(t => t.id !== 'admin' || ADMIN_USERS.includes(adminUsername?.toLowerCase() ?? ''));
+  const visibleTabs = TABS.filter(t => t.id !== 'admin' || isAdmin);
   const connected     = isConfigured();
   const liveCount     = useLiveCounter();
 
@@ -103,25 +106,39 @@ function App() {
   }, []);
 
   useEffect(() => {
-    // Immediately read existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) setAdminUsername(session.user?.user_metadata?.username ?? null);
+      if (session) {
+        const u = session.user?.user_metadata?.username ?? null;
+        const av = session.user?.user_metadata?.avatar_url ?? null;
+        setAdminUsername(u);
+        setAvatarUrl(av);
+        if (session.user) {
+          supabase.from('admins').select('user_id').eq('user_id', session.user.id).maybeSingle()
+            .then(({ data }) => setIsAdmin(!!data));
+        }
+      }
     });
 
-    // Then keep in sync with auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
-      setAdminUsername(session?.user?.user_metadata?.username ?? null);
+      const u = session?.user?.user_metadata?.username ?? null;
+      const av = session?.user?.user_metadata?.avatar_url ?? null;
+      setAdminUsername(u);
+      setAvatarUrl(av);
+      if (session?.user) {
+        supabase.from('admins').select('user_id').eq('user_id', session.user.id).maybeSingle()
+          .then(({ data }) => setIsAdmin(!!data));
+      } else {
+        setIsAdmin(false);
+      }
       if (session?.expires_at) {
         const msLeft = session.expires_at * 1000 - Date.now();
         const warnAt = msLeft - 5 * 60 * 1000;
-        if (warnAt > 0) setTimeout(() => {
-          toast.warning('Your session expires in 5 minutes.', { duration: 10000 });
-        }, warnAt);
+        if (warnAt > 0) setTimeout(() => toast.warning('Your session expires in 5 minutes.', { duration: 10000 }), warnAt);
       }
     });
 
     if (new URLSearchParams(window.location.search).get('reset') === 'true') {
-      setShowChangePw(true);
+
       window.history.replaceState({}, '', window.location.pathname);
     }
 
@@ -133,18 +150,23 @@ function App() {
       <Header
         isConnected={connected}
         username={adminUsername}
+        avatarUrl={avatarUrl}
         onLoginClick={() => setShowLogin(true)}
-        onLogout={async () => { await logout(); setAdminUsername(null); }}
-        onChangePassword={() => setShowChangePw(true)}
+        onLogout={async () => { await logout(); setAdminUsername(null); setAvatarUrl(null); setIsAdmin(false); }}
+        onAccountClick={() => setShowAccount(true)}
       />
 
       {showLogin && (
         <LoginModal onSuccess={() => setShowLogin(false)} onClose={() => setShowLogin(false)} />
       )}
 
-      {showChangePw && adminUsername && (
+      {showAccount && adminUsername && (
         <Suspense fallback={null}>
-          <ChangePasswordModal username={adminUsername} onClose={() => setShowChangePw(false)} />
+          <AccountManager
+            onClose={() => setShowAccount(false)}
+            onUsernameChange={u => setAdminUsername(u)}
+            onAvatarChange={url => setAvatarUrl(url)}
+          />
         </Suspense>
       )}
 

@@ -1,26 +1,18 @@
-import { Activity, Database, Sun, Moon, Monitor, LogIn, LogOut, KeyRound } from 'lucide-react';
-import { useTheme } from 'next-themes';
+import { Activity, LogIn, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface HeaderProps {
   isConnected?: boolean;
   username?: string | null;
+  avatarUrl?: string | null;
   onLoginClick?: () => void;
   onLogout?: () => void;
-  onChangePassword?: () => void;
+  onAccountClick?: () => void;
 }
 
-export function Header({ isConnected = true, username, onLoginClick, onLogout, onChangePassword }: HeaderProps) {
-  const { theme, setTheme } = useTheme();
-  const nextTheme = () => {
-    if (theme === 'dark') setTheme('light');
-    else if (theme === 'light') setTheme('system');
-    else setTheme('dark');
-  };
-  const ThemeIcon = theme === 'dark' ? Moon : theme === 'light' ? Sun : Monitor;
-
+export function Header({ isConnected = true, username, avatarUrl, onLoginClick, onLogout, onAccountClick }: HeaderProps) {
   return (
-    <header className="border-b border-gray-800 dark:border-gray-800 bg-white/80 dark:bg-gray-950/80 backdrop-blur-sm sticky top-0 z-40">
+    <header className="border-b sticky top-0 z-40 backdrop-blur-sm" style={{ borderColor: 'var(--color-border)', backgroundColor: 'color-mix(in srgb, var(--color-bg) 85%, transparent)' }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center gap-3">
@@ -28,57 +20,39 @@ export function Header({ isConnected = true, username, onLoginClick, onLogout, o
               <Activity className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-lg font-semibold text-gray-900 dark:text-white">vhxLUA Hub</h1>
-              <p className="text-xs text-gray-500">Scripts · Analytics · Tools</p>
+              <h1 className="text-lg font-semibold" style={{ color: 'var(--color-text)' }}>vhxLUA Hub</h1>
+              <p className="text-xs" style={{ color: 'var(--color-muted)' }}>Scripts · Analytics · Tools</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <div className="flex items-center gap-2 text-sm">
               <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-500' : 'bg-amber-500'} animate-pulse`} />
-              <span className="text-gray-400">{isConnected ? 'Live' : 'Offline'}</span>
+              <span className="text-xs" style={{ color: 'var(--color-muted)' }}>{isConnected ? 'Live' : 'Offline'}</span>
             </div>
 
-            <div className="h-6 w-px bg-gray-200 dark:bg-gray-800" />
-
-            <div className="flex items-center gap-2 text-sm text-gray-500">
-              <Database className="w-4 h-4" />
-              <span className="hidden sm:inline">projectcounter</span>
-            </div>
-
-            <div className="h-6 w-px bg-gray-200 dark:bg-gray-800" />
-
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={nextTheme}
-              title={`Theme: ${theme}`}
-              className="text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 w-8 h-8"
-            >
-              <ThemeIcon className="w-4 h-4" />
-            </Button>
-
-            <div className="h-6 w-px bg-gray-200 dark:bg-gray-800" />
+            <div className="w-px h-5" style={{ backgroundColor: 'var(--color-border)' }} />
 
             {username ? (
               <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-400 hidden sm:inline">@{username}</span>
-                <Button variant="ghost" size="icon" onClick={onChangePassword} title="Change password"
-                  className="text-gray-500 hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-800 w-8 h-8">
-                  <KeyRound className="w-4 h-4" />
-                </Button>
+                <button onClick={onAccountClick} className="flex items-center gap-2 px-2 py-1.5 rounded-lg transition-all hover:opacity-80" style={{ backgroundColor: 'var(--color-surface2)' }}>
+                  {avatarUrl ? (
+                    <img src={avatarUrl} alt={username} className="w-6 h-6 rounded-full object-cover" />
+                  ) : (
+                    <div className="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold" style={{ backgroundColor: 'var(--color-accent)', color: 'var(--color-accent-fg)' }}>
+                      {username[0].toUpperCase()}
+                    </div>
+                  )}
+                  <span className="text-xs font-medium hidden sm:inline" style={{ color: 'var(--color-text)' }}>@{username}</span>
+                </button>
                 <Button variant="ghost" size="icon" onClick={onLogout} title="Sign out"
-                  className="text-gray-500 hover:text-rose-400 hover:bg-gray-100 dark:hover:bg-gray-800 w-8 h-8">
+                  className="w-8 h-8" style={{ color: 'var(--color-muted)' }}>
                   <LogOut className="w-4 h-4" />
                 </Button>
               </div>
             ) : (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onLoginClick}
-                className="text-gray-500 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 gap-1.5 text-xs"
-              >
+              <Button variant="ghost" size="sm" onClick={onLoginClick}
+                className="gap-1.5 text-xs" style={{ color: 'var(--color-muted)' }}>
                 <LogIn className="w-3.5 h-3.5" />
                 Sign in
               </Button>
