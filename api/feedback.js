@@ -20,30 +20,37 @@ export default async function handler(req, res) {
   RATE_LIMIT.set(ip, now);
 
   const { type, message, username, rating } = req.body ?? {};
-
   if (!message?.trim()) return res.status(400).json({ error: 'Message is required.' });
   if (message.length > 1000) return res.status(400).json({ error: 'Message too long.' });
 
-  const COLORS = { bug: 0xef4444, suggestion: 0x6366f1, praise: 0x10b981, other: 0x6b7280 };
-  const EMOJIS = { bug: '🐛', suggestion: '💡', praise: '⭐', other: '💬' };
   const t = type ?? 'other';
 
-  const stars = rating ? '⭐'.repeat(Math.min(5, Math.max(1, rating))) : null;
+  const COLORS  = { bug: 0xef4444, suggestion: 0x6366f1, praise: 0xf59e0b, other: 0x6b7280 };
+  const BADGES  = { bug: '🐛  BUG REPORT', suggestion: '💡  SUGGESTION', praise: '⭐  PRAISE', other: '💬  FEEDBACK' };
+  const DIVIDER = '▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬';
+
+  const stars     = rating ? '★'.repeat(rating) + '☆'.repeat(5 - rating) : null;
+  const fromLine  = username ? `> **@${username}**` : '> *Anonymous*';
+  const starLine  = stars ? `\n> ${stars}  \`${rating}/5\`` : '';
+
+  const description = [
+    `## ${BADGES[t] ?? BADGES.other}`,
+    DIVIDER,
+    `>>> ${message.trim()}`,
+    '',
+    DIVIDER,
+    fromLine + starLine,
+  ].join('\n');
 
   const embed = {
-    username: 'vhxLUA Feedback',
+    username: 'vhxLUA Hub',
     avatar_url: 'https://i.imgur.com/4M34hi2.png',
     embeds: [{
-      title: `${EMOJIS[t] ?? '💬'} New ${t.charAt(0).toUpperCase() + t.slice(1)} Feedback`,
-      description: message.trim(),
+      description,
       color: COLORS[t] ?? COLORS.other,
-      fields: [
-        ...(username ? [{ name: '👤 From', value: `@${username}`, inline: true }] : [{ name: '👤 From', value: 'Guest', inline: true }]),
-        { name: '📂 Type', value: t.charAt(0).toUpperCase() + t.slice(1), inline: true },
-        ...(stars ? [{ name: '⭐ Rating', value: stars, inline: true }] : []),
-      ],
-      footer: { text: 'vhxLUA Hub Feedback' },
-      timestamp: new Date().toISOString(),
+      footer: {
+        text: `vhxLUA Hub · ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`,
+      },
     }],
   };
 
