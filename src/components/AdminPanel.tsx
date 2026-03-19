@@ -182,15 +182,18 @@ export function AdminPanel() {
     const username = banInput.trim();
     if (!username) { toast.error('Enter a Roblox username'); return; }
 
-    // Look up roblox_user_id from unique_users
-    const { data: dbUser } = await supabase
+    const { data: rows } = await supabase
       .from('unique_users')
       .select('roblox_user_id, username')
       .ilike('username', username)
-      .limit(1)
-      .maybeSingle();
+      .limit(1);
 
-    if (!dbUser) { toast.error(`User "${username}" not found. They must have run a script first.`); return; }
+    const dbUser = rows?.[0];
+
+    if (!dbUser || !dbUser.roblox_user_id) {
+      toast.error(`"${username}" not found in the database. They must run a script in-game first.`);
+      return;
+    }
 
     const { error } = await supabase.from('banned_users').insert({
       roblox_user_id: dbUser.roblox_user_id,
