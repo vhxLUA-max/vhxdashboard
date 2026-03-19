@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react';
 import { Copy, Check, Loader2, Gamepad2 } from 'lucide-react';
 
 const LOADER = `loadstring(game:HttpGet("https://raw.githubusercontent.com/vhxLUA-max/vhxframeworks/refs/heads/main/main.lua"))()`;
+const UNC_LOADER = `loadstring(game:HttpGet("https://raw.githubusercontent.com/vhxLUA-max/vhxframeworks/refs/heads/main/unctester"))()`;
 
 const GAMES = [
-  { name: 'Pixel Blade',      placeId: 18172550962     },
-  { name: 'Loot Hero',        placeId: 138013005633222 },
-  { name: 'Survive The Lava', placeId: 119987266683883 },
-  { name: 'Flick',            placeId: 136801880565837 },
+  { name: 'Pixel Blade',      placeId: 18172550962,     loader: LOADER     },
+  { name: 'Loot Hero',        placeId: 138013005633222, loader: LOADER     },
+  { name: 'Survive The Lava', placeId: 119987266683883, loader: LOADER     },
+  { name: 'Flick',            placeId: 136801880565837, loader: LOADER     },
+  { name: 'UNC Tester',       placeId: 0,               loader: UNC_LOADER },
 ];
 
 async function robloxProxy(path: string): Promise<unknown> {
@@ -38,7 +40,7 @@ export function ScriptsTab() {
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all(GAMES.map(async g => ({ placeId: g.placeId, url: await fetchThumb(g.placeId) }))).then(results => {
+    Promise.all(GAMES.filter(g => g.placeId !== 0).map(async g => ({ placeId: g.placeId, url: await fetchThumb(g.placeId) }))).then(results => {
       if (cancelled) return;
       const map: Record<number, string | null> = {};
       results.forEach(r => { map[r.placeId] = r.url; });
@@ -48,9 +50,9 @@ export function ScriptsTab() {
     return () => { cancelled = true; };
   }, []);
 
-  const copy = (key: number | 'all') => {
-    navigator.clipboard.writeText(LOADER);
-    setCopied(key);
+  const copy = (game: typeof GAMES[number]) => {
+    navigator.clipboard.writeText(game.loader);
+    setCopied(game.placeId);
     setTimeout(() => setCopied(null), 2000);
   };
 
@@ -62,7 +64,7 @@ export function ScriptsTab() {
           <p className="text-sm text-gray-500 mt-0.5">One loader works for all supported games</p>
         </div>
         <button
-          onClick={() => copy('all')}
+          onClick={() => copy(GAMES[0])}
           className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all border ${
             copied === 'all'
               ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
@@ -102,7 +104,7 @@ export function ScriptsTab() {
 
             <div className="p-3 flex justify-end">
               <button
-                onClick={() => copy(game.placeId)}
+                onClick={() => copy(game)}
                 className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-medium transition-all border ${
                   copied === game.placeId
                     ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
