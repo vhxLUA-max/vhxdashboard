@@ -55,7 +55,7 @@ export function useSupabaseDashboard(dateRange: DateRange): UseSupabaseDashboard
       setData({
         totalExecutions,
         uniqueUsers:      new Set(activeUsers.map(u => u.roblox_user_id ?? u.user_id)).size,
-        activeGames:      new Set(filteredExecs.map(e => e.place_id)).size || allExecs.length,
+        activeGames:      3,
         lastExecutedAt:   allExecs[0]?.last_executed_at ?? null,
         recentExecutions: filteredExecs,
         allExecutions:    allExecs,
