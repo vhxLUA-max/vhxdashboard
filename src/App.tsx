@@ -58,6 +58,8 @@ function useLiveCounter() {
 
 type SidebarTab = 'stats' | 'search' | 'webhook' | 'token' | 'scripts' | 'status' | 'changelog' | 'themes' | 'admin';
 
+const ADMIN_USERS = ['vhxlua-max', 'vhxlua'];
+
 const TABS = [
   { id: 'stats',     label: 'Stats',     icon: BarChart3   },
   { id: 'search',    label: 'Search',    icon: Search      },
@@ -84,6 +86,7 @@ function App() {
   const [showChangePw, setShowChangePw]   = useState(false);
   const { data, loading, error, refresh } = useSupabaseDashboard(dateRange);
   const handleRefresh = useCallback(() => refresh(), [refresh]);
+  const visibleTabs = TABS.filter(t => t.id !== 'admin' || ADMIN_USERS.includes(adminUsername?.toLowerCase() ?? ''));
   const connected     = isConfigured();
   const liveCount     = useLiveCounter();
 
@@ -91,7 +94,7 @@ function App() {
     const handler = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       const idx = parseInt(e.key) - 1;
-      if (idx >= 0 && idx < TABS.length) setActiveTab(TABS[idx].id);
+      if (idx >= 0 && idx < visibleTabs.length) setActiveTab(visibleTabs[idx].id);
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
@@ -145,7 +148,7 @@ function App() {
 
       <div className="flex flex-1">
         <aside className="hidden lg:flex flex-col gap-1 w-20 shrink-0 border-r border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 px-2 py-6 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto">
-          {TABS.map((tab, i) => (
+          {visibleTabs.map((tab, i) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
@@ -194,7 +197,7 @@ function App() {
             )}
 
             <div className="flex lg:hidden gap-1 bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-1 mb-6 overflow-x-auto">
-              {TABS.map(tab => (
+              {visibleTabs.map(tab => (
                 <button key={tab.id} onClick={() => setActiveTab(tab.id)}
                   className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${
                     activeTab === tab.id ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
