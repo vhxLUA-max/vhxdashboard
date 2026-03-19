@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Copy, Check, Loader2, Gamepad2, X, Users, ThumbsUp, Star, ExternalLink, ArrowLeft } from 'lucide-react';
+import { Copy, Check, Loader2, Gamepad2, Users, ThumbsUp, Star, ExternalLink, ArrowLeft } from 'lucide-react';
 
 const LOADER = `loadstring(game:HttpGet("https://raw.githubusercontent.com/vhxLUA-max/vhxframeworks/refs/heads/main/main.lua"))()`;
 const UNC_LOADER = `loadstring(game:HttpGet("https://raw.githubusercontent.com/vhxLUA-max/vhxframeworks/refs/heads/main/unctester"))()`;
@@ -184,9 +184,22 @@ export function ScriptsTab() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Scripts</h2>
-        <p className="text-sm text-gray-500 mt-0.5">Click a game to view info and copy the script</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Scripts</h2>
+          <p className="text-sm text-gray-500 mt-0.5">Click a game to view info and copy the script</p>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <a href="https://rscripts.net/@vhxLUA_max" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:text-indigo-400 hover:border-indigo-500/40 transition-all">
+            <ExternalLink className="w-3 h-3" /> rscripts
+          </a>
+          <a href="https://youtube.com/@vhxlua?si=1CYB46iZY4RRt9Hq" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:text-red-400 hover:border-red-500/40 transition-all">
+            <ExternalLink className="w-3 h-3" /> YouTube
+          </a>
+          <a href="https://www.tiktok.com/@vhxlua_?lang=en" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:text-pink-400 hover:border-pink-500/40 transition-all">
+            <ExternalLink className="w-3 h-3" /> TikTok
+          </a>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
