@@ -142,51 +142,54 @@ function App() {
               <TopUsersLeaderboard adminUsername={adminUsername} />
             </div>
 
-            <div className="space-y-4">
-              <div className="flex gap-1 bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg p-1 overflow-x-auto">
+            <div className="flex gap-3">
+              <div className="flex flex-col gap-1 bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-1.5 h-fit">
                 {([
-                  { id: 'stats',     label: 'Stats',     icon: BarChart3    },
-                  { id: 'search',    label: 'Search',    icon: Search       },
-                  { id: 'webhook',   label: 'Webhook',   icon: Webhook      },
-                  { id: 'token',     label: 'Token',     icon: Key          },
-                  { id: 'status',    label: 'Status',    icon: ShieldCheck  },
-                  { id: 'changelog', label: 'Changelog', icon: Megaphone    },
+                  { id: 'stats',     label: 'Stats',     icon: BarChart3   },
+                  { id: 'search',    label: 'Search',    icon: Search      },
+                  { id: 'webhook',   label: 'Webhook',   icon: Webhook     },
+                  { id: 'token',     label: 'Token',     icon: Key         },
+                  { id: 'status',    label: 'Status',    icon: ShieldCheck },
+                  { id: 'changelog', label: 'Changelog', icon: Megaphone   },
                 ] as { id: SidebarTab; label: string; icon: React.ElementType }[]).map(tab => (
                   <button
                     key={tab.id}
                     onClick={() => setSidebarTab(tab.id)}
-                    className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-md text-xs font-medium transition-all whitespace-nowrap min-w-0 ${
+                    title={tab.label}
+                    className={`flex flex-col items-center gap-1 px-2.5 py-2.5 rounded-lg text-[10px] font-medium transition-all w-14 ${
                       sidebarTab === tab.id
                         ? 'bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm'
-                        : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                        : 'text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-white/50 dark:hover:bg-gray-800/50'
                     }`}
                   >
-                    <tab.icon className="w-3.5 h-3.5 flex-shrink-0" />
-                    <span className="hidden sm:inline">{tab.label}</span>
+                    <tab.icon className="w-4 h-4 flex-shrink-0" />
+                    {tab.label}
                   </button>
                 ))}
               </div>
 
-              <ErrorBoundary fallback={
-                <div className="bg-gray-100 dark:bg-gray-900 rounded-xl border border-rose-500/20 p-6 text-center">
-                  <p className="text-sm text-rose-400">This panel crashed. Try switching tabs.</p>
-                </div>
-              }>
-                {sidebarTab === 'stats' && (
-                  <div className="bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                      <BarChart3 className="w-5 h-5 text-blue-400" />
-                      Quick Stats
-                    </h3>
-                    <QuickStatsPanel data={data} loading={loading} />
+              <div className="flex-1 min-w-0">
+                <ErrorBoundary fallback={
+                  <div className="bg-gray-100 dark:bg-gray-900 rounded-xl border border-rose-500/20 p-6 text-center">
+                    <p className="text-sm text-rose-400">This panel crashed. Try switching tabs.</p>
                   </div>
-                )}
-                {sidebarTab === 'search' && <UserSearch />}
-                {sidebarTab === 'webhook' && <WebhookTab />}
-                {sidebarTab === 'token' && <MyTokenPanel />}
-                {sidebarTab === 'status' && <StatusTab executions={data?.recentExecutions ?? []} />}
-                {sidebarTab === 'changelog' && <ChangelogTab />}
-              </ErrorBoundary>
+                }>
+                  {sidebarTab === 'stats' && (
+                    <div className="bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                        <BarChart3 className="w-5 h-5 text-blue-400" />
+                        Quick Stats
+                      </h3>
+                      <QuickStatsPanel data={data} loading={loading} />
+                    </div>
+                  )}
+                  {sidebarTab === 'search' && <UserSearch />}
+                  {sidebarTab === 'webhook' && <WebhookTab />}
+                  {sidebarTab === 'token' && <MyTokenPanel />}
+                  {sidebarTab === 'status' && <StatusTab executions={data?.recentExecutions ?? []} />}
+                  {sidebarTab === 'changelog' && <ChangelogTab />}
+                </ErrorBoundary>
+              </div>
             </div>
           </div>
         )}
