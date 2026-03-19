@@ -179,12 +179,27 @@ export function AdminPanel() {
   };
 
   const banUser = async () => {
-    const id = parseInt(banInput.trim());
-    if (!id) { toast.error('Enter a valid Roblox user ID'); return; }
-    const { error } = await supabase.from('banned_users').insert({ roblox_user_id: id, reason: banReason || null });
+    const username = banInput.trim();
+    if (!username) { toast.error('Enter a Roblox username'); return; }
+
+    // Look up roblox_user_id from unique_users
+    const { data: dbUser } = await supabase
+      .from('unique_users')
+      .select('roblox_user_id, username')
+      .ilike('username', username)
+      .limit(1)
+      .maybeSingle();
+
+    if (!dbUser) { toast.error(`User "${username}" not found. They must have run a script first.`); return; }
+
+    const { error } = await supabase.from('banned_users').insert({
+      roblox_user_id: dbUser.roblox_user_id,
+      username: dbUser.username,
+      reason: banReason || null,
+    });
     if (error) { toast.error(error.message); return; }
-    await logAction('ban_user', { roblox_user_id: id, reason: banReason });
-    toast.success(`User ${id} banned`);
+    await logAction('ban_user', { roblox_user_id: dbUser.roblox_user_id, username: dbUser.username, reason: banReason });
+    toast.success(`@${dbUser.username} banned`);
     setBanInput(''); setBanReason('');
     loadBans();
   };
@@ -344,7 +359,7 @@ export function AdminPanel() {
           <div className="p-4 rounded-xl border space-y-3" style={s}>
             <p className="text-xs font-semibold" style={{ color: 'var(--color-text)' }}>Ban a user</p>
             <div className="flex gap-2">
-              <Input value={banInput} onChange={e => setBanInput(e.target.value)} placeholder="Roblox User ID"
+              <Input value={banInput} onChange={e => setBanInput(e.target.value)} placeholder="Roblox username"
                 className="h-8 text-xs" style={{ backgroundColor: 'var(--color-surface2)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }} />
               <Input value={banReason} onChange={e => setBanReason(e.target.value)} placeholder="Reason (optional)"
                 className="h-8 text-xs flex-1" style={{ backgroundColor: 'var(--color-surface2)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }} />
