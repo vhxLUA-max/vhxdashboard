@@ -5,7 +5,7 @@ import { Zap } from 'lucide-react';
 export function ExecutionRateBadge() {
   const [rate, setRate] = useState<number | null>(null);
   const history         = useRef<{ count: number; time: number }[]>([]);
-  const WINDOW_MS       = 5 * 60 * 1000; // 5-min rolling window
+  const WINDOW_MS       = 5 * 60 * 1000;
 
   const getTotal = async () => {
     const { data } = await supabase.from('game_executions').select('count');
@@ -16,7 +16,7 @@ export function ExecutionRateBadge() {
     const now  = Date.now();
     const snap = { count: currentCount, time: now };
     history.current.push(snap);
-    // Keep only last 5 minutes
+
     history.current = history.current.filter(h => now - h.time <= WINDOW_MS);
     if (history.current.length < 2) return;
     const oldest  = history.current[0];
@@ -25,16 +25,16 @@ export function ExecutionRateBadge() {
   };
 
   useEffect(() => {
-    // Seed initial count
+
     getTotal().then(t => { history.current = [{ count: t, time: Date.now() }]; setRate(0); });
 
-    // Poll every 10s for smoother rate
+
     const poll = setInterval(async () => {
       const t = await getTotal();
       recalcRate(t);
     }, 10000);
 
-    // Also update instantly on realtime event
+
     const ch = supabase.channel('exec-rate')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'game_executions' }, async () => {
         const t = await getTotal();

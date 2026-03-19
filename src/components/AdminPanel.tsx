@@ -73,26 +73,26 @@ export function AdminPanel() {
   const [isAdmin, setIsAdmin]     = useState<boolean | null>(null);
   const [loading, setLoading]     = useState(false);
 
-  // Accounts
+
   const [accounts, setAccounts]   = useState<DashboardUser[]>([]);
 
-  // Tokens
+
   const [tokens, setTokens]       = useState<TokenRow[]>([]);
   const [editingToken, setEditingToken] = useState<string | null>(null);
   const [newTokenVal, setNewTokenVal]   = useState('');
 
-  // Bans
+
   const [bans, setBans]           = useState<BannedUser[]>([]);
   const [banInput, setBanInput]   = useState('');
   const [banReason, setBanReason] = useState('');
 
-  // Announcements
+
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [newMsg, setNewMsg]       = useState('');
   const [newType, setNewType]     = useState<Announcement['type']>('info');
   const [newExpiry, setNewExpiry] = useState('');
 
-  // Audit
+
   const [audit, setAudit]         = useState<AuditEntry[]>([]);
 
   useEffect(() => {
@@ -278,7 +278,7 @@ export function AdminPanel() {
         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20">ADMIN ONLY</span>
       </div>
 
-      {/* Tab bar */}
+
       <div className="flex gap-1 p-1 rounded-xl border overflow-x-auto" style={s2}>
         {TABS.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
@@ -291,7 +291,7 @@ export function AdminPanel() {
 
       {loading && <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin" style={{ color: 'var(--color-muted)' }} /></div>}
 
-      {/* ── Accounts ── */}
+
       {!loading && tab === 'accounts' && (
         <div className="space-y-2">
           <p className="text-xs" style={{ color: 'var(--color-muted)' }}>{accounts.length} registered accounts</p>
@@ -313,7 +313,7 @@ export function AdminPanel() {
         </div>
       )}
 
-      {/* ── Tokens ── */}
+
       {!loading && tab === 'tokens' && (
         <div className="space-y-2">
           <p className="text-xs" style={{ color: 'var(--color-muted)' }}>{tokens.length} verified tokens</p>
@@ -359,7 +359,7 @@ export function AdminPanel() {
         </div>
       )}
 
-      {/* ── Bans ── */}
+
       {!loading && tab === 'bans' && (
         <div className="space-y-4">
           <div className="p-4 rounded-xl border space-y-3" style={s}>
@@ -388,7 +388,7 @@ export function AdminPanel() {
               </div>
             </div>
 
-            {/* Preview what the user will see in Roblox */}
+
             {(banInput.trim() || banReason.trim()) && (
               <div className="p-3 rounded-lg border border-dashed border-rose-500/30" style={{ backgroundColor: 'rgba(239,68,68,0.05)' }}>
                 <p className="text-[10px] font-semibold text-rose-400 mb-1">Preview — what they'll see in console:</p>
@@ -423,7 +423,7 @@ export function AdminPanel() {
         </div>
       )}
 
-      {/* ── Announcements ── */}
+
       {!loading && tab === 'announcements' && (
         <div className="space-y-4">
           <div className="p-4 rounded-xl border space-y-3" style={s}>
@@ -476,7 +476,7 @@ export function AdminPanel() {
         </div>
       )}
 
-      {/* ── Audit Log ── */}
+
       {!loading && tab === 'audit' && (
         <div className="space-y-2">
           <p className="text-xs" style={{ color: 'var(--color-muted)' }}>Last 100 admin actions</p>

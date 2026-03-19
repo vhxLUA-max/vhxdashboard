@@ -75,7 +75,7 @@ export function FeedbackTab() {
         <p className="text-sm mt-0.5" style={{ color: 'var(--color-muted)' }}>Report a bug, suggest a feature, or just say hi.</p>
       </div>
 
-      {/* Type selector */}
+
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         {TYPES.map(t => {
           const active = type === t.id;
@@ -94,7 +94,7 @@ export function FeedbackTab() {
         })}
       </div>
 
-      {/* Star rating (only for praise) */}
+
       {type === 'praise' && (
         <div>
           <label className="text-xs mb-2 block" style={{ color: 'var(--color-muted)' }}>Rating</label>
@@ -113,7 +113,7 @@ export function FeedbackTab() {
         </div>
       )}
 
-      {/* Message */}
+
       <div>
         <label className="text-xs mb-2 block" style={{ color: 'var(--color-muted)' }}>
           Message <span style={{ opacity: 0.5 }}>({message.length}/1000)</span>
@@ -138,7 +138,7 @@ export function FeedbackTab() {
         />
       </div>
 
-      {/* From */}
+
       <div className="flex items-center gap-2 p-3 rounded-lg border text-xs" style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-muted)' }}>
         <span>Sending as:</span>
         <span className="font-medium" style={{ color: 'var(--color-text)' }}>{username ? `@${username}` : 'Guest (not logged in)'}</span>

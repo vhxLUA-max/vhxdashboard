@@ -14,31 +14,30 @@ import { LiveCharts } from '@/components/LiveCharts';
 import { ExecutionHeatmap } from '@/components/ExecutionHeatmap';
 import { RatingsPanel } from '@/components/RatingsPanel';
 import { ExecutionRateBadge } from '@/components/ExecutionRateBadge';
+import { AnnouncementBanner } from '@/components/AnnouncementBanner';
 import { Activity, Users, Clock, RefreshCw, BarChart3, Gamepad2, Search, Webhook, Key, ShieldCheck, Megaphone, Code, Loader2, Palette, Shield, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LoginModal } from '@/components/LoginModal';
 import { logout } from '@/lib/auth';
 import { initTheme } from '@/components/ThemeManager';
-const AccountManager = lazy(() => import('@/components/AccountManager').then(m => ({ default: m.AccountManager })));
 
 initTheme();
 
-const UserSearch          = lazy(() => import('@/components/UserSearch').then(m => ({ default: m.UserSearch })));
-const WebhookTab       = lazy(() => import('@/components/WebhookTab').then(m => ({ default: m.WebhookTab })));
-const MyTokenPanel     = lazy(() => import('@/components/MyTokenPanel').then(m => ({ default: m.MyTokenPanel })));
-const ScriptsTab       = lazy(() => import('@/components/ScriptsTab').then(m => ({ default: m.ScriptsTab })));
-const ThemeManager     = lazy(() => import('@/components/ThemeManager').then(m => ({ default: m.ThemeManager })));
-const StatusTab        = lazy(() => import('@/components/StatusTab').then(m => ({ default: m.StatusTab })));
-const ChangelogTab     = lazy(() => import('@/components/ChangelogTab').then(m => ({ default: m.ChangelogTab })));
-const AdminPanel       = lazy(() => import('@/components/AdminPanel').then(m => ({ default: m.AdminPanel })));
-const FeedbackTab      = lazy(() => import('@/components/FeedbackTab').then(m => ({ default: m.FeedbackTab })));
-import { AnnouncementBanner } from '@/components/AnnouncementBanner';
+const AccountManager = lazy(() => import('@/components/AccountManager').then(m => ({ default: m.AccountManager })));
+const UserSearch     = lazy(() => import('@/components/UserSearch').then(m => ({ default: m.UserSearch })));
+const WebhookTab     = lazy(() => import('@/components/WebhookTab').then(m => ({ default: m.WebhookTab })));
+const MyTokenPanel   = lazy(() => import('@/components/MyTokenPanel').then(m => ({ default: m.MyTokenPanel })));
+const ScriptsTab     = lazy(() => import('@/components/ScriptsTab').then(m => ({ default: m.ScriptsTab })));
+const ThemeManager   = lazy(() => import('@/components/ThemeManager').then(m => ({ default: m.ThemeManager })));
+const StatusTab      = lazy(() => import('@/components/StatusTab').then(m => ({ default: m.StatusTab })));
+const ChangelogTab   = lazy(() => import('@/components/ChangelogTab').then(m => ({ default: m.ChangelogTab })));
+const AdminPanel     = lazy(() => import('@/components/AdminPanel').then(m => ({ default: m.AdminPanel })));
+const FeedbackTab    = lazy(() => import('@/components/FeedbackTab').then(m => ({ default: m.FeedbackTab })));
 
 function timeAgo(iso: string): string {
   const diff = (Date.now() - new Date(iso).getTime()) / 1000;
   if (diff < 3600) {
-    const m = Math.floor(diff / 60);
-    const s = Math.floor(diff % 60);
+    const m = Math.floor(diff / 60), s = Math.floor(diff % 60);
     return m > 0 ? `${m}m ${s}s ago` : `${s}s ago`;
   }
   if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
@@ -50,13 +49,13 @@ function useLiveTimeAgo(iso: string | null | undefined): string {
   useEffect(() => {
     if (!iso) { setDisplay('-'); return; }
     setDisplay(timeAgo(iso));
-    const interval = setInterval(() => setDisplay(timeAgo(iso)), 1000);
-    return () => clearInterval(interval);
+    const t = setInterval(() => setDisplay(timeAgo(iso)), 1000);
+    return () => clearInterval(t);
   }, [iso]);
   return display;
 }
 
-// All-time total executions (live)
+
 function useLiveCounter() {
   const [count, setCount] = useState<number | null>(null);
   useEffect(() => {
@@ -73,7 +72,6 @@ function useLiveCounter() {
   return count;
 }
 
-// Today's executions (live, resets at midnight)
 function useLive24h() {
   const [count, setCount] = useState<number | null>(null);
   useEffect(() => {
@@ -94,7 +92,6 @@ function useLive24h() {
   return count;
 }
 
-// Active unique users in last 24h (live)
 function useLiveUniqueUsers() {
   const [count, setCount] = useState<number | null>(null);
   useEffect(() => {
@@ -113,7 +110,6 @@ function useLiveUniqueUsers() {
   return count;
 }
 
-// New users today (first_seen today, live)
 function useLiveNewUsers() {
   const [count, setCount] = useState<number | null>(null);
   useEffect(() => {
@@ -132,7 +128,6 @@ function useLiveNewUsers() {
   return count;
 }
 
-// Most recent execution timestamp (live)
 function useLiveLastExecution() {
   const [iso, setIso] = useState<string | null>(null);
   useEffect(() => {
@@ -149,19 +144,6 @@ function useLiveLastExecution() {
   return useLiveTimeAgo(iso);
 }
 
-const ADMIN_USERNAMES = ['vhxlua-max', 'vhxlua'];
-
-type SidebarTab = 'stats' | 'search' | 'webhook' | 'token' | 'scripts' | 'themes' | 'feedback' | 'status' | 'changelog' | 'admin';
-
-async function checkIsAdmin(userId: string, username: string | null): Promise<boolean> {
-  try {
-    const { data } = await supabase.from('admins').select('user_id').eq('user_id', userId).maybeSingle();
-    if (data) return true;
-  } catch { /* fall through */ }
-  return ADMIN_USERNAMES.includes(username?.toLowerCase() ?? '');
-}
-
-// All executions for charts/heatmap (live)
 function useLiveAllExecutions() {
   const [execs, setExecs] = useState<import('@/types').GameExecution[]>([]);
   useEffect(() => {
@@ -178,17 +160,29 @@ function useLiveAllExecutions() {
   return execs;
 }
 
+const ADMIN_USERNAMES = ['vhxlua-max', 'vhxlua'];
+
+async function checkIsAdmin(userId: string, username: string | null): Promise<boolean> {
+  try {
+    const { data } = await supabase.from('admins').select('user_id').eq('user_id', userId).maybeSingle();
+    if (data) return true;
+  } catch { /* fall through */ }
+  return ADMIN_USERNAMES.includes(username?.toLowerCase() ?? '');
+}
+
+type SidebarTab = 'stats' | 'search' | 'webhook' | 'token' | 'scripts' | 'themes' | 'feedback' | 'status' | 'changelog' | 'admin';
+
 const TABS = [
-  { id: 'stats',     label: 'Stats',     icon: BarChart3    },
-  { id: 'search',    label: 'Search',    icon: Search       },
-  { id: 'webhook',   label: 'Webhook',   icon: Webhook      },
-  { id: 'token',     label: 'Token',     icon: Key          },
-  { id: 'scripts',   label: 'Scripts',   icon: Code         },
-  { id: 'themes',    label: 'Themes',    icon: Palette      },
-  { id: 'feedback',  label: 'Feedback',  icon: MessageSquare},
-  { id: 'status',    label: 'Status',    icon: ShieldCheck  },
-  { id: 'changelog', label: 'Changelog', icon: Megaphone    },
-  { id: 'admin',     label: 'Admin',     icon: Shield       },
+  { id: 'stats',     label: 'Stats',     icon: BarChart3     },
+  { id: 'search',    label: 'Search',    icon: Search        },
+  { id: 'webhook',   label: 'Webhook',   icon: Webhook       },
+  { id: 'token',     label: 'Token',     icon: Key           },
+  { id: 'scripts',   label: 'Scripts',   icon: Code          },
+  { id: 'themes',    label: 'Themes',    icon: Palette       },
+  { id: 'feedback',  label: 'Feedback',  icon: MessageSquare },
+  { id: 'status',    label: 'Status',    icon: ShieldCheck   },
+  { id: 'changelog', label: 'Changelog', icon: Megaphone     },
+  { id: 'admin',     label: 'Admin',     icon: Shield        },
 ] as const;
 
 const TabFallback = () => (
@@ -205,16 +199,16 @@ function App() {
   const [isAdmin, setIsAdmin]             = useState(false);
   const [showLogin, setShowLogin]         = useState(false);
   const [showAccount, setShowAccount]     = useState(false);
-  const { loading, error, refresh } = useSupabaseDashboard(dateRange);
-  const handleRefresh = useCallback(() => refresh(), [refresh]);
-  const visibleTabs = TABS.filter(t => t.id !== 'admin' || isAdmin);
-  const connected     = isConfigured();
-  const liveAllExecs   = useLiveAllExecutions();
-  const liveCount      = useLiveCounter();
-  const live24h        = useLive24h();
-  const liveUsers      = useLiveUniqueUsers();
-  const liveNewUsers   = useLiveNewUsers();
-  const lastExecution  = useLiveLastExecution();
+  const { loading, error, refresh }       = useSupabaseDashboard(dateRange);
+  const handleRefresh                     = useCallback(() => refresh(), [refresh]);
+  const connected                         = isConfigured();
+  const liveAllExecs                      = useLiveAllExecutions();
+  const liveCount                         = useLiveCounter();
+  const live24h                           = useLive24h();
+  const liveUsers                         = useLiveUniqueUsers();
+  const liveNewUsers                      = useLiveNewUsers();
+  const lastExecution                     = useLiveLastExecution();
+  const visibleTabs                       = TABS.filter(t => t.id !== 'admin' || isAdmin);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -224,36 +218,25 @@ function App() {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, []);
+  }, [visibleTabs]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        const u  = session.user?.user_metadata?.username ?? null;
-        const av = session.user?.user_metadata?.avatar_url ?? null;
-        setAdminUsername(u);
-        setAvatarUrl(av);
-        checkIsAdmin(session.user.id, u).then(setIsAdmin);
-      }
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
-      const u  = session?.user?.user_metadata?.username ?? null;
-      const av = session?.user?.user_metadata?.avatar_url ?? null;
+      if (!session) return;
+      const u = session.user?.user_metadata?.username ?? null;
       setAdminUsername(u);
-      setAvatarUrl(av);
-      if (session?.user) {
-        checkIsAdmin(session.user.id, u).then(setIsAdmin);
-      } else {
-        setIsAdmin(false);
-      }
+      setAvatarUrl(session.user?.user_metadata?.avatar_url ?? null);
+      checkIsAdmin(session.user.id, u).then(setIsAdmin);
     });
-
-    if (new URLSearchParams(window.location.search).get('reset') === 'true') {
-
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+      const u = session?.user?.user_metadata?.username ?? null;
+      setAdminUsername(u);
+      setAvatarUrl(session?.user?.user_metadata?.avatar_url ?? null);
+      if (session?.user) checkIsAdmin(session.user.id, u).then(setIsAdmin);
+      else setIsAdmin(false);
+    });
+    if (new URLSearchParams(window.location.search).get('reset') === 'true')
       window.history.replaceState({}, '', window.location.pathname);
-    }
-
     return () => subscription.unsubscribe();
   }, []);
 
@@ -268,9 +251,7 @@ function App() {
         onAccountClick={() => setShowAccount(true)}
       />
 
-      {showLogin && (
-        <LoginModal onSuccess={() => setShowLogin(false)} onClose={() => setShowLogin(false)} />
-      )}
+      {showLogin && <LoginModal onSuccess={() => setShowLogin(false)} onClose={() => setShowLogin(false)} />}
 
       {showAccount && adminUsername && (
         <Suspense fallback={null}>
@@ -310,8 +291,6 @@ function App() {
 
         <div className="flex-1 min-w-0">
           <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
-            <AnnouncementBanner />
-
             {activeTab === 'stats' && (
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
                 <div>
@@ -362,22 +341,19 @@ function App() {
                 </div>
               }>
                 {activeTab === 'stats' && (
-                  <div key="stats" className="tab-animate space-y-8">
+                  <div className="space-y-8">
                     <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
                       <MetricCard title="Total Executions" value={(dateRange === '24h' ? live24h : liveCount)?.toLocaleString() ?? '-'} subtitle={dateRange === '24h' ? 'Today' : `In last ${dateRange}`} icon={Activity} loading={false} />
-                      <MetricCard title="Unique Users"     value={liveUsers?.toLocaleString() ?? '-'}     subtitle="Active in last 24h" icon={Users} loading={false} />
-                      <MetricCard title="New Users Today"  value={liveNewUsers?.toLocaleString() ?? '-'}  subtitle="First seen today" icon={Users} loading={false} />
-                      <MetricCard title="Last Execution"   value={lastExecution} subtitle="Most recent activity" icon={Clock} loading={false} />
+                      <MetricCard title="Unique Users"     value={liveUsers?.toLocaleString() ?? '-'}    subtitle="Active in last 24h" icon={Users} loading={false} />
+                      <MetricCard title="New Users Today"  value={liveNewUsers?.toLocaleString() ?? '-'} subtitle="First seen today"   icon={Users} loading={false} />
+                      <MetricCard title="Last Execution"   value={lastExecution}                         subtitle="Most recent activity" icon={Clock} loading={false} />
                     </div>
 
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-4">
                         <Gamepad2 className="w-5 h-5 text-indigo-400" /> Supported Games
                       </h3>
-                      {liveAllExecs.length === 0 && !loading
-                        ? <EmptyState />
-                        : <LiveRecentActivity />
-                      }
+                      {liveAllExecs.length === 0 && !loading ? <EmptyState /> : <LiveRecentActivity />}
                     </div>
 
                     <LiveCharts dateRange={dateRange} />
@@ -388,12 +364,11 @@ function App() {
                       </div>
                       <RatingsPanel />
                     </div>
-
                   </div>
                 )}
 
                 <Suspense fallback={<TabFallback />}>
-                  <div key={activeTab} className="tab-animate">
+                  <div key={activeTab}>
                     {activeTab === 'search'    && <UserSearch />}
                     {activeTab === 'webhook'   && <WebhookTab />}
                     {activeTab === 'token'     && <MyTokenPanel />}

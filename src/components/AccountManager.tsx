@@ -99,7 +99,7 @@ export function AccountManager({ onClose, onUsernameChange, onAvatarChange }: Ac
 
         <div className="p-5 space-y-6">
 
-          {/* Avatar */}
+
           <div className="flex flex-col items-center gap-3">
             <div className="relative">
               {avatarUrl ? (
@@ -119,7 +119,7 @@ export function AccountManager({ onClose, onUsernameChange, onAvatarChange }: Ac
             <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
           </div>
 
-          {/* Username */}
+
           <div className="space-y-2">
             <label className="text-xs font-medium flex items-center gap-1.5" style={{ color: 'var(--color-muted)' }}>
               <User className="w-3.5 h-3.5" /> Username
@@ -136,7 +136,7 @@ export function AccountManager({ onClose, onUsernameChange, onAvatarChange }: Ac
             </div>
           </div>
 
-          {/* Password */}
+
           <div className="space-y-2">
             <label className="text-xs font-medium flex items-center gap-1.5" style={{ color: 'var(--color-muted)' }}>
               <Lock className="w-3.5 h-3.5" /> Change Password

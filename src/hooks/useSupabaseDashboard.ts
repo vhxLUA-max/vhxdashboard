@@ -9,10 +9,6 @@ const RANGE_MS: Record<DateRange, number> = {
   '90d': 7776000000,
 };
 
-function getStartDate(ms: number): string {
-  return new Date(Date.now() - ms).toISOString();
-}
-
 export function useSupabaseDashboard(dateRange: DateRange): UseSupabaseDashboardReturn {
   const [data, setData]       = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -26,14 +22,14 @@ export function useSupabaseDashboard(dateRange: DateRange): UseSupabaseDashboard
     setError(null);
 
     try {
-      const since   = getStartDate(RANGE_MS[dateRange]);
-      const since24 = getStartDate(86400000);
+      const since   = new Date(Date.now() - RANGE_MS[dateRange]).toISOString();
+      const since24 = new Date(Date.now() - 86400000).toISOString();
 
       const [
-        { data: filteredExecData, error: e1 },
-        { data: allExecData,      error: e2 },
-        { data: userData,         error: e3 },
-        { data: newUsersData,     error: e4 },
+        { data: filtered, error: e1 },
+        { data: all,       error: e2 },
+        { data: active,    error: e3 },
+        { data: newUsers,  error: e4 },
       ] = await Promise.all([
         supabase.from('game_executions').select('place_id,count,daily_count,last_executed_at,game_name').gte('last_executed_at', since).order('last_executed_at', { ascending: false }),
         supabase.from('game_executions').select('place_id,count,daily_count,last_executed_at,game_name').order('last_executed_at', { ascending: false }),
@@ -46,32 +42,29 @@ export function useSupabaseDashboard(dateRange: DateRange): UseSupabaseDashboard
       if (e3) throw new Error(e3.message);
       if (e4) throw new Error(e4.message);
 
-      const filtered: GameExecution[] = filteredExecData ?? [];
-      const all: GameExecution[]      = allExecData ?? [];
-      const active: Pick<UniqueUser, 'roblox_user_id' | 'user_id'>[] = userData ?? [];
+      const filteredExecs: GameExecution[] = filtered ?? [];
+      const allExecs: GameExecution[]      = all ?? [];
+      const activeUsers: Pick<UniqueUser, 'roblox_user_id' | 'user_id'>[] = active ?? [];
 
-      // 24h: sum daily_count (resets at midnight, accurate today's count)
-      // Other ranges: sum game_executions.count for active games in range
-      const totalExec = dateRange === '24h'
-        ? (all as (GameExecution & { daily_count?: number })[]).reduce((s, e) => s + (e.daily_count ?? 0), 0)
-        : filtered.reduce((s, e) => s + e.count, 0);
-      const distinctUsers = new Set(active.map(u => u.roblox_user_id ?? u.user_id)).size;
-      const newUsersToday = new Set((newUsersData ?? []).map((u: { roblox_user_id: number }) => u.roblox_user_id)).size;
+      const today = new Date().toISOString().slice(0, 10);
+      const totalExecutions = dateRange === '24h'
+        ? (allExecs as (GameExecution & { daily_count?: number; daily_reset_at?: string })[])
+            .reduce((s, e) => s + ((e as { daily_reset_at?: string }).daily_reset_at?.slice(0, 10) === today ? ((e as { daily_count?: number }).daily_count ?? 0) : 0), 0)
+        : filteredExecs.reduce((s, e) => s + e.count, 0);
 
       setData({
-        totalExecutions:  totalExec,
-        uniqueUsers:      distinctUsers,
-        activeGames:      new Set(filtered.map(e => e.place_id)).size || all.length,
-        lastExecutedAt:   all[0]?.last_executed_at ?? null,
-        recentExecutions: filtered,
-        allExecutions:    all,
+        totalExecutions,
+        uniqueUsers:      new Set(activeUsers.map(u => u.roblox_user_id ?? u.user_id)).size,
+        activeGames:      new Set(filteredExecs.map(e => e.place_id)).size || allExecs.length,
+        lastExecutedAt:   allExecs[0]?.last_executed_at ?? null,
+        recentExecutions: filteredExecs,
+        allExecutions:    allExecs,
         recentUsers:      [],
-        newUsersToday,
+        newUsersToday:    new Set((newUsers ?? []).map((u: { roblox_user_id: number }) => u.roblox_user_id)).size,
       });
     } catch (err) {
-      if ((err as Error).name !== 'AbortError') {
+      if ((err as Error).name !== 'AbortError')
         setError(err instanceof Error ? err : new Error('Unknown error'));
-      }
     } finally {
       setLoading(false);
     }
@@ -80,12 +73,11 @@ export function useSupabaseDashboard(dateRange: DateRange): UseSupabaseDashboard
   useEffect(() => { fetchData(); }, [fetchData]);
 
   useEffect(() => {
-    const channel = supabase
-      .channel('dashboard-realtime')
+    const ch = supabase.channel('dashboard-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'game_executions' }, fetchData)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'unique_users' }, fetchData)
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    return () => { supabase.removeChannel(ch); };
   }, [fetchData]);
 
   return { data, loading, error, refresh: fetchData };
