@@ -5,11 +5,11 @@ const LOADER = `loadstring(game:HttpGet("https://raw.githubusercontent.com/vhxLU
 const UNC_LOADER = `loadstring(game:HttpGet("https://raw.githubusercontent.com/vhxLUA-max/vhxframeworks/refs/heads/main/unctester"))()`;
 
 const GAMES = [
-  { name: 'Pixel Blade',      placeId: 18172550962,     loader: LOADER     },
-  { name: 'Loot Hero',        placeId: 138013005633222, loader: LOADER     },
-  { name: 'Survive The Lava', placeId: 119987266683883, loader: LOADER     },
-  { name: 'Flick',            placeId: 136801880565837, loader: LOADER     },
-  { name: 'UNC Tester',       placeId: 0,               loader: UNC_LOADER },
+  { name: 'Pixel Blade',                  placeId: 18172550962,     loader: LOADER     },
+  { name: 'Loot Hero',                    placeId: 138013005633222, loader: LOADER     },
+  { name: 'Survive LAVA for Brainrots!',  placeId: 119987266683883, loader: LOADER     },
+  { name: 'Flick',                        placeId: 136801880565837, loader: LOADER     },
+  { name: 'Baseplate',                    placeId: 0,               loader: UNC_LOADER },
 ];
 
 async function robloxProxy(path: string): Promise<unknown> {
