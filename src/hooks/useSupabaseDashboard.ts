@@ -35,8 +35,8 @@ export function useSupabaseDashboard(dateRange: DateRange): UseSupabaseDashboard
         { data: userData,         error: e3 },
         { data: newUsersData,     error: e4 },
       ] = await Promise.all([
-        supabase.from('game_executions').select('place_id,count,last_executed_at,game_name').gte('last_executed_at', since).order('last_executed_at', { ascending: false }),
-        supabase.from('game_executions').select('place_id,count,last_executed_at,game_name').order('last_executed_at', { ascending: false }),
+        supabase.from('game_executions').select('place_id,count,daily_count,last_executed_at,game_name').gte('last_executed_at', since).order('last_executed_at', { ascending: false }),
+        supabase.from('game_executions').select('place_id,count,daily_count,last_executed_at,game_name').order('last_executed_at', { ascending: false }),
         supabase.from('unique_users').select('roblox_user_id,user_id').gte('last_seen', since),
         supabase.from('unique_users').select('roblox_user_id').gte('first_seen', since24),
       ]);
@@ -50,8 +50,11 @@ export function useSupabaseDashboard(dateRange: DateRange): UseSupabaseDashboard
       const all: GameExecution[]      = allExecData ?? [];
       const active: Pick<UniqueUser, 'roblox_user_id' | 'user_id'>[] = userData ?? [];
 
-      // Total executions: sum game_executions.count filtered by date range (accurate)
-      const totalExec     = filtered.reduce((s, e) => s + e.count, 0);
+      // 24h: sum daily_count (resets at midnight, accurate today's count)
+      // Other ranges: sum game_executions.count for active games in range
+      const totalExec = dateRange === '24h'
+        ? (all as (GameExecution & { daily_count?: number })[]).reduce((s, e) => s + (e.daily_count ?? 0), 0)
+        : filtered.reduce((s, e) => s + e.count, 0);
       const distinctUsers = new Set(active.map(u => u.roblox_user_id ?? u.user_id)).size;
       const newUsersToday = new Set((newUsersData ?? []).map((u: { roblox_user_id: number }) => u.roblox_user_id)).size;
 
