@@ -9,7 +9,11 @@ export default async function handler(req, res) {
   const { path, method = 'GET', body } = req.body;
 
   let domain;
-  if (path.startsWith('/v1/games/icons') || path.startsWith('/v1/games/thumbnails')) {
+  if (path.startsWith('/v1/users/avatar') || path.startsWith('/v1/users/avatar-headshot') || path.includes('avatar-headshot')) {
+    domain = 'https://thumbnails.roblox.com';
+  } else if (path.startsWith('/v1/users/') || path.startsWith('/v1/users')) {
+    domain = 'https://users.roblox.com';
+  } else if (path.startsWith('/v1/games/icons') || path.startsWith('/v1/games/thumbnails')) {
     domain = 'https://thumbnails.roblox.com';
   } else if (path.startsWith('/universes/')) {
     domain = 'https://apis.roblox.com';
