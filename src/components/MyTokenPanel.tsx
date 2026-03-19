@@ -104,18 +104,6 @@ export function MyTokenPanel() {
       return;
     }
 
-    const { data: existing } = await supabase
-      .from('user_tokens')
-      .select('user_id')
-      .eq('roblox_user_id', dbUser.roblox_user_id)
-      .maybeSingle();
-
-    if (existing) {
-      setError('This Roblox account is already linked to another token.');
-      setLookingUp(false);
-      return;
-    }
-
     setRobloxUser({ id: dbUser.roblox_user_id, name: dbUser.username, displayName: dbUser.username });
     setVerifyCode(generateVerifyCode());
     setStep('verify');

@@ -1,32 +1,44 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import type { UniqueUser } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Trophy } from 'lucide-react';
 
 const MEDAL = ['🥇', '🥈', '🥉'];
+const ADMIN_USERNAME = import.meta.env.VITE_ADMIN_USERNAME ?? 'vhxLUA-max';
 
-export function TopUsersLeaderboard() {
-  const [users, setUsers] = useState<UniqueUser[]>([]);
+type AggUser = { roblox_user_id: number; username: string; total: number };
+
+export function TopUsersLeaderboard({ adminUsername }: { adminUsername: string | null }) {
+  const [users, setUsers] = useState<AggUser[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const isAdmin = adminUsername?.toLowerCase() === ADMIN_USERNAME.toLowerCase();
+
   useEffect(() => {
+    if (!isAdmin) { setLoading(false); return; }
     const fetch = async () => {
       const { data } = await supabase
         .from('unique_users')
-        .select('*')
-        .order('execution_count', { ascending: false })
-        .limit(10);
-      if (data) setUsers(data as UniqueUser[]);
+        .select('roblox_user_id, username, execution_count');
+      if (data) {
+        const agg: Record<number, AggUser> = {};
+        for (const row of data) {
+          const id = row.roblox_user_id;
+          if (!agg[id]) agg[id] = { roblox_user_id: id, username: row.username, total: 0 };
+          agg[id].total += row.execution_count ?? 0;
+        }
+        setUsers(Object.values(agg).sort((a, b) => b.total - a.total).slice(0, 10));
+      }
       setLoading(false);
     };
     fetch();
-
     const ch = supabase.channel('leaderboard')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'unique_users' }, fetch)
       .subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, []);
+  }, [isAdmin]);
+
+  if (!isAdmin) return null;
 
   return (
     <div className="bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6">
@@ -49,10 +61,10 @@ export function TopUsersLeaderboard() {
       ) : (
         <div className="space-y-2">
           {users.map((u, i) => (
-            <div key={u.user_id ?? i} className="flex items-center gap-3 p-3 bg-gray-950 rounded-lg border border-gray-800">
+            <div key={u.roblox_user_id} className="flex items-center gap-3 p-3 bg-gray-950 rounded-lg border border-gray-800">
               <span className="text-sm w-5 text-center">{MEDAL[i] ?? <span className="text-gray-500">{i + 1}</span>}</span>
               <span className="flex-1 text-sm text-white truncate">{u.username ?? `User ${u.roblox_user_id}`}</span>
-              <span className="text-xs text-indigo-400 font-medium">{u.execution_count.toLocaleString()}</span>
+              <span className="text-xs text-indigo-400 font-medium">{u.total.toLocaleString()}</span>
             </div>
           ))}
         </div>

@@ -53,10 +53,21 @@ type SidebarTab = 'stats' | 'search' | 'webhook' | 'token' | 'status' | 'changel
 function App() {
   const [dateRange, setDateRange] = useState<DateRange>('24h');
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>('stats');
+  const [adminUsername, setAdminUsername] = useState<string | null>(null);
   const { data, loading, error, refresh } = useSupabaseDashboard(dateRange);
   const handleRefresh = useCallback(() => refresh(), [refresh]);
   const connected = isConfigured();
   const liveCount = useLiveCounter();
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setAdminUsername(session?.user?.user_metadata?.username ?? null);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+      setAdminUsername(session?.user?.user_metadata?.username ?? null);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950 text-gray-900 dark:text-white">
@@ -124,7 +135,7 @@ function App() {
                 <GameBreakdownChart executions={data?.recentExecutions ?? []} loading={loading} />
               </div>
 
-              <TopUsersLeaderboard />
+              <TopUsersLeaderboard adminUsername={adminUsername} />
             </div>
 
             <div className="space-y-4">
