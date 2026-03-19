@@ -20,8 +20,10 @@ import { TopUsersLeaderboard } from '@/components/TopUsersLeaderboard';
 import { ExecutionRateBadge } from '@/components/ExecutionRateBadge';
 import { StatusTab } from '@/components/StatusTab';
 import { ChangelogTab } from '@/components/ChangelogTab';
-import { Activity, Users, Clock, RefreshCw, BarChart3, Gamepad2, Search, Webhook, Key, ShieldCheck, Megaphone } from 'lucide-react';
+import { Activity, Users, Clock, RefreshCw, BarChart3, Gamepad2, Search, Webhook, Key, ShieldCheck, Megaphone, LogIn, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { LoginModal } from '@/components/LoginModal';
+import { logout } from '@/lib/auth';
 
 function timeAgo(iso: string): string {
   const diff = (Date.now() - new Date(iso).getTime()) / 1000;
@@ -54,6 +56,7 @@ function App() {
   const [dateRange, setDateRange] = useState<DateRange>('24h');
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>('stats');
   const [adminUsername, setAdminUsername] = useState<string | null>(null);
+  const [showLogin, setShowLogin] = useState(false);
   const { data, loading, error, refresh } = useSupabaseDashboard(dateRange);
   const handleRefresh = useCallback(() => refresh(), [refresh]);
   const connected = isConfigured();
@@ -71,7 +74,8 @@ function App() {
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950 text-gray-900 dark:text-white">
-      <Header isConnected={connected} />
+      <Header isConnected={connected} username={adminUsername} onLoginClick={() => setShowLogin(true)} onLogout={async () => { await logout(); setAdminUsername(null); }} />
+      {showLogin && <LoginModal onSuccess={() => setShowLogin(false)} onClose={() => setShowLogin(false)} />}
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">

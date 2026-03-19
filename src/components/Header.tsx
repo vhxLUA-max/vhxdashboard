@@ -1,20 +1,21 @@
-import { Activity, Database, Sun, Moon, Monitor } from 'lucide-react';
+import { Activity, Database, Sun, Moon, Monitor, LogIn, LogOut } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 
 interface HeaderProps {
   isConnected?: boolean;
+  username?: string | null;
+  onLoginClick?: () => void;
+  onLogout?: () => void;
 }
 
-export function Header({ isConnected = true }: HeaderProps) {
+export function Header({ isConnected = true, username, onLoginClick, onLogout }: HeaderProps) {
   const { theme, setTheme } = useTheme();
-
   const nextTheme = () => {
     if (theme === 'dark') setTheme('light');
     else if (theme === 'light') setTheme('system');
     else setTheme('dark');
   };
-
   const ThemeIcon = theme === 'dark' ? Moon : theme === 'light' ? Sun : Monitor;
 
   return (
@@ -55,6 +56,33 @@ export function Header({ isConnected = true }: HeaderProps) {
             >
               <ThemeIcon className="w-4 h-4" />
             </Button>
+
+            <div className="h-6 w-px bg-gray-200 dark:bg-gray-800" />
+
+            {username ? (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-400 hidden sm:inline">@{username}</span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={onLogout}
+                  title="Sign out"
+                  className="text-gray-500 hover:text-rose-400 hover:bg-gray-100 dark:hover:bg-gray-800 w-8 h-8"
+                >
+                  <LogOut className="w-4 h-4" />
+                </Button>
+              </div>
+            ) : (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onLoginClick}
+                className="text-gray-500 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 gap-1.5 text-xs"
+              >
+                <LogIn className="w-3.5 h-3.5" />
+                Sign in
+              </Button>
+            )}
           </div>
         </div>
       </div>
