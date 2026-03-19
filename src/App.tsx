@@ -180,7 +180,7 @@ function App() {
                         <BarChart3 className="w-5 h-5 text-blue-400" />
                         Quick Stats
                       </h3>
-                      <QuickStatsPanel data={data} loading={loading} />
+                      <QuickStatsPanel data={data} loading={loading} liveTotal={liveCount} />
                     </div>
                   )}
                   {sidebarTab === 'search' && <UserSearch />}

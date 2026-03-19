@@ -5,6 +5,7 @@ import { Activity, Users, Gamepad2, Clock } from 'lucide-react';
 interface QuickStatsPanelProps {
   data: DashboardData | null;
   loading?: boolean;
+  liveTotal?: number | null;
 }
 
 function timeAgo(iso: string): string {
@@ -15,7 +16,7 @@ function timeAgo(iso: string): string {
   return `${Math.floor(diff / 86400)}d ago`;
 }
 
-export function QuickStatsPanel({ data, loading = false }: QuickStatsPanelProps) {
+export function QuickStatsPanel({ data, loading = false, liveTotal }: QuickStatsPanelProps) {
   if (loading) {
     return (
       <div className="space-y-3">
@@ -33,11 +34,13 @@ export function QuickStatsPanel({ data, loading = false }: QuickStatsPanelProps)
     return <div className="text-center py-8 text-gray-500 text-sm">No data available</div>;
   }
 
+  const totalDisplay = liveTotal != null ? liveTotal.toLocaleString() : data.totalExecutions.toLocaleString();
+
   const stats = [
-    { label: 'Total Executions', value: data.totalExecutions.toLocaleString(),  icon: Activity, color: 'text-indigo-400', bg: 'bg-indigo-500/10' },
-    { label: 'Unique Users',     value: data.uniqueUsers.toLocaleString(),       icon: Users,    color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
-    { label: 'Active Scripts', value: '3',                                                                          icon: Gamepad2, color: 'text-blue-400',    bg: 'bg-blue-500/10'   },
-    { label: 'Last Execution',   value: data.lastExecutedAt ? timeAgo(data.lastExecutedAt) : '—', icon: Clock, color: 'text-amber-400', bg: 'bg-amber-500/10' },
+    { label: 'Total Executions', value: totalDisplay,                                                                icon: Activity, color: 'text-indigo-400', bg: 'bg-indigo-500/10' },
+    { label: 'Unique Users',     value: data.uniqueUsers.toLocaleString(),                                           icon: Users,    color: 'text-emerald-400', bg: 'bg-emerald-500/10' },
+    { label: 'Active Scripts',   value: '3',                                                                         icon: Gamepad2, color: 'text-blue-400',    bg: 'bg-blue-500/10'   },
+    { label: 'Last Execution',   value: data.lastExecutedAt ? timeAgo(data.lastExecutedAt) : '—',                    icon: Clock,    color: 'text-amber-400',   bg: 'bg-amber-500/10'  },
   ];
 
   return (
