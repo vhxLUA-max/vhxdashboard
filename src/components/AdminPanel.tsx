@@ -363,16 +363,45 @@ export function AdminPanel() {
         <div className="space-y-4">
           <div className="p-4 rounded-xl border space-y-3" style={s}>
             <p className="text-xs font-semibold" style={{ color: 'var(--color-text)' }}>Ban a user</p>
-            <div className="flex gap-2">
-              <Input value={banInput} onChange={e => setBanInput(e.target.value)} placeholder="Roblox username"
-                className="h-8 text-xs" style={{ backgroundColor: 'var(--color-surface2)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }} />
-              <Input value={banReason} onChange={e => setBanReason(e.target.value)} placeholder="Reason (optional)"
-                className="h-8 text-xs flex-1" style={{ backgroundColor: 'var(--color-surface2)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }} />
-              <Button onClick={banUser} size="sm" className="h-8 px-3 border-0 shrink-0" style={{ backgroundColor: '#ef4444', color: '#fff' }}>
-                <Ban className="w-3.5 h-3.5 mr-1" /> Ban
-              </Button>
+
+            <div className="space-y-2">
+              <div>
+                <label className="text-[11px] mb-1 block" style={{ color: 'var(--color-muted)' }}>Roblox username</label>
+                <Input
+                  value={banInput}
+                  onChange={e => setBanInput(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && banUser()}
+                  placeholder="e.g. Builderman"
+                  style={{ backgroundColor: 'var(--color-surface2)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }}
+                />
+              </div>
+              <div>
+                <label className="text-[11px] mb-1 block" style={{ color: 'var(--color-muted)' }}>Reason <span style={{ color: 'var(--color-muted)', opacity: 0.6 }}>(shown to the user in-game)</span></label>
+                <Input
+                  value={banReason}
+                  onChange={e => setBanReason(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && banUser()}
+                  placeholder="e.g. Cheating, exploiting, abuse..."
+                  style={{ backgroundColor: 'var(--color-surface2)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }}
+                />
+              </div>
             </div>
+
+            {/* Preview what the user will see in Roblox */}
+            {(banInput.trim() || banReason.trim()) && (
+              <div className="p-3 rounded-lg border border-dashed border-rose-500/30" style={{ backgroundColor: 'rgba(239,68,68,0.05)' }}>
+                <p className="text-[10px] font-semibold text-rose-400 mb-1">Preview — what they'll see in console:</p>
+                <code className="text-[11px] text-rose-300 font-mono">
+                  [vhxLUA] You are banned. Reason: {banReason.trim() || 'No reason provided.'}
+                </code>
+              </div>
+            )}
+
+            <Button onClick={banUser} className="w-full border-0 font-semibold" style={{ backgroundColor: '#ef4444', color: '#fff' }}>
+              <Ban className="w-4 h-4 mr-2" /> Ban {banInput.trim() ? `@${banInput.trim()}` : 'User'}
+            </Button>
           </div>
+
           <div className="space-y-2">
             <p className="text-xs" style={{ color: 'var(--color-muted)' }}>{bans.length} banned users</p>
             {bans.map(b => (
