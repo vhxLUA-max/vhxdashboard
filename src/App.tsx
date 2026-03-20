@@ -216,14 +216,9 @@ function App() {
   const liveUsers                         = useLiveUniqueUsers();
   const liveNewUsers                      = useLiveNewUsers();
   const lastExecution                     = useLiveLastExecution();
-  // Auth gating:
-  // - Public (no login): stats, scripts, themes, changelog, status, feedback, token
-  // - Requires login:    search, webhook
-  // - Requires admin:    admin
+  // All tabs visible to everyone — gated tabs show a sign-in note inside the tab
   const visibleTabs = TABS.filter(t => {
-    if (t.id === 'admin')   return isAdmin;
-    if (t.id === 'search')  return isLoggedIn;
-    if (t.id === 'webhook') return isLoggedIn;
+    if (t.id === 'admin') return isAdmin;
     return true;
   });
 

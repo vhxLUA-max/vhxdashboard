@@ -132,26 +132,28 @@ export function MaintenancePanel() {
               {saving === g.id ? '...' : g.maintenance ? 'Bring Online' : 'Set Maintenance'}
             </button>
           </div>
-          {g.maintenance && (
-            <div className="space-y-2">
-              <div>
-                <label className="text-[10px] uppercase tracking-wider block mb-1" style={{ color: 'var(--color-muted)' }}>Message shown to players</label>
-                <input key={g.id + g.maintenance_msg} defaultValue={g.maintenance_msg}
-                  onBlur={e => updateMsg(g, e.target.value)} placeholder="Maintenance message..."
-                  className="w-full text-xs px-3 py-2 rounded-lg border outline-none"
-                  style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }} />
-              </div>
-              <div>
-                <label className="text-[10px] uppercase tracking-wider block mb-1" style={{ color: 'var(--color-muted)' }}>End time — countdown source of truth</label>
-                <input type="datetime-local"
-                  defaultValue={g.end_timestamp ? new Date(g.end_timestamp).toISOString().slice(0,16) : ''}
-                  onBlur={e => updateEndTime(g, e.target.value)}
-                  className="w-full text-xs px-3 py-2 rounded-lg border outline-none"
-                  style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }} />
-                <p className="text-[10px] mt-1" style={{ color: 'var(--color-muted)' }}>Drives the live HH:MM:SS countdown on dashboard and in-game. Leave empty for no timer.</p>
-              </div>
+          <div className="space-y-2">
+            <div>
+              <label className="text-[10px] uppercase tracking-wider block mb-1" style={{ color: 'var(--color-muted)' }}>Message shown to players</label>
+              <input key={g.id + g.maintenance_msg} defaultValue={g.maintenance_msg}
+                onBlur={e => updateMsg(g, e.target.value)} placeholder="Maintenance message..."
+                className="w-full text-xs px-3 py-2 rounded-lg border outline-none"
+                style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }} />
             </div>
-          )}
+            <div>
+              <label className="text-[10px] uppercase tracking-wider block mb-1" style={{ color: 'var(--color-muted)' }}>
+                End time — set this before activating maintenance
+              </label>
+              <input type="datetime-local"
+                defaultValue={g.end_timestamp ? new Date(g.end_timestamp).toISOString().slice(0,16) : ''}
+                onBlur={e => updateEndTime(g, e.target.value)}
+                className="w-full text-xs px-3 py-2 rounded-lg border outline-none"
+                style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }} />
+              <p className="text-[10px] mt-1" style={{ color: 'var(--color-muted)' }}>
+                Drives the live HH:MM:SS countdown on dashboard and in-game. Leave empty for no timer.
+              </p>
+            </div>
+          </div>
         </div>
       ))}
     </div>
