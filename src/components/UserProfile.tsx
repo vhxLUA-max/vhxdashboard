@@ -83,8 +83,6 @@ export function UserProfile({ userId, username, onBack, isAdmin }: Props) {
     await supabase.from('fingerprint_bans').insert({ fingerprint: fp, roblox_user_id: userId, username, reason: banReason });
     toast.success('Device banned');
   };
-    toast.success('Device banned');
-  };
 
   if (loading) return <div className="flex items-center justify-center py-20"><div className="w-5 h-5 rounded-full border-2 border-indigo-400 border-t-transparent animate-spin" /></div>;
 
