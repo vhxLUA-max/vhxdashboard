@@ -415,7 +415,7 @@ function App() {
 
                 <Suspense fallback={<TabFallback />}>
                   <div>
-                    {activeTab === 'search'    && <UserSearch />}
+                    {activeTab === 'search'    && <UserSearch isAdmin={isAdmin} />}
                     {activeTab === 'webhook'   && <WebhookTab />}
                     {activeTab === 'token'     && <MyTokenPanel />}
                     {activeTab === 'scripts'   && <ScriptsTab />}

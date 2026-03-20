@@ -6,7 +6,8 @@ import { Users, Clock, Calendar, Gamepad2, ArrowLeft, ExternalLink, Shield, Acti
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 
-function QuickBanButton({ userId, username }: { userId: number; username: string }) {
+function QuickBanButton({ userId, username, isAdmin }: { userId: number; username: string; isAdmin: boolean }) {
+  if (!isAdmin) return null;
   const [open,    setOpen]    = useState(false);
   const [reason,  setReason]  = useState('');
   const [loading, setLoading] = useState(false);
@@ -284,7 +285,7 @@ function UserProfilePanel({ user, onBack }: { user: UserResult; onBack: () => vo
   );
 }
 
-export function UserSearch() {
+export function UserSearch({ isAdmin = false }: { isAdmin?: boolean }) {
   const [query, setQuery]           = useState('');
   const [results, setResults]       = useState<UserResult[]>([]);
   const [loading, setLoading]       = useState(false);
@@ -491,10 +492,12 @@ export function UserSearch() {
                 className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:text-indigo-400 hover:border-indigo-500/40 transition-all">
                 <Download className="w-3 h-3" /> Export
               </button>
-              <button onClick={() => exportCSV(true)}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:text-emerald-400 hover:border-emerald-500/40 transition-all">
-                <Download className="w-3 h-3" /> All Users
-              </button>
+              {isAdmin && (
+                <button onClick={() => exportCSV(true)}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:text-emerald-400 hover:border-emerald-500/40 transition-all">
+                  <Download className="w-3 h-3" /> All Users
+                </button>
+              )}
             </div>
           </div>
           <div className="space-y-2">
@@ -520,7 +523,7 @@ export function UserSearch() {
                   </div>
                 </div>
               </button>
-              <QuickBanButton userId={user.roblox_user_id} username={user.username} />
+              <QuickBanButton userId={user.roblox_user_id} username={user.username} isAdmin={isAdmin} />
             </div>
           ))}
           </div>
