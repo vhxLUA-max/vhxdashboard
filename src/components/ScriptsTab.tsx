@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Copy, Check, Loader2, Gamepad2, Users, ThumbsUp, Star, ExternalLink, ArrowLeft, Play } from 'lucide-react';
+import { Copy, Check, Loader2, Gamepad2, Users, ThumbsUp, Star, ExternalLink, ArrowLeft, Play, Wrench } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '@/lib/supabase';
 
 const LOADER = `loadstring(game:HttpGet("https://raw.githubusercontent.com/vhxLUA-max/vhxframeworks/refs/heads/main/main.lua"))()`;
 const UNC_LOADER = `loadstring(game:HttpGet("https://raw.githubusercontent.com/vhxLUA-max/vhxframeworks/refs/heads/main/unctester"))()`;
@@ -176,14 +177,22 @@ function GameDetailPanel({ info, placeId, loader, onBack }: { info: GameInfo; pl
 type CardState = { loading: boolean; info: GameInfo | null };
 
 export function ScriptsTab() {
-  const [cards, setCards]       = useState<Record<number, CardState>>({});
-  const [selected, setSelected] = useState<typeof GAMES[number] | null>(null);
+  const [cards,       setCards]       = useState<Record<number, CardState>>({});
+  const [selected,    setSelected]    = useState<typeof GAMES[number] | null>(null);
+  const [maintenance, setMaintenance] = useState<Record<string, { on: boolean; msg: string }>>({});
 
   useEffect(() => {
     GAMES.forEach(async game => {
       setCards(prev => ({ ...prev, [game.placeId]: { loading: true, info: null } }));
       const info = await fetchGameInfo(game.placeId);
       setCards(prev => ({ ...prev, [game.placeId]: { loading: false, info } }));
+    });
+
+    supabase.from('game_status').select('game_name, maintenance, maintenance_msg').then(({ data }) => {
+      if (!data) return;
+      const m: Record<string, { on: boolean; msg: string }> = {};
+      data.forEach((r: any) => { m[r.game_name] = { on: r.maintenance, msg: r.maintenance_msg ?? '' }; });
+      setMaintenance(m);
     });
   }, []);
 
@@ -219,6 +228,9 @@ export function ScriptsTab() {
           const card = cards[game.placeId];
           const loading = card?.loading ?? true;
           const info = card?.info ?? null;
+          const gameName = info?.name ?? null;
+          const mStatus = gameName ? maintenance[gameName] : null;
+          const inMaintenance = mStatus?.on ?? false;
 
           return (
             <button
@@ -226,6 +238,7 @@ export function ScriptsTab() {
               onClick={() => setSelected(game)}
               disabled={loading}
               className="group text-left bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden hover:border-indigo-500/40 hover:shadow-lg hover:shadow-indigo-500/5 transition-all disabled:opacity-60 disabled:cursor-wait"
+              style={inMaintenance ? { borderColor: '#f59e0b60' } : {}}
             >
               <div className="aspect-square bg-gray-200 dark:bg-gray-800 relative">
                 {loading ? (
@@ -233,10 +246,21 @@ export function ScriptsTab() {
                     <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
                   </div>
                 ) : info?.thumbUrl ? (
-                  <img src={info.thumbUrl} alt={info.name} className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300" />
+                  <img src={info.thumbUrl} alt={info.name} className={`w-full h-full object-contain group-hover:scale-105 transition-transform duration-300 ${inMaintenance ? 'brightness-50' : ''}`} />
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center">
                     <Gamepad2 className="w-10 h-10 text-gray-600" />
+                  </div>
+                )}
+                {inMaintenance && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 px-2">
+                    <div className="w-8 h-8 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center">
+                      <Wrench className="w-4 h-4 text-amber-400" />
+                    </div>
+                    <span className="text-[10px] font-bold text-amber-400 text-center leading-tight">MAINTENANCE</span>
+                    {mStatus?.msg && (
+                      <span className="text-[9px] text-amber-300/70 text-center leading-tight line-clamp-2">{mStatus.msg}</span>
+                    )}
                   </div>
                 )}
               </div>
@@ -245,7 +269,9 @@ export function ScriptsTab() {
                   {loading ? <span className="block h-3 w-20 bg-gray-700 rounded animate-pulse" /> : (info?.name ?? 'Unknown')}
                 </p>
                 {!loading && info && (
-                  <p className="text-[10px] text-gray-500 mt-0.5">{formatNum(info.playing)} playing</p>
+                  <p className="text-[10px] mt-0.5" style={{ color: inMaintenance ? '#f59e0b' : 'rgb(107 114 128)' }}>
+                    {inMaintenance ? '🔧 Under maintenance' : `${formatNum(info.playing)} playing`}
+                  </p>
                 )}
               </div>
             </button>
