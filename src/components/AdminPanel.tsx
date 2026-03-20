@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
-import { CommandConsole } from '@/components/CommandConsole';
 import {
   Shield, Users, Key, Megaphone, ScrollText,
   Loader2, Trash2, Ban, CheckCircle2, Plus, X,
@@ -285,7 +284,6 @@ export function AdminPanel() {
         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20">ADMIN ONLY</span>
       </div>
 
-      <CommandConsole />
 
 
       <div className="flex gap-1 p-1 rounded-xl border overflow-x-auto" style={s2}>
