@@ -181,3 +181,6 @@
 
 /* Root background */
 html, body { background-color: var(--color-bg) !important; color: var(--color-text) !important; }
+
+.scrollbar-hide { scrollbar-width: none; -ms-overflow-style: none; }
+.scrollbar-hide::-webkit-scrollbar { display: none; }

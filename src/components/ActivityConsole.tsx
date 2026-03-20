@@ -160,7 +160,7 @@ export function ActivityConsole() {
         </div>
       </div>
 
-      <div className="flex gap-1 px-3 py-2 overflow-x-auto border-b" style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-surface2)' }}>
+      <div className="flex gap-1 px-3 py-2 overflow-x-auto border-b scrollbar-hide" style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-surface2)', WebkitOverflowScrolling: 'touch' as any }}>
         {FILTER_TYPES.map(f => {
           const c = f === 'all' ? null : TYPE_CONFIG[f as EntryType];
           const active = filter === f;
