@@ -262,7 +262,7 @@ export function ScriptsTab() {
                     <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
                   </div>
                 ) : info?.thumbUrl ? (
-                  <img src={info.thumbUrl} alt={info.name} className={`w-full h-full object-contain group-hover:scale-105 transition-transform duration-300 ${inMaintenance ? 'brightness-50' : ''}`} />
+                  <img src={info.thumbUrl} alt={info.name} className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300" style={{ filter: inMaintenance ? 'brightness(0.4)' : 'none' }} />
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center">
                     <Gamepad2 className="w-10 h-10 text-gray-600" />

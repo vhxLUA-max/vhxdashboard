@@ -71,10 +71,18 @@ export function UserProfile({ userId, username, onBack, isAdmin }: Props) {
     await supabase.from('banned_users').delete().eq('roblox_user_id', userId);
     toast.success(`@${username} unbanned`); setBan(null);
   };
+  const doHWIDBan = async () => {
+    if (!hwid) return toast.error('No HWID found');
+    if (!banReason.trim()) return toast.error('Enter a reason');
+    await supabase.from('hwid_bans').insert({ hwid, roblox_user_id: userId, username, reason: banReason });
+    toast.success('HWID banned');
+  };
   const doFPBan = async () => {
     if (!fp) return toast.error('No fingerprint found');
     if (!banReason.trim()) return toast.error('Enter a reason');
     await supabase.from('fingerprint_bans').insert({ fingerprint: fp, roblox_user_id: userId, username, reason: banReason });
+    toast.success('Device banned');
+  };
     toast.success('Device banned');
   };
 
@@ -177,6 +185,7 @@ export function UserProfile({ userId, username, onBack, isAdmin }: Props) {
               : <button onClick={doUnban} className="px-4 py-2 rounded-lg text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors">Unban User</button>
             }
             <button onClick={doFPBan} className="px-4 py-2 rounded-lg text-xs font-medium bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20 transition-colors">Device Ban</button>
+            <button onClick={doHWIDBan} className="px-4 py-2 rounded-lg text-xs font-medium bg-orange-500/10 text-orange-400 border border-orange-500/20 hover:bg-orange-500/20 transition-colors">HWID Ban</button>
           </div>
         </div>
       )}
