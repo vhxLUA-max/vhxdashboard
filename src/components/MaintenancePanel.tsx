@@ -15,8 +15,7 @@ const DEFAULT_GAMES = ['Pixel Blade', 'Loot Hero', 'Flick', 'Survive Lava', 'UNC
 
 function getRemainingSeconds(endTs: string | null): number {
   if (!endTs) return -1;
-  // Both Date.parse and Date.now() are UTC-based — timezone safe
-  const endMs = Date.parse(endTs);
+  const endMs = Date.parse(endTs); // always UTC
   if (isNaN(endMs)) return -1;
   return Math.max(0, Math.floor((endMs - Date.now()) / 1000));
 }
@@ -36,7 +35,6 @@ function Countdown({ endTs, onExpired }: { endTs: string | null; onExpired?: () 
     firedRef.current = false;
     setSecs(getRemainingSeconds(endTs));
     if (!endTs) return;
-
     const id = setInterval(() => {
       const remaining = getRemainingSeconds(endTs);
       setSecs(remaining);
@@ -46,18 +44,57 @@ function Countdown({ endTs, onExpired }: { endTs: string | null; onExpired?: () 
         onExpired?.();
       }
     }, 1000);
-
     return () => clearInterval(id);
-  }, [endTs]); // onExpired intentionally excluded — avoids stale closure re-triggering
+  }, [endTs]);
 
   if (!endTs || secs < 0) return null;
   return <>{formatSeconds(secs)}</>;
 }
 
+// Duration picker — HH MM SS spinners, no timezone involved
+function DurationPicker({ value, onChange, disabled }: {
+  value: { h: number; m: number; s: number };
+  onChange: (v: { h: number; m: number; s: number }) => void;
+  disabled?: boolean;
+}) {
+  const spin = (field: 'h'|'m'|'s', max: number) => (
+    <div className="flex flex-col items-center">
+      <button type="button" disabled={disabled}
+        onClick={() => onChange({ ...value, [field]: Math.min(max, value[field]+1) })}
+        className="text-xs px-2 py-0.5 rounded hover:opacity-80 disabled:opacity-30"
+        style={{ color: 'var(--color-accent)' }}>▲</button>
+      <input
+        type="number" min={0} max={max} disabled={disabled}
+        value={String(value[field]).padStart(2,'0')}
+        onChange={e => { const n=Math.min(max,Math.max(0,parseInt(e.target.value)||0)); onChange({...value,[field]:n}); }}
+        className="w-10 text-center text-sm font-mono font-bold rounded border outline-none py-1 disabled:opacity-50"
+        style={{ backgroundColor:'var(--color-surface)', borderColor:'var(--color-border)', color:'var(--color-text)' }}
+      />
+      <button type="button" disabled={disabled}
+        onClick={() => onChange({ ...value, [field]: Math.max(0, value[field]-1) })}
+        className="text-xs px-2 py-0.5 rounded hover:opacity-80 disabled:opacity-30"
+        style={{ color: 'var(--color-accent)' }}>▼</button>
+    </div>
+  );
+
+  return (
+    <div className="flex items-center gap-1">
+      {spin('h', 99)}
+      <span className="text-sm font-bold pb-0.5" style={{ color: 'var(--color-muted)' }}>:</span>
+      {spin('m', 59)}
+      <span className="text-sm font-bold pb-0.5" style={{ color: 'var(--color-muted)' }}>:</span>
+      {spin('s', 59)}
+      <span className="text-[10px] ml-1" style={{ color: 'var(--color-muted)' }}>HH MM SS</span>
+    </div>
+  );
+}
+
 export function MaintenancePanel() {
-  const [games,   setGames]   = useState<GameStatus[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [saving,  setSaving]  = useState<string | null>(null);
+  const [games,    setGames]    = useState<GameStatus[]>([]);
+  const [loading,  setLoading]  = useState(true);
+  const [saving,   setSaving]   = useState<string | null>(null);
+  // Per-game duration state
+  const [durations, setDurations] = useState<Record<string, { h:number; m:number; s:number }>>({});
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   const load = async () => {
@@ -88,6 +125,10 @@ export function MaintenancePanel() {
     return () => { channelRef.current && supabase.removeChannel(channelRef.current); };
   }, []);
 
+  const getDuration = (id: string) => durations[id] ?? { h: 1, m: 0, s: 0 };
+  const setDuration = (id: string, v: { h:number; m:number; s:number }) =>
+    setDurations(prev => ({ ...prev, [id]: v }));
+
   const bringOnline = async (g: GameStatus) => {
     setSaving(g.id);
     const update = { maintenance: false, end_timestamp: null, updated_at: new Date().toISOString() };
@@ -95,35 +136,27 @@ export function MaintenancePanel() {
     setSaving(null);
     if (error) return toast.error(error.message);
     setGames(prev => prev.map(x => x.id === g.id ? { ...x, ...update } : x));
-    toast.success(`${g.game_name} brought back online`);
+    toast.success(`${g.game_name} is back online`);
   };
 
-  const toggle = async (g: GameStatus) => {
-    if (g.maintenance) return bringOnline(g);
+  const activate = async (g: GameStatus) => {
+    const dur = getDuration(g.id);
+    const totalSecs = dur.h * 3600 + dur.m * 60 + dur.s;
+    // Calculate end timestamp from NOW — no timezone issues
+    const endTs = totalSecs > 0 ? new Date(Date.now() + totalSecs * 1000).toISOString() : null;
     setSaving(g.id);
-    const update: any = { maintenance: true, updated_at: new Date().toISOString() };
+    const update: any = { maintenance: true, end_timestamp: endTs, updated_at: new Date().toISOString() };
     const { error } = await supabase.from('game_status').update(update).eq('id', g.id);
     setSaving(null);
     if (error) return toast.error(error.message);
     setGames(prev => prev.map(x => x.id === g.id ? { ...x, ...update } : x));
-    toast.success(`${g.game_name} set to maintenance`);
+    toast.success(`${g.game_name} set to maintenance${endTs ? ` for ${formatSeconds(totalSecs)}` : ''}`);
   };
 
   const updateMsg = async (g: GameStatus, msg: string) => {
-    if (g.maintenance) return; // locked while active
+    if (g.maintenance) return;
     const { error } = await supabase.from('game_status').update({ maintenance_msg: msg }).eq('id', g.id);
     if (!error) setGames(prev => prev.map(x => x.id === g.id ? { ...x, maintenance_msg: msg } : x));
-  };
-
-  const updateEndTime = async (g: GameStatus, val: string) => {
-    if (g.maintenance) return;
-    // datetime-local gives local time string — convert to UTC ISO correctly
-    const ts = val ? new Date(val).toISOString() : null;
-    if (ts && isNaN(Date.parse(ts))) return toast.error('Invalid date');
-    const { error } = await supabase.from('game_status').update({ end_timestamp: ts }).eq('id', g.id);
-    if (error) return toast.error(error.message);
-    setGames(prev => prev.map(x => x.id === g.id ? { ...x, end_timestamp: ts } : x));
-    toast.success('End time updated');
   };
 
   if (loading) return (
@@ -143,6 +176,8 @@ export function MaintenancePanel() {
       {games.map(g => (
         <div key={g.id} className="rounded-xl border p-4 space-y-3 transition-all"
           style={{ borderColor: g.maintenance ? '#f59e0b50' : 'var(--color-border)', backgroundColor: g.maintenance ? 'rgba(245,158,11,0.05)' : 'var(--color-surface2)' }}>
+
+          {/* Header row */}
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2 min-w-0">
               <div className={`w-2 h-2 rounded-full shrink-0 ${g.maintenance ? 'bg-amber-400' : 'bg-emerald-400'}`}
@@ -158,52 +193,47 @@ export function MaintenancePanel() {
                   </div>
                 )}
                 {g.maintenance && !g.end_timestamp && (
-                  <span className="text-[10px]" style={{ color: 'var(--color-muted)' }}>No end time set</span>
+                  <span className="text-[10px]" style={{ color: 'var(--color-muted)' }}>No timer set</span>
                 )}
               </div>
               {g.maintenance && <span className="text-[9px] font-bold text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full shrink-0">MAINTENANCE</span>}
             </div>
-            <button onClick={() => toggle(g)} disabled={saving === g.id}
+            <button
+              onClick={() => g.maintenance ? bringOnline(g) : activate(g)}
+              disabled={saving === g.id}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all shrink-0 disabled:opacity-50"
               style={{ backgroundColor: g.maintenance ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', color: g.maintenance ? '#10b981' : '#ef4444', border: `1px solid ${g.maintenance ? '#10b98140' : '#ef444440'}` }}>
               <Power className="w-3 h-3" />
               {saving === g.id ? '...' : g.maintenance ? 'Bring Online' : 'Set Maintenance'}
             </button>
           </div>
+
+          {/* Config fields — locked while active */}
           <div className="space-y-2">
             <div>
-              <label className="text-[10px] uppercase tracking-wider block mb-1 flex items-center gap-1.5" style={{ color: 'var(--color-muted)' }}>
-                Message shown to players
-                {g.maintenance && <span className="text-[9px] text-amber-400/60">locked during maintenance</span>}
+              <label className="text-[10px] uppercase tracking-wider flex items-center gap-1.5 mb-1" style={{ color: 'var(--color-muted)' }}>
+                Message
+                {g.maintenance && <span className="text-[9px] text-amber-400/60">locked</span>}
               </label>
               <input key={g.id + g.maintenance_msg} defaultValue={g.maintenance_msg}
-                onBlur={e => updateMsg(g, e.target.value)} placeholder="Maintenance message..."
+                onBlur={e => updateMsg(g, e.target.value)} placeholder="Message shown to players..."
                 disabled={g.maintenance}
                 className="w-full text-xs px-3 py-2 rounded-lg border outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }} />
             </div>
             <div>
-              <label className="text-[10px] uppercase tracking-wider block mb-1 flex items-center gap-1.5" style={{ color: 'var(--color-muted)' }}>
-                End time
+              <label className="text-[10px] uppercase tracking-wider flex items-center gap-1.5 mb-2" style={{ color: 'var(--color-muted)' }}>
+                Duration
                 {g.maintenance
-                  ? <span className="text-[9px] text-amber-400/60">locked during maintenance</span>
-                  : <span className="text-[9px] text-emerald-400/60">set before activating</span>
+                  ? <span className="text-[9px] text-amber-400/60">locked — timer started</span>
+                  : <span className="text-[9px] text-emerald-400/60">starts counting when you activate</span>
                 }
               </label>
-              <input type="datetime-local"
-                defaultValue={g.end_timestamp ? (() => {
-                  const d = new Date(g.end_timestamp);
-                  // Offset to local time for datetime-local input
-                  const offset = d.getTimezoneOffset() * 60000;
-                  return new Date(d.getTime() - offset).toISOString().slice(0,16);
-                })() : ''}
-                onBlur={e => updateEndTime(g, e.target.value)}
+              <DurationPicker
+                value={getDuration(g.id)}
+                onChange={v => setDuration(g.id, v)}
                 disabled={g.maintenance}
-                className="w-full text-xs px-3 py-2 rounded-lg border outline-none disabled:opacity-50 disabled:cursor-not-allowed"
-                style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }} />
-              <p className="text-[10px] mt-1" style={{ color: 'var(--color-muted)' }}>
-                Drives the live HH:MM:SS countdown. Automatically brings script online when it hits 00:00:00.
-              </p>
+              />
             </div>
           </div>
         </div>
