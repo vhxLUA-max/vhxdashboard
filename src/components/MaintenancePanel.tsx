@@ -13,28 +13,45 @@ interface GameStatus {
 
 const DEFAULT_GAMES = ['Pixel Blade', 'Loot Hero', 'Flick', 'Survive Lava', 'UNC Tester'];
 
-function formatCountdown(endTs: string | null): string {
-  if (!endTs) return '';
-  const remaining = Math.max(0, Math.floor((new Date(endTs).getTime() - Date.now()) / 1000));
-  const h = Math.floor(remaining / 3600);
-  const m = Math.floor((remaining % 3600) / 60);
-  const s = remaining % 60;
+function getRemainingSeconds(endTs: string | null): number {
+  if (!endTs) return -1;
+  // Both Date.parse and Date.now() are UTC-based — timezone safe
+  const endMs = Date.parse(endTs);
+  if (isNaN(endMs)) return -1;
+  return Math.max(0, Math.floor((endMs - Date.now()) / 1000));
+}
+
+function formatSeconds(secs: number): string {
+  const h = Math.floor(secs / 3600);
+  const m = Math.floor((secs % 3600) / 60);
+  const s = secs % 60;
   return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
 }
 
 function Countdown({ endTs, onExpired }: { endTs: string | null; onExpired?: () => void }) {
-  const [display, setDisplay] = useState(formatCountdown(endTs));
+  const [secs, setSecs] = useState(() => getRemainingSeconds(endTs));
+  const firedRef = useRef(false);
+
   useEffect(() => {
+    firedRef.current = false;
+    setSecs(getRemainingSeconds(endTs));
     if (!endTs) return;
+
     const id = setInterval(() => {
-      const fmt = formatCountdown(endTs);
-      setDisplay(fmt);
-      if (fmt === '00:00:00') { clearInterval(id); onExpired?.(); }
+      const remaining = getRemainingSeconds(endTs);
+      setSecs(remaining);
+      if (remaining <= 0 && !firedRef.current) {
+        firedRef.current = true;
+        clearInterval(id);
+        onExpired?.();
+      }
     }, 1000);
+
     return () => clearInterval(id);
-  }, [endTs, onExpired]);
-  if (!endTs) return null;
-  return <>{display}</>;
+  }, [endTs]); // onExpired intentionally excluded — avoids stale closure re-triggering
+
+  if (!endTs || secs < 0) return null;
+  return <>{formatSeconds(secs)}</>;
 }
 
 export function MaintenancePanel() {
@@ -99,8 +116,10 @@ export function MaintenancePanel() {
   };
 
   const updateEndTime = async (g: GameStatus, val: string) => {
-    if (g.maintenance) return; // locked while active
+    if (g.maintenance) return;
+    // datetime-local gives local time string — convert to UTC ISO correctly
     const ts = val ? new Date(val).toISOString() : null;
+    if (ts && isNaN(Date.parse(ts))) return toast.error('Invalid date');
     const { error } = await supabase.from('game_status').update({ end_timestamp: ts }).eq('id', g.id);
     if (error) return toast.error(error.message);
     setGames(prev => prev.map(x => x.id === g.id ? { ...x, end_timestamp: ts } : x));
@@ -172,7 +191,12 @@ export function MaintenancePanel() {
                 }
               </label>
               <input type="datetime-local"
-                defaultValue={g.end_timestamp ? new Date(g.end_timestamp).toISOString().slice(0,16) : ''}
+                defaultValue={g.end_timestamp ? (() => {
+                  const d = new Date(g.end_timestamp);
+                  // Offset to local time for datetime-local input
+                  const offset = d.getTimezoneOffset() * 60000;
+                  return new Date(d.getTime() - offset).toISOString().slice(0,16);
+                })() : ''}
                 onBlur={e => updateEndTime(g, e.target.value)}
                 disabled={g.maintenance}
                 className="w-full text-xs px-3 py-2 rounded-lg border outline-none disabled:opacity-50 disabled:cursor-not-allowed"
