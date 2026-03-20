@@ -30,10 +30,12 @@ export function ActivityConsole() {
   const [loading, setLoading] = useState(true);
   const bottomRef             = useRef<HTMLDivElement>(null);
   const pausedRef             = useRef(false);
+  const loadedRef             = useRef(false);
   pausedRef.current = paused;
 
   useEffect(() => {
     const load = async () => {
+      if (loadedRef.current) { setLoading(false); return; }
       const { data } = await supabase
         .from('console_logs')
         .select('id, created_at, type, msg, level')
@@ -46,6 +48,7 @@ export function ActivityConsole() {
           type: (r.type as EntryType) || 'system',
           msg: r.msg,
         })).reverse());
+        loadedRef.current = true;
       }
       setLoading(false);
     };

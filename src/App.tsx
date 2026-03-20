@@ -32,7 +32,7 @@ const ScriptsTab     = lazy(() => import('@/components/ScriptsTab').then(m => ({
 const ThemeManager   = lazy(() => import('@/components/ThemeManager').then(m => ({ default: m.ThemeManager })));
 const StatusTab      = lazy(() => import('@/components/StatusTab').then(m => ({ default: m.StatusTab })));
 const ChangelogTab   = lazy(() => import('@/components/ChangelogTab').then(m => ({ default: m.ChangelogTab })));
-const AdminPanel     = lazy(() => import('@/components/AdminPanel').then(m => ({ default: m.AdminPanel })));
+import { AdminPanel } from '@/components/AdminPanel';
 const FeedbackTab    = lazy(() => import('@/components/FeedbackTab').then(m => ({ default: m.FeedbackTab })));
 
 function timeAgo(iso: string): string {
@@ -412,7 +412,7 @@ function App() {
                 )}
 
                 <Suspense fallback={<TabFallback />}>
-                  <div key={activeTab}>
+                  <div>
                     {activeTab === 'search'    && <UserSearch />}
                     {activeTab === 'webhook'   && <WebhookTab />}
                     {activeTab === 'token'     && <MyTokenPanel />}
@@ -421,7 +421,9 @@ function App() {
                     {activeTab === 'feedback'  && <FeedbackTab />}
                     {activeTab === 'status'    && <StatusTab />}
                     {activeTab === 'changelog' && <ChangelogTab />}
-                    {activeTab === 'admin'     && <AdminPanel />}
+                    <div style={{ display: activeTab === 'admin' ? 'block' : 'none' }}>
+                      <AdminPanel />
+                    </div>
                   </div>
                 </Suspense>
               </ErrorBoundary>
