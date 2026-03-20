@@ -31,12 +31,7 @@ function Countdown({ endTs }: { endTs: string | null }) {
     return () => clearInterval(id);
   }, [endTs]);
   if (!endTs) return null;
-  return (
-    <div className="flex items-center gap-1.5 mt-1">
-      <Timer className="w-3 h-3 text-amber-400 shrink-0" />
-      <span className="text-xs font-mono font-bold text-amber-400">{display}</span>
-    </div>
-  );
+  return <>{display}</>;
 }
 
 export function MaintenancePanel() {
@@ -121,7 +116,17 @@ export function MaintenancePanel() {
                 style={{ boxShadow: g.maintenance ? '0 0 6px #f59e0b88' : '0 0 6px #34d39988' }} />
               <div className="min-w-0">
                 <span className="text-sm font-medium truncate block" style={{ color: 'var(--color-text)' }}>{g.game_name}</span>
-                {g.maintenance && <Countdown endTs={g.end_timestamp} />}
+                {g.maintenance && g.end_timestamp && (
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <Timer className="w-3 h-3 text-amber-400 shrink-0" />
+                    <span className="text-xs font-mono font-bold text-amber-400">
+                      <Countdown endTs={g.end_timestamp} />
+                    </span>
+                  </div>
+                )}
+                {g.maintenance && !g.end_timestamp && (
+                  <span className="text-[10px]" style={{ color: 'var(--color-muted)' }}>No end time set</span>
+                )}
               </div>
               {g.maintenance && <span className="text-[9px] font-bold text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full shrink-0">MAINTENANCE</span>}
             </div>

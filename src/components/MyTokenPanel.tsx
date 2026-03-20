@@ -70,10 +70,18 @@ export function MyTokenPanel() {
 
   const fetchToken = useCallback(async () => {
     setLoading(true);
+    // First check localStorage for cached token (works without login)
+    const cached = localStorage.getItem('vhx_token_row');
+    if (cached) {
+      try { setTokenRow(JSON.parse(cached)); } catch {}
+    }
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setLoading(false); return; }
     const { data } = await supabase.from('user_tokens').select('token,roblox_username,roblox_user_id,updated_at').eq('user_id', user.id).maybeSingle();
-    setTokenRow(data ?? null);
+    if (data) {
+      setTokenRow(data);
+      localStorage.setItem('vhx_token_row', JSON.stringify(data));
+    }
     setLoading(false);
   }, []);
 
@@ -123,7 +131,9 @@ export function MyTokenPanel() {
       });
       if (err) throw new Error(err.message);
       await supabase.from('unique_users').update({ token: newToken }).eq('roblox_user_id', robloxUser.id);
-      setTokenRow({ token: newToken, roblox_username: robloxUser.name, roblox_user_id: robloxUser.id, updated_at: new Date().toISOString() });
+      const newRow = { token: newToken, roblox_username: robloxUser.name, roblox_user_id: robloxUser.id, updated_at: new Date().toISOString() };
+      setTokenRow(newRow);
+      localStorage.setItem('vhx_token_row', JSON.stringify(newRow));
       setStep('done');
       toast.success('Token generated!');
     } catch (err) {
@@ -146,7 +156,9 @@ export function MyTokenPanel() {
       }, { onConflict: 'user_id' });
       if (err) throw new Error(err.message);
       await supabase.from('unique_users').update({ token: newToken }).eq('roblox_user_id', tokenRow.roblox_user_id);
-      setTokenRow({ ...tokenRow, token: newToken, updated_at: new Date().toISOString() });
+      const newRow = { ...tokenRow, token: newToken, updated_at: new Date().toISOString() };
+      setTokenRow(newRow);
+      localStorage.setItem('vhx_token_row', JSON.stringify(newRow));
       toast.success('Token regenerated. Old token is now invalid.');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to regenerate.');
