@@ -283,9 +283,9 @@ export function AdminPanel() {
         <Shield className="w-5 h-5 text-rose-400" />
         <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text)' }}>Admin Panel</h2>
         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20">ADMIN ONLY</span>
+      </div>
 
       <ActivityConsole />
-      </div>
 
 
       <div className="flex gap-1 p-1 rounded-xl border overflow-x-auto" style={s2}>
