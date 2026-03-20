@@ -1,15 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
+import { UserProfile } from '@/components/UserProfile';
+import { MaintenancePanel } from '@/components/MaintenancePanel';
 import {
-  Shield, Users, Key, Megaphone, ScrollText,
+  Shield, Users, Key, Megaphone, ScrollText, Wrench,
   Loader2, Trash2, Ban, CheckCircle2, Plus, X,
   RefreshCw, AlertTriangle, Info, Check, Zap
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
-type AdminTab = 'accounts' | 'tokens' | 'bans' | 'announcements' | 'audit';
+type AdminTab = 'accounts' | 'tokens' | 'bans' | 'announcements' | 'audit' | 'maintenance';
 
 type DashboardUser = {
   id: string;
@@ -17,6 +19,7 @@ type DashboardUser = {
   username: string;
   created_at: string;
   last_sign_in_at: string | null;
+  roblox_user_id: number | null;
 };
 
 type BannedUser = {
@@ -70,6 +73,7 @@ const ANNOUNCE_COLORS = { info: '#3b82f6', warning: '#f59e0b', success: '#10b981
 
 export function AdminPanel() {
   const [tab, setTab]             = useState<AdminTab>('accounts');
+  const [profileUser, setProfileUser] = useState<{ userId: number; username: string } | null>(null);
   const [isAdmin, setIsAdmin]     = useState<boolean | null>(null);
   const [loading, setLoading]     = useState(false);
 
@@ -114,6 +118,7 @@ export function AdminPanel() {
       id: u.user_id,
       email: '',
       username: u.roblox_username,
+      roblox_user_id: u.roblox_user_id ?? null,
       created_at: u.updated_at,
       last_sign_in_at: u.updated_at,
     })));
@@ -271,6 +276,7 @@ export function AdminPanel() {
     { id: 'bans',          label: 'Bans',           icon: Ban         },
     { id: 'announcements', label: 'Announcements',  icon: Megaphone   },
     { id: 'audit',         label: 'Audit Log',      icon: ScrollText  },
+    { id: 'maintenance',   label: 'Maintenance',    icon: Wrench      },
   ];
 
   const s = { borderColor: 'var(--color-border)', backgroundColor: 'var(--color-surface)' };
@@ -300,24 +306,27 @@ export function AdminPanel() {
 
 
       {!loading && tab === 'accounts' && (
-        <div className="space-y-2">
-          <p className="text-xs" style={{ color: 'var(--color-muted)' }}>{accounts.length} registered accounts</p>
-          {accounts.map(a => (
-            <div key={a.id} className="flex items-center gap-3 p-3 rounded-lg border" style={s2}>
-              <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 font-bold text-sm"
-                style={{ backgroundColor: 'color-mix(in srgb, var(--color-accent) 15%, transparent)', color: 'var(--color-accent)' }}>
-                {(a.username[0] ?? '?').toUpperCase()}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate" style={{ color: 'var(--color-text)' }}>@{a.username}</p>
-                <p className="text-[10px]" style={{ color: 'var(--color-muted)' }}>linked {timeAgo(a.created_at)}</p>
-              </div>
-              <p className="text-[10px] shrink-0" style={{ color: 'var(--color-muted)' }}>
-                {a.last_sign_in_at ? `last seen ${timeAgo(a.last_sign_in_at)}` : 'never signed in'}
-              </p>
+        profileUser
+          ? <UserProfile userId={profileUser.userId} username={profileUser.username} onBack={() => setProfileUser(null)} isAdmin={true} />
+          : <div className="space-y-2">
+              <p className="text-xs" style={{ color: 'var(--color-muted)' }}>{accounts.length} registered accounts — click to view profile</p>
+              {accounts.map(a => (
+                <div key={a.id} className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover:opacity-75 transition-opacity" style={s2}
+                  onClick={() => a.roblox_user_id ? setProfileUser({ userId: a.roblox_user_id, username: a.username }) : null}>
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 font-bold text-sm"
+                    style={{ backgroundColor: 'color-mix(in srgb, var(--color-accent) 15%, transparent)', color: 'var(--color-accent)' }}>
+                    {(a.username[0] ?? '?').toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate" style={{ color: 'var(--color-text)' }}>@{a.username}</p>
+                    <p className="text-[10px]" style={{ color: 'var(--color-muted)' }}>linked {timeAgo(a.created_at)}</p>
+                  </div>
+                  <p className="text-[10px] shrink-0" style={{ color: 'var(--color-muted)' }}>
+                    {a.last_sign_in_at ? `last seen ${timeAgo(a.last_sign_in_at)}` : 'never signed in'}
+                  </p>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
       )}
 
 
@@ -513,6 +522,8 @@ export function AdminPanel() {
           {audit.length === 0 && <p className="text-center text-xs py-6" style={{ color: 'var(--color-muted)' }}>No audit entries yet</p>}
         </div>
       )}
+
+      {tab === 'maintenance' && <MaintenancePanel />}
     </div>
   );
 }
