@@ -124,8 +124,10 @@ export function CommandConsole() {
       })
       .subscribe((status) => {
         setConnected(status === 'SUBSCRIBED');
-        if (status === 'CHANNEL_ERROR')
-          push({ id: uid(), time: new Date().toISOString(), level: 'error', category: 'system', message: 'Realtime error — enable replication on tables in Supabase' });
+        if (status === 'SUBSCRIBED')
+          push({ id: uid(), time: new Date().toISOString(), level: 'success', category: 'system', message: 'Realtime connected — all events live' });
+        if (status === 'CLOSED')
+          push({ id: uid(), time: new Date().toISOString(), level: 'warn', category: 'system', message: 'Realtime disconnected' });
       });
 
     return () => { supabase.removeChannel(ch); };
