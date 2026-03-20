@@ -247,6 +247,11 @@ function App() {
     });
     if (new URLSearchParams(window.location.search).get('reset') === 'true')
       window.history.replaceState({}, '', window.location.pathname);
+    const tabParam = new URLSearchParams(window.location.search).get('tab') as SidebarTab | null;
+    if (tabParam && TABS.find(t => t.id === tabParam)) {
+      switchTab(tabParam);
+      window.history.replaceState({}, '', window.location.pathname);
+    }
     return () => subscription.unsubscribe();
   }, []);
 

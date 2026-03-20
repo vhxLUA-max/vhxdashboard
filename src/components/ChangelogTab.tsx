@@ -70,6 +70,15 @@ export function ChangelogTab() {
           ],
           footer: { text: `Thanks for using the script. | ${entry.date}` },
         }],
+        components: [{
+          type: 1,
+          components: [{
+            type: 2,
+            style: 5,
+            label: 'Get Script',
+            url: 'https://vhxlua.vercel.app/?tab=scripts',
+          }],
+        }],
       }),
     }).catch(() => {});
   };
