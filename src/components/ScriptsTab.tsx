@@ -174,6 +174,12 @@ function GameDetailPanel({ info, placeId, loader, onBack }: { info: GameInfo; pl
   );
 }
 
+const GAME_NAMES: Record<number, string> = {
+  18172550962: 'Pixel Blade', 18172553902: 'Pixel Blade', 133884972346775: 'Pixel Blade',
+  138013005633222: 'Loot Hero', 77439980360504: 'Loot Hero',
+  119987266683883: 'Survive Lava', 136801880565837: 'Flick', 123974602339071: 'UNC Tester',
+};
+
 type CardState = { loading: boolean; info: GameInfo | null };
 
 export function ScriptsTab() {
@@ -188,12 +194,22 @@ export function ScriptsTab() {
       setCards(prev => ({ ...prev, [game.placeId]: { loading: false, info } }));
     });
 
-    supabase.from('game_status').select('game_name, maintenance, maintenance_msg').then(({ data }) => {
+    const loadMaintenance = async () => {
+      const { data } = await supabase.from('game_status').select('game_name, maintenance, maintenance_msg');
       if (!data) return;
       const m: Record<string, { on: boolean; msg: string }> = {};
-      data.forEach((r: any) => { m[r.game_name] = { on: r.maintenance, msg: r.maintenance_msg ?? '' }; });
+      data.forEach((r: any) => { m[r.game_name] = { on: !!r.maintenance, msg: r.maintenance_msg ?? '' }; });
       setMaintenance(m);
-    });
+    };
+    loadMaintenance();
+
+    const ch = supabase.channel('scripts-maintenance')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'game_status' }, () => {
+        loadMaintenance();
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(ch); };
   }, []);
 
   if (selected) {
@@ -228,7 +244,7 @@ export function ScriptsTab() {
           const card = cards[game.placeId];
           const loading = card?.loading ?? true;
           const info = card?.info ?? null;
-          const gameName = info?.name ?? null;
+          const gameName = GAME_NAMES[game.placeId];
           const mStatus = gameName ? maintenance[gameName] : null;
           const inMaintenance = mStatus?.on ?? false;
 
