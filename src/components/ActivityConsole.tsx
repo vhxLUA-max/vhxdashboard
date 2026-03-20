@@ -56,8 +56,9 @@ const PLACE_NAMES: Record<number, string> = {
 
 const resolveGame = (r: any) => r.game_name || PLACE_NAMES[r.place_id] || `Place ${r.place_id}`;
 
-const writeLog = (type: string, msg: string) =>
-  supabase.from('console_logs').insert({ level: 'INFO', type, msg }).then(() => {}).catch(() => {});
+const writeLog = (type: string, msg: string) => {
+  supabase.from('console_logs').insert({ level: 'INFO', type, msg }).then(() => {}, () => {});
+};
 
 export function ActivityConsole() {
   const [entries, setEntries]   = useState<Entry[]>([]);
