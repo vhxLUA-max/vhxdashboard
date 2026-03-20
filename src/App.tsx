@@ -421,11 +421,11 @@ function App() {
                     {activeTab === 'feedback'  && <FeedbackTab />}
                     {activeTab === 'status'    && <StatusTab />}
                     {activeTab === 'changelog' && <ChangelogTab />}
-                    <div style={{ display: activeTab === 'admin' ? 'block' : 'none' }}>
-                      <AdminPanel />
-                    </div>
                   </div>
                 </Suspense>
+                <div style={{ display: activeTab === 'admin' ? 'block' : 'none' }}>
+                  <AdminPanel />
+                </div>
               </ErrorBoundary>
             )}
           </main>
