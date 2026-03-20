@@ -2,9 +2,64 @@ import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { supabase } from '@/lib/supabase';
 import type { UniqueUser, GameExecution } from '@/types';
-import { Users, Clock, Calendar, Gamepad2, ArrowLeft, ExternalLink, Shield, Activity, Hash, Download, ArrowUpDown } from 'lucide-react';
+import { Users, Clock, Calendar, Gamepad2, ArrowLeft, ExternalLink, Shield, Activity, Hash, Download, ArrowUpDown, Ban } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
+
+function QuickBanButton({ userId, username }: { userId: number; username: string }) {
+  const [open,    setOpen]    = useState(false);
+  const [reason,  setReason]  = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const doBan = async () => {
+    if (!reason.trim()) return toast.error('Enter a reason');
+    setLoading(true);
+    const { error } = await supabase.from('banned_users').insert({ roblox_user_id: userId, username, reason });
+    setLoading(false);
+    if (error) return toast.error(error.message);
+    toast.success(`@${username} banned`);
+    setOpen(false);
+    setReason('');
+  };
+
+  return (
+    <div className="relative shrink-0">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="p-2 rounded-lg border transition-all hover:bg-red-500/10 hover:border-red-500/40"
+        style={{ borderColor: 'var(--color-border)', color: open ? '#ef4444' : 'var(--color-muted)' }}
+        title="Quick ban">
+        <Ban className="w-4 h-4" />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-10 z-50 w-56 rounded-xl border shadow-xl p-3 space-y-2"
+          style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
+          <p className="text-xs font-semibold text-red-400">Ban @{username}</p>
+          <input
+            autoFocus
+            value={reason}
+            onChange={e => setReason(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && doBan()}
+            placeholder="Reason..."
+            className="w-full text-xs px-2.5 py-1.5 rounded-lg border outline-none"
+            style={{ backgroundColor: 'var(--color-surface2)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }}
+          />
+          <div className="flex gap-1.5">
+            <button onClick={doBan} disabled={loading}
+              className="flex-1 py-1.5 rounded-lg text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-colors disabled:opacity-50">
+              {loading ? '...' : 'Ban'}
+            </button>
+            <button onClick={() => { setOpen(false); setReason(''); }}
+              className="flex-1 py-1.5 rounded-lg text-xs font-medium border transition-colors"
+              style={{ borderColor: 'var(--color-border)', color: 'var(--color-muted)' }}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 type PlaceEntry = {
   place_id: number;
@@ -246,20 +301,32 @@ export function UserSearch() {
     );
   }, [results, sortBy]);
 
-  const exportCSV = () => {
-    if (!results.length) return;
+  const exportCSV = async (allUsers = false) => {
+    let exportData = results;
+    if (allUsers) {
+      const { data } = await supabase
+        .from('unique_users')
+        .select('roblox_user_id, username, game_name, place_id, execution_count, first_seen, last_seen, fingerprint, hwid')
+        .order('execution_count', { ascending: false });
+      if (!data?.length) return toast.error('No users found');
+      const rows = [
+        ['Username', 'Roblox ID', 'Game', 'Executions', 'First Seen', 'Last Seen', 'Fingerprint', 'HWID'],
+        ...data.map((u: any) => [u.username, u.roblox_user_id, u.game_name ?? u.place_id, u.execution_count, u.first_seen, u.last_seen, u.fingerprint ?? '', u.hwid ?? '']),
+      ];
+      const csv  = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href = url; a.download = `vhx-all-users-${new Date().toISOString().slice(0,10)}.csv`; a.click();
+      URL.revokeObjectURL(url);
+      return toast.success(`Exported ${data.length} users`);
+    }
+    if (!exportData.length) return;
     const rows = [
       ['Username', 'Roblox ID', 'Total Executions', 'Games', 'First Seen', 'Last Seen'],
-      ...results.map(u => [
-        u.username,
-        u.roblox_user_id,
-        u.total_executions,
-        u.places.length,
-        u.earliest_seen,
-        u.latest_seen,
-      ]),
+      ...exportData.map(u => [u.username, u.roblox_user_id, u.total_executions, u.places.length, u.earliest_seen, u.latest_seen]),
     ];
-    const csv  = rows.map(r => r.join(',')).join('\n');
+    const csv  = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a');
@@ -419,34 +486,42 @@ export function UserSearch() {
                 </button>
               ))}
             </div>
-            <button onClick={exportCSV}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:text-indigo-400 hover:border-indigo-500/40 transition-all">
-              <Download className="w-3 h-3" /> Export CSV
-            </button>
+            <div className="flex gap-1.5">
+              <button onClick={() => exportCSV(false)}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:text-indigo-400 hover:border-indigo-500/40 transition-all">
+                <Download className="w-3 h-3" /> Export
+              </button>
+              <button onClick={() => exportCSV(true)}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:text-emerald-400 hover:border-emerald-500/40 transition-all">
+                <Download className="w-3 h-3" /> All Users
+              </button>
+            </div>
           </div>
           <div className="space-y-2">
             {sortedResults.map((user) => (
-            <button
-              key={user.roblox_user_id}
-              onClick={() => setSelectedUser(user)}
-              className="w-full text-left p-3 bg-white dark:bg-gray-950 rounded-lg border border-gray-200 dark:border-gray-800 hover:border-purple-500/40 hover:bg-gray-50 dark:hover:bg-gray-900 transition-all group"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-full bg-purple-500/10 border border-purple-500/20 flex items-center justify-center flex-shrink-0">
-                    <Users className="w-4 h-4 text-purple-400" />
+            <div key={user.roblox_user_id} className="flex items-center gap-2">
+              <button
+                onClick={() => setSelectedUser(user)}
+                className="flex-1 text-left p-3 bg-white dark:bg-gray-950 rounded-lg border border-gray-200 dark:border-gray-800 hover:border-purple-500/40 hover:bg-gray-50 dark:hover:bg-gray-900 transition-all group"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-full bg-purple-500/10 border border-purple-500/20 flex items-center justify-center flex-shrink-0">
+                      <Users className="w-4 h-4 text-purple-400" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-900 dark:text-white text-sm group-hover:text-purple-500 dark:group-hover:text-purple-300 transition-colors">{user.username}</p>
+                      <p className="text-[10px] text-gray-500">ID {user.roblox_user_id} · {user.places.length} game{user.places.length !== 1 ? 's' : ''}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-semibold text-gray-900 dark:text-white text-sm group-hover:text-purple-500 dark:group-hover:text-purple-300 transition-colors">{user.username}</p>
-                    <p className="text-[10px] text-gray-500">ID {user.roblox_user_id} · {user.places.length} game{user.places.length !== 1 ? 's' : ''}</p>
+                  <div className="text-right flex-shrink-0">
+                    <p className="text-sm font-bold text-indigo-400">{user.total_executions.toLocaleString()}</p>
+                    <p className="text-[10px] text-gray-500">execs</p>
                   </div>
                 </div>
-                <div className="text-right flex-shrink-0">
-                  <p className="text-sm font-bold text-indigo-400">{user.total_executions.toLocaleString()}</p>
-                  <p className="text-[10px] text-gray-500">execs</p>
-                </div>
-              </div>
-            </button>
+              </button>
+              <QuickBanButton userId={user.roblox_user_id} username={user.username} />
+            </div>
           ))}
           </div>
         </div>

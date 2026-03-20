@@ -33,6 +33,7 @@ const ThemeManager   = lazy(() => import('@/components/ThemeManager').then(m => 
 const StatusTab      = lazy(() => import('@/components/StatusTab').then(m => ({ default: m.StatusTab })));
 const ChangelogTab   = lazy(() => import('@/components/ChangelogTab').then(m => ({ default: m.ChangelogTab })));
 import { AdminPanel } from '@/components/AdminPanel';
+import { FloatingScriptIcon } from '@/components/FloatingScriptIcon';
 const FeedbackTab    = lazy(() => import('@/components/FeedbackTab').then(m => ({ default: m.FeedbackTab })));
 
 function timeAgo(iso: string): string {
@@ -273,6 +274,7 @@ function App() {
       )}
 
       <AnnouncementBanner />
+      <FloatingScriptIcon />
 
       <div className="flex flex-1">
         <aside className="hidden lg:flex flex-col gap-1 w-20 shrink-0 border-r border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 px-2 py-6 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto">
