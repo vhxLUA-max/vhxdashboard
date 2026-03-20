@@ -204,6 +204,7 @@ function App() {
   const [adminUsername, setAdminUsername] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl]         = useState<string | null>(null);
   const [isAdmin, setIsAdmin]             = useState(false);
+  const [isLoggedIn, setIsLoggedIn]       = useState(false);
   const [showLogin, setShowLogin]         = useState(false);
   const [showAccount, setShowAccount]     = useState(false);
   const { loading, error, refresh }       = useSupabaseDashboard(dateRange);
@@ -215,7 +216,11 @@ function App() {
   const liveUsers                         = useLiveUniqueUsers();
   const liveNewUsers                      = useLiveNewUsers();
   const lastExecution                     = useLiveLastExecution();
-  const visibleTabs                       = TABS.filter(t => t.id !== 'admin' || isAdmin);
+  // Gate: admin-only tabs hidden unless admin; search/scripts visible to all; admin tab only for admins
+  const visibleTabs = TABS.filter(t => {
+    if (t.id === 'admin') return isAdmin;
+    return true;
+  });
 
   const [showShortcuts, setShowShortcuts] = useState(false);
 
@@ -236,12 +241,14 @@ function App() {
       const u = session.user?.user_metadata?.username ?? null;
       setAdminUsername(u);
       setAvatarUrl(session.user?.user_metadata?.avatar_url ?? null);
+      setIsLoggedIn(true);
       checkIsAdmin(session.user.id, u).then(setIsAdmin);
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
       const u = session?.user?.user_metadata?.username ?? null;
       setAdminUsername(u);
       setAvatarUrl(session?.user?.user_metadata?.avatar_url ?? null);
+      setIsLoggedIn(!!session?.user);
       if (session?.user) checkIsAdmin(session.user.id, u).then(setIsAdmin);
       else setIsAdmin(false);
     });
@@ -420,7 +427,13 @@ function App() {
 
                 <Suspense fallback={<TabFallback />}>
                   <div>
-                    {activeTab === 'search'    && <UserSearch isAdmin={isAdmin} />}
+                    {activeTab === 'search'    && (isLoggedIn
+                      ? <UserSearch isAdmin={isAdmin} />
+                      : <div className="flex flex-col items-center justify-center py-20 gap-4">
+                          <p className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>Sign in to search users</p>
+                          <button onClick={() => setShowLogin(true)} className="px-5 py-2 rounded-xl text-sm font-semibold text-white" style={{ backgroundColor: 'var(--color-accent)' }}>Sign In</button>
+                        </div>
+                    )}
                     {activeTab === 'webhook'   && <WebhookTab />}
                     {activeTab === 'token'     && <MyTokenPanel />}
                     {activeTab === 'scripts'   && <ScriptsTab />}
