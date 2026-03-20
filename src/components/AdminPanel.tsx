@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
+import { ActivityConsole } from '@/components/ActivityConsole';
 import {
   Shield, Users, Key, Megaphone, ScrollText,
   Loader2, Trash2, Ban, CheckCircle2, Plus, X,
@@ -282,6 +283,8 @@ export function AdminPanel() {
         <Shield className="w-5 h-5 text-rose-400" />
         <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text)' }}>Admin Panel</h2>
         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20">ADMIN ONLY</span>
+
+      <ActivityConsole />
       </div>
 
 
