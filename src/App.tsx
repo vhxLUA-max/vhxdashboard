@@ -216,9 +216,14 @@ function App() {
   const liveUsers                         = useLiveUniqueUsers();
   const liveNewUsers                      = useLiveNewUsers();
   const lastExecution                     = useLiveLastExecution();
-  // Gate: admin-only tabs hidden unless admin; search/scripts visible to all; admin tab only for admins
+  // Auth gating:
+  // - Public (no login): stats, scripts, themes, changelog, status, feedback, token
+  // - Requires login:    search, webhook
+  // - Requires admin:    admin
   const visibleTabs = TABS.filter(t => {
-    if (t.id === 'admin') return isAdmin;
+    if (t.id === 'admin')   return isAdmin;
+    if (t.id === 'search')  return isLoggedIn;
+    if (t.id === 'webhook') return isLoggedIn;
     return true;
   });
 
@@ -434,7 +439,13 @@ function App() {
                           <button onClick={() => setShowLogin(true)} className="px-5 py-2 rounded-xl text-sm font-semibold text-white" style={{ backgroundColor: 'var(--color-accent)' }}>Sign In</button>
                         </div>
                     )}
-                    {activeTab === 'webhook'   && <WebhookTab />}
+                    {activeTab === 'webhook'   && (isLoggedIn
+                      ? <WebhookTab />
+                      : <div className="flex flex-col items-center justify-center py-20 gap-4">
+                          <p className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>Sign in to access webhook settings</p>
+                          <button onClick={() => setShowLogin(true)} className="px-5 py-2 rounded-xl text-sm font-semibold text-white" style={{ backgroundColor: 'var(--color-accent)' }}>Sign In</button>
+                        </div>
+                    )}
                     {activeTab === 'token'     && <MyTokenPanel />}
                     {activeTab === 'scripts'   && <ScriptsTab />}
                     {activeTab === 'themes'    && <ThemeManager />}
