@@ -30,7 +30,10 @@ export function ActivityConsole() {
     const execCh = supabase.channel('console-execs')
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'game_executions' }, ({ new: n }: any) => {
         add({ time: new Date().toISOString(), type: 'execution', msg: `${n.game_name ?? `Place ${n.place_id}`} — total ${n.count?.toLocaleString()} execs` });
-      }).subscribe();
+      }).subscribe((status) => {
+        if (status === 'SUBSCRIBED') add({ time: new Date().toISOString(), type: 'execution', msg: 'Console connected — listening for live events' });
+        if (status === 'CHANNEL_ERROR') add({ time: new Date().toISOString(), type: 'ban', msg: 'Realtime error — enable replication in Supabase for game_executions' });
+      });
 
     const userCh = supabase.channel('console-users')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'unique_users' }, ({ new: n }: any) => {
@@ -47,9 +50,18 @@ export function ActivityConsole() {
         add({ time: new Date().toISOString(), type: 'token', msg: `@${n.roblox_username} generated a token` });
       }).subscribe();
 
-    add({ time: new Date().toISOString(), type: 'execution', msg: 'Console connected — listening for live events' });
+    let lastExecCount = 0;
+    const poll = setInterval(async () => {
+      const { data } = await supabase.from('game_executions').select('count,game_name,place_id,last_executed_at').order('last_executed_at', { ascending: false }).limit(1);
+      const row = data?.[0];
+      if (row && row.count !== lastExecCount) {
+        if (lastExecCount > 0) add({ time: new Date().toISOString(), type: 'execution', msg: `${row.game_name ?? `Place ${row.place_id}`} — total ${row.count?.toLocaleString()} execs` });
+        lastExecCount = row.count;
+      }
+    }, 15000);
 
     return () => {
+      clearInterval(poll);
       supabase.removeChannel(execCh);
       supabase.removeChannel(userCh);
       supabase.removeChannel(banCh);
