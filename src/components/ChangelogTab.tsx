@@ -53,22 +53,30 @@ export function ChangelogTab() {
 
   const sendWebhook = async (entry: typeof form) => {
     const color = entry.type === 'new' ? 0x10b981 : entry.type === 'update' ? 0x6366f1 : 0xf59e0b;
-    const typeLabel = entry.type === 'new' ? 'New' : entry.type === 'update' ? 'Update' : 'Fix';
+    const tag = entry.type === 'new' ? 'NEW' : entry.type === 'update' ? 'UPDATE' : 'FIX';
+    const lines = [
+      '```json',
+      '{',
+      `  "type"    : "${tag}",`,
+      `  "game"    : "${entry.game}",`,
+      `  "title"   : "${entry.title}",`,
+      ...(entry.body ? [`  "details" : "${entry.body}",`] : []),
+      `  "date"    : "${entry.date}",`,
+      `  "script"  : "vhxdashboard.vercel.app"`,
+      '}',
+      '```',
+    ].join('\n');
     await fetch(WEBHOOK, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        username: 'vhxLUA Updates',
+        username: 'vhxLUA',
+        avatar_url: 'https://vhxlua.vercel.app/favicon.ico',
         embeds: [{
-          title: 'Changelog',
-          description: 'A new update has just dropped.',
+          title: 'Script Update',
+          description: lines,
           color,
-          fields: [
-            { name: 'What\'s New', value: `+ ${entry.title}${entry.body ? `\n${entry.body}` : ''}`, inline: false },
-            { name: 'Game', value: entry.game, inline: true },
-            { name: 'Type', value: typeLabel, inline: true },
-          ],
-          footer: { text: `Thanks for using the script. | ${entry.date}` },
+          footer: { text: `vhxLUA Script Hub  •  ${entry.date}` },
         }],
         components: [{
           type: 1,
@@ -76,7 +84,7 @@ export function ChangelogTab() {
             type: 2,
             style: 5,
             label: 'Get Script',
-            url: 'https://vhxlua.vercel.app/?tab=scripts',
+            url: 'https://vhxdashboard.vercel.app/?tab=scripts',
           }],
         }],
       }),
