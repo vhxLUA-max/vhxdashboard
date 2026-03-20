@@ -47,6 +47,18 @@ const toEntry = (r: any): Entry => ({
 const fmt = (iso: string) =>
   new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
+const PLACE_NAMES: Record<number, string> = {
+  18172550962: 'Pixel Blade', 18172553902: 'Pixel Blade',
+  133884972346775: 'Pixel Blade', 138013005633222: 'Loot Hero',
+  77439980360504: 'Loot Hero', 119987266683883: 'Survive Lava',
+  136801880565837: 'Flick', 123974602339071: 'UNC Tester',
+};
+
+const resolveGame = (r: any) => r.game_name || PLACE_NAMES[r.place_id] || `Place ${r.place_id}`;
+
+const writeLog = (type: string, msg: string) =>
+  supabase.from('console_logs').insert({ level: 'INFO', type, msg }).then(() => {}).catch(() => {});
+
 export function ActivityConsole() {
   const [entries, setEntries]   = useState<Entry[]>([]);
   const [filter,  setFilter]    = useState<EntryType | 'all'>('all');
@@ -87,11 +99,8 @@ export function ActivityConsole() {
     })();
 
     const ch = supabase.channel('console-realtime')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'console_logs' },
-        ({ new: n }: any) => push(toEntry(n)),
-      )
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'console_logs' },
+        ({ new: n }: any) => push(toEntry(n)))
       .subscribe((status) => {
         if (!mounted) return;
         if (status === 'SUBSCRIBED')
@@ -100,9 +109,40 @@ export function ActivityConsole() {
           push({ id: crypto.randomUUID(), time: new Date().toISOString(), type: 'system', msg: 'Realtime error — run ALTER PUBLICATION supabase_realtime ADD TABLE console_logs in Supabase SQL' });
       });
 
+    const watchCh = supabase.channel('console-watchers')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'unique_users' }, ({ new: n }: any) => {
+        writeLog('execution', `@${n.username} executed ${resolveGame(n)} (${n.execution_count?.toLocaleString()} total)`);
+      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'unique_users' }, ({ new: n }: any) => {
+        writeLog('new_user', `@${n.username} joined via ${resolveGame(n)}`);
+      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'banned_users' }, ({ new: n }: any) => {
+        writeLog('ban', `@${n.username} banned — ${n.reason ?? 'no reason'}`);
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'banned_users' }, ({ old: n }: any) => {
+        writeLog('unban', `@${n.username ?? 'user'} unbanned`);
+      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'fingerprint_bans' }, ({ new: n }: any) => {
+        writeLog('fpban', `@${n.username} device banned — ${n.reason ?? 'no reason'}`);
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'fingerprint_bans' }, ({ old: n }: any) => {
+        writeLog('fpunban', `@${n.username ?? 'user'} device ban removed`);
+      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'user_tokens' }, ({ new: n }: any) => {
+        writeLog('token', `@${n.roblox_username} generated token ${n.token}`);
+      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'changelog' }, ({ new: n }: any) => {
+        writeLog('changelog', `[${n.type?.toUpperCase()}] ${n.game} — ${n.title}`);
+      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'announcements' }, ({ new: n }: any) => {
+        writeLog('announcement', `New announcement [${n.type}] — ${n.message}`);
+      })
+      .subscribe();
+
     return () => {
       mounted = false;
       supabase.removeChannel(ch);
+      supabase.removeChannel(watchCh);
     };
   }, [push]);
 
