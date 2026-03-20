@@ -1,7 +1,40 @@
-import { useState, useEffect } from 'react';
-import { Copy, Check, Loader2, Gamepad2, Users, ThumbsUp, Star, ExternalLink, ArrowLeft, Play, Wrench } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Copy, Check, Loader2, Gamepad2, Users, ThumbsUp, Star, ExternalLink, ArrowLeft, Play, Wrench, Timer } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
+
+function getRemainingSeconds(endTs: string | null): number {
+  if (!endTs) return -1;
+  const endMs = Date.parse(endTs);
+  if (isNaN(endMs)) return -1;
+  return Math.max(0, Math.floor((endMs - Date.now()) / 1000));
+}
+
+function ScriptCountdown({ endTs }: { endTs: string | null }) {
+  const [secs, setSecs] = useState(() => getRemainingSeconds(endTs));
+  const firedRef = useRef(false);
+  useEffect(() => {
+    firedRef.current = false;
+    setSecs(getRemainingSeconds(endTs));
+    if (!endTs) return;
+    const id = setInterval(() => {
+      const r = getRemainingSeconds(endTs);
+      setSecs(r);
+      if (r <= 0 && !firedRef.current) { firedRef.current = true; clearInterval(id); }
+    }, 1000);
+    return () => clearInterval(id);
+  }, [endTs]);
+  if (!endTs || secs < 0) return null;
+  const h = Math.floor(secs/3600), m = Math.floor((secs%3600)/60), s = secs%60;
+  return (
+    <div className="flex items-center gap-1 justify-center">
+      <Timer className="w-2.5 h-2.5 text-amber-400 shrink-0" />
+      <span className="text-[9px] font-mono font-bold text-amber-400">
+        {String(h).padStart(2,'0')}:{String(m).padStart(2,'0')}:{String(s).padStart(2,'0')}
+      </span>
+    </div>
+  );
+}
 
 const LOADER = `loadstring(game:HttpGet("https://raw.githubusercontent.com/vhxLUA-max/vhxframeworks/refs/heads/main/main.lua"))()`;
 const UNC_LOADER = `loadstring(game:HttpGet("https://raw.githubusercontent.com/vhxLUA-max/vhxframeworks/refs/heads/main/unctester"))()`;
@@ -185,7 +218,7 @@ type CardState = { loading: boolean; info: GameInfo | null };
 export function ScriptsTab() {
   const [cards,       setCards]       = useState<Record<number, CardState>>({});
   const [selected,    setSelected]    = useState<typeof GAMES[number] | null>(null);
-  const [maintenance, setMaintenance] = useState<Record<string, { on: boolean; msg: string }>>({});
+  const [maintenance, setMaintenance] = useState<Record<string, { on: boolean; msg: string; endTs: string | null }>>({});
 
   useEffect(() => {
     GAMES.forEach(async game => {
@@ -195,10 +228,10 @@ export function ScriptsTab() {
     });
 
     const loadMaintenance = async () => {
-      const { data } = await supabase.from('game_status').select('game_name, maintenance, maintenance_msg');
+      const { data } = await supabase.from('game_status').select('game_name, maintenance, maintenance_msg, end_timestamp');
       if (!data) return;
-      const m: Record<string, { on: boolean; msg: string }> = {};
-      data.forEach((r: any) => { m[r.game_name] = { on: !!r.maintenance, msg: r.maintenance_msg ?? '' }; });
+      const m: Record<string, { on: boolean; msg: string; endTs: string | null }> = {};
+      data.forEach((r: any) => { m[r.game_name] = { on: !!r.maintenance, msg: r.maintenance_msg ?? '', endTs: r.end_timestamp ?? null }; });
       setMaintenance(m);
     };
     loadMaintenance();
@@ -277,6 +310,7 @@ export function ScriptsTab() {
                     {mStatus?.msg && (
                       <span className="text-[9px] text-amber-300/70 text-center leading-tight line-clamp-2">{mStatus.msg}</span>
                     )}
+                    <ScriptCountdown endTs={mStatus?.endTs ?? null} />
                   </div>
                 )}
               </div>
