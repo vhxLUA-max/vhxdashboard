@@ -54,70 +54,94 @@ type TokenRow = { token: string; roblox_username: string; roblox_user_id: number
 type Step = 'username' | 'verify' | 'done';
 type RobloxUser = { id: number; name: string; displayName: string };
 
+// Persist verify step in localStorage so refresh doesn't reset it
+const LS_TOKEN   = 'vhx_token_row';
+const LS_STEP    = 'vhx_token_step';
+const LS_RBXUSER = 'vhx_rbx_user';
+const LS_CODE    = 'vhx_verify_code';
+
+function lsGet<T>(key: string): T | null {
+  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : null; } catch { return null; }
+}
+function lsSet(key: string, val: unknown) {
+  try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
+}
+function lsDel(...keys: string[]) {
+  keys.forEach(k => { try { localStorage.removeItem(k); } catch {} });
+}
+
 export function MyTokenPanel() {
-  const [tokenRow, setTokenRow]         = useState<TokenRow | null>(null);
-  const [loading, setLoading]           = useState(true);
-  const [error, setError]               = useState('');
-  const [step, setStep]                 = useState<Step>('username');
-  const [robloxInput, setRobloxInput]   = useState('');
-  const [lookingUp, setLookingUp]       = useState(false);
-  const [robloxUser, setRobloxUser]     = useState<RobloxUser | null>(null);
-  const [verifyCode, setVerifyCode]     = useState('');
-  const [codeCopied, setCodeCopied]     = useState(false);
-  const [verifying, setVerifying]       = useState(false);
-  const [tokenCopied, setTokenCopied]   = useState(false);
+  const [tokenRow,     setTokenRow]     = useState<TokenRow | null>(() => lsGet<TokenRow>(LS_TOKEN));
+  const [loading,      setLoading]      = useState(true);
+  const [error,        setError]        = useState('');
+  const [step,         setStep]         = useState<Step>(() => lsGet<Step>(LS_STEP) ?? 'username');
+  const [robloxInput,  setRobloxInput]  = useState('');
+  const [lookingUp,    setLookingUp]    = useState(false);
+  const [robloxUser,   setRobloxUser]   = useState<RobloxUser | null>(() => lsGet<RobloxUser>(LS_RBXUSER));
+  const [verifyCode,   setVerifyCode]   = useState<string>(() => lsGet<string>(LS_CODE) ?? '');
+  const [codeCopied,   setCodeCopied]   = useState(false);
+  const [verifying,    setVerifying]    = useState(false);
+  const [tokenCopied,  setTokenCopied]  = useState(false);
   const [regenerating, setRegenerating] = useState(false);
 
+  // Sync from Supabase if logged in, but always show localStorage data immediately
   const fetchToken = useCallback(async () => {
     setLoading(true);
-    // First check localStorage for cached token (works without login)
-    const cached = localStorage.getItem('vhx_token_row');
-    if (cached) {
-      try { setTokenRow(JSON.parse(cached)); } catch {}
-    }
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) { setLoading(false); return; }
-    const { data } = await supabase.from('user_tokens').select('token,roblox_username,roblox_user_id,updated_at').eq('user_id', user.id).maybeSingle();
-    if (data) {
-      setTokenRow(data);
-      localStorage.setItem('vhx_token_row', JSON.stringify(data));
+    if (user) {
+      const { data } = await supabase
+        .from('user_tokens')
+        .select('token,roblox_username,roblox_user_id,updated_at')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (data) {
+        setTokenRow(data);
+        lsSet(LS_TOKEN, data);
+        // Clear verify state since we have a confirmed token
+        setStep('done');
+        lsSet(LS_STEP, 'done');
+      }
     }
     setLoading(false);
   }, []);
 
   useEffect(() => { fetchToken(); }, [fetchToken]);
 
+  const goToVerify = (rbxUser: RobloxUser) => {
+    const code = generateVerifyCode();
+    setRobloxUser(rbxUser);
+    setVerifyCode(code);
+    setStep('verify');
+    lsSet(LS_RBXUSER, rbxUser);
+    lsSet(LS_CODE, code);
+    lsSet(LS_STEP, 'verify');
+  };
+
+  const resetVerify = () => {
+    setStep('username');
+    setRobloxUser(null);
+    setVerifyCode('');
+    setError('');
+    lsDel(LS_STEP, LS_RBXUSER, LS_CODE);
+  };
+
   const handleLookup = async () => {
     const trimmed = robloxInput.trim();
     if (!trimmed) return;
-    setLookingUp(true);
-    setError('');
+    setLookingUp(true); setError('');
     const rbxUser = await lookupRobloxUser(trimmed);
-    if (rbxUser) {
-      setRobloxUser(rbxUser);
-      setVerifyCode(generateVerifyCode());
-      setStep('verify');
-      setLookingUp(false);
-      return;
-    }
+    if (rbxUser) { goToVerify(rbxUser); setLookingUp(false); return; }
     const { data: dbUser } = await supabase.from('unique_users').select('roblox_user_id,username').ilike('username', trimmed).limit(1).maybeSingle();
-    if (!dbUser) {
-      setError(`Username "${trimmed}" not found. Run a script in-game first.`);
-      setLookingUp(false);
-      return;
-    }
-    setRobloxUser({ id: dbUser.roblox_user_id, name: dbUser.username, displayName: dbUser.username });
-    setVerifyCode(generateVerifyCode());
-    setStep('verify');
+    if (!dbUser) { setError(`Username "${trimmed}" not found. Run a script in-game first.`); setLookingUp(false); return; }
+    goToVerify({ id: dbUser.roblox_user_id, name: dbUser.username, displayName: dbUser.username });
     setLookingUp(false);
   };
 
   const handleVerify = async () => {
     if (!robloxUser || !verifyCode) return;
-    setVerifying(true);
-    setError('');
+    setVerifying(true); setError('');
     const bio = await fetchRobloxBio(robloxUser.id);
-    if (bio === null) { setError('Could not fetch your Roblox profile. Try again.'); setVerifying(false); return; }
+    if (bio === null) { setError('Could not fetch your Roblox profile.'); setVerifying(false); return; }
     if (!bio.includes(verifyCode)) { setError(`Code "${verifyCode}" not found in your bio. Paste it and save first.`); setVerifying(false); return; }
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -132,9 +156,9 @@ export function MyTokenPanel() {
       if (err) throw new Error(err.message);
       await supabase.from('unique_users').update({ token: newToken }).eq('roblox_user_id', robloxUser.id);
       const newRow = { token: newToken, roblox_username: robloxUser.name, roblox_user_id: robloxUser.id, updated_at: new Date().toISOString() };
-      setTokenRow(newRow);
-      localStorage.setItem('vhx_token_row', JSON.stringify(newRow));
-      setStep('done');
+      setTokenRow(newRow); lsSet(LS_TOKEN, newRow);
+      setStep('done');     lsSet(LS_STEP, 'done');
+      lsDel(LS_RBXUSER, LS_CODE);
       toast.success('Token generated!');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong.');
@@ -143,8 +167,7 @@ export function MyTokenPanel() {
 
   const handleRegenerate = async () => {
     if (!tokenRow) return;
-    setRegenerating(true);
-    setError('');
+    setRegenerating(true); setError('');
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not logged in.');
@@ -157,8 +180,7 @@ export function MyTokenPanel() {
       if (err) throw new Error(err.message);
       await supabase.from('unique_users').update({ token: newToken }).eq('roblox_user_id', tokenRow.roblox_user_id);
       const newRow = { ...tokenRow, token: newToken, updated_at: new Date().toISOString() };
-      setTokenRow(newRow);
-      localStorage.setItem('vhx_token_row', JSON.stringify(newRow));
+      setTokenRow(newRow); lsSet(LS_TOKEN, newRow);
       toast.success('Token regenerated. Old token is now invalid.');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to regenerate.');
@@ -168,15 +190,13 @@ export function MyTokenPanel() {
   const copyToken = () => {
     if (!tokenRow) return;
     navigator.clipboard.writeText(tokenRow.token);
-    setTokenCopied(true);
-    setTimeout(() => setTokenCopied(false), 2000);
+    setTokenCopied(true); setTimeout(() => setTokenCopied(false), 2000);
     toast.success('Token copied!');
   };
 
   const copyCode = () => {
     navigator.clipboard.writeText(verifyCode);
-    setCodeCopied(true);
-    setTimeout(() => setCodeCopied(false), 2000);
+    setCodeCopied(true); setTimeout(() => setCodeCopied(false), 2000);
   };
 
   const timeAgo = (iso: string) => {
@@ -186,7 +206,7 @@ export function MyTokenPanel() {
     return `${Math.floor(d / 86400)}d ago`;
   };
 
-  if (loading) return (
+  if (loading && !tokenRow && step === 'username') return (
     <div className="rounded-xl border p-6 flex items-center justify-center py-12" style={{ borderColor: 'var(--color-border)' }}>
       <Loader2 className="w-5 h-5 animate-spin" style={{ color: 'var(--color-muted)' }} />
     </div>
@@ -229,7 +249,7 @@ export function MyTokenPanel() {
           <div className="flex items-start gap-2 p-3 rounded-lg" style={{ backgroundColor: 'color-mix(in srgb, #3b82f6 8%, transparent)', border: '1px solid color-mix(in srgb, #3b82f6 20%, transparent)' }}>
             <ShieldCheck className="w-3.5 h-3.5 text-blue-400 shrink-0 mt-0.5" />
             <p className="text-[11px] text-blue-400/80 leading-relaxed">
-              Use in <strong>User Search</strong>, <strong>Webhook</strong>, and paste in-game via Settings. Regenerating invalidates the old one immediately.
+              Use in <strong>User Search</strong> and <strong>Webhook</strong>. Regenerating invalidates the old token immediately.
             </p>
           </div>
 
@@ -243,7 +263,40 @@ export function MyTokenPanel() {
           </div>
         </div>
 
-      ) : step === 'username' ? (
+      ) : step === 'verify' && robloxUser ? (
+        <div className="space-y-4">
+          <button onClick={resetVerify} className="text-xs transition-colors" style={{ color: 'var(--color-muted)' }}>← Change account</button>
+
+          <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg border" style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-surface2)' }}>
+            <img src={`https://tr.rbxcdn.com/avatar-thumbnail/150/150/AvatarHeadshot/Png?userId=${robloxUser.id}`} alt={robloxUser.name} className="w-8 h-8 rounded-full object-cover" style={{ border: '1px solid var(--color-border)' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+            <div>
+              <p className="text-xs font-semibold" style={{ color: 'var(--color-text)' }}>{robloxUser.displayName}</p>
+              <p className="text-[10px]" style={{ color: 'var(--color-muted)' }}>@{robloxUser.name} · ID {robloxUser.id}</p>
+            </div>
+          </div>
+
+          <div className="space-y-3 p-4 rounded-xl border border-amber-500/20" style={{ backgroundColor: 'rgba(245,158,11,0.05)' }}>
+            <p className="text-xs font-semibold text-amber-400">Add this code to your Roblox bio</p>
+            <div className="flex items-center gap-2 rounded-lg px-3 py-2.5 border border-amber-500/30" style={{ backgroundColor: 'var(--color-surface2)' }}>
+              <span className="flex-1 font-mono text-lg font-bold tracking-widest text-amber-400">{verifyCode}</span>
+              <button onClick={copyCode} className="p-1.5 rounded transition-colors shrink-0" style={{ color: 'var(--color-muted)' }}>
+                {codeCopied ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <ClipboardCopy className="w-4 h-4" />}
+              </button>
+            </div>
+            <ol className="space-y-1 text-[11px]" style={{ color: 'var(--color-muted)' }}>
+              <li>1. Go to <a href="https://www.roblox.com/my/account#!/info" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-accent)' }} className="hover:underline">roblox.com/my/account</a> → About</li>
+              <li>2. Paste <span className="font-mono text-amber-400">{verifyCode}</span> in your bio and save</li>
+              <li>3. Come back and click Verify — you can remove it from bio after</li>
+            </ol>
+            <p className="text-[10px] text-amber-400/60">This step is saved — refreshing this page will keep your progress.</p>
+          </div>
+
+          <Button onClick={handleVerify} disabled={verifying} className="w-full border-0" style={{ backgroundColor: '#10b981', color: '#fff' }}>
+            {verifying ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Checking bio...</> : <><ShieldCheck className="w-4 h-4 mr-2" /> Verify & Get Token</>}
+          </Button>
+        </div>
+
+      ) : (
         <div className="space-y-4">
           <div className="space-y-1.5">
             <label className="text-xs" style={{ color: 'var(--color-muted)' }}>Your Roblox username</label>
@@ -266,43 +319,6 @@ export function MyTokenPanel() {
               <p className="text-[11px] mt-0.5" style={{ color: 'var(--color-muted)' }}>Works across Search, Webhook, and in-game</p>
             </div>
           </div>
-        </div>
-
-      ) : (
-        <div className="space-y-4">
-          <button onClick={() => { setStep('username'); setRobloxUser(null); setVerifyCode(''); setError(''); }} className="text-xs transition-colors" style={{ color: 'var(--color-muted)' }}>
-            ← Change account
-          </button>
-
-          {robloxUser && (
-            <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg border" style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-surface2)' }}>
-              <img src={`https://tr.rbxcdn.com/avatar-thumbnail/150/150/AvatarHeadshot/Png?userId=${robloxUser.id}`} alt={robloxUser.name} className="w-8 h-8 rounded-full object-cover" style={{ border: '1px solid var(--color-border)' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-              <div>
-                <p className="text-xs font-semibold" style={{ color: 'var(--color-text)' }}>{robloxUser.displayName}</p>
-                <p className="text-[10px]" style={{ color: 'var(--color-muted)' }}>@{robloxUser.name} · ID {robloxUser.id}</p>
-              </div>
-            </div>
-          )}
-
-          <div className="space-y-3 p-4 rounded-xl border border-amber-500/20" style={{ backgroundColor: 'rgba(245,158,11,0.05)' }}>
-            <p className="text-xs font-semibold text-amber-400">Step 1 — Add this code to your Roblox bio</p>
-            <div className="flex items-center gap-2 rounded-lg px-3 py-2.5 border border-amber-500/30" style={{ backgroundColor: 'var(--color-surface2)' }}>
-              <span className="flex-1 font-mono text-lg font-bold tracking-widest text-amber-400">{verifyCode}</span>
-              <button onClick={copyCode} className="p-1.5 rounded transition-colors shrink-0" style={{ color: 'var(--color-muted)' }}>
-                {codeCopied ? <CheckCircle2 className="w-4 h-4 text-emerald-400" /> : <ClipboardCopy className="w-4 h-4" />}
-              </button>
-            </div>
-            <ol className="space-y-1 text-[11px]" style={{ color: 'var(--color-muted)' }}>
-              <li>1. Go to <a href="https://www.roblox.com/my/account#!/info" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-accent)' }} className="hover:underline">roblox.com/my/account</a> → Profile → About</li>
-              <li>2. Paste <span className="font-mono text-amber-400">{verifyCode}</span> anywhere in your bio and save</li>
-              <li>3. Come back and click Verify below</li>
-            </ol>
-          </div>
-
-          <Button onClick={handleVerify} disabled={verifying} className="w-full border-0" style={{ backgroundColor: '#10b981', color: '#fff' }}>
-            {verifying ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Checking bio...</> : <><ShieldCheck className="w-4 h-4 mr-2" /> Verify & Get Token</>}
-          </Button>
-          <p className="text-[11px] text-center" style={{ color: 'var(--color-muted)' }}>You can remove the code from your bio after verification.</p>
         </div>
       )}
 

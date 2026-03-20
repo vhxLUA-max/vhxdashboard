@@ -16,20 +16,23 @@ const DEFAULT_GAMES = ['Pixel Blade', 'Loot Hero', 'Flick', 'Survive Lava', 'UNC
 function formatCountdown(endTs: string | null): string {
   if (!endTs) return '';
   const remaining = Math.max(0, Math.floor((new Date(endTs).getTime() - Date.now()) / 1000));
-  if (remaining === 0) return 'Ending soon...';
   const h = Math.floor(remaining / 3600);
   const m = Math.floor((remaining % 3600) / 60);
   const s = remaining % 60;
   return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
 }
 
-function Countdown({ endTs }: { endTs: string | null }) {
+function Countdown({ endTs, onExpired }: { endTs: string | null; onExpired?: () => void }) {
   const [display, setDisplay] = useState(formatCountdown(endTs));
   useEffect(() => {
     if (!endTs) return;
-    const id = setInterval(() => setDisplay(formatCountdown(endTs)), 1000);
+    const id = setInterval(() => {
+      const fmt = formatCountdown(endTs);
+      setDisplay(fmt);
+      if (fmt === '00:00:00') { clearInterval(id); onExpired?.(); }
+    }, 1000);
     return () => clearInterval(id);
-  }, [endTs]);
+  }, [endTs, onExpired]);
   if (!endTs) return null;
   return <>{display}</>;
 }
@@ -68,24 +71,35 @@ export function MaintenancePanel() {
     return () => { channelRef.current && supabase.removeChannel(channelRef.current); };
   }, []);
 
-  const toggle = async (g: GameStatus) => {
+  const bringOnline = async (g: GameStatus) => {
     setSaving(g.id);
-    const newVal = !g.maintenance;
-    const update: any = { maintenance: newVal, updated_at: new Date().toISOString() };
-    if (!newVal) update.end_timestamp = null;
+    const update = { maintenance: false, end_timestamp: null, updated_at: new Date().toISOString() };
     const { error } = await supabase.from('game_status').update(update).eq('id', g.id);
     setSaving(null);
     if (error) return toast.error(error.message);
     setGames(prev => prev.map(x => x.id === g.id ? { ...x, ...update } : x));
-    toast.success(`${g.game_name} ${newVal ? 'set to maintenance' : 'brought back online'}`);
+    toast.success(`${g.game_name} brought back online`);
+  };
+
+  const toggle = async (g: GameStatus) => {
+    if (g.maintenance) return bringOnline(g);
+    setSaving(g.id);
+    const update: any = { maintenance: true, updated_at: new Date().toISOString() };
+    const { error } = await supabase.from('game_status').update(update).eq('id', g.id);
+    setSaving(null);
+    if (error) return toast.error(error.message);
+    setGames(prev => prev.map(x => x.id === g.id ? { ...x, ...update } : x));
+    toast.success(`${g.game_name} set to maintenance`);
   };
 
   const updateMsg = async (g: GameStatus, msg: string) => {
+    if (g.maintenance) return; // locked while active
     const { error } = await supabase.from('game_status').update({ maintenance_msg: msg }).eq('id', g.id);
     if (!error) setGames(prev => prev.map(x => x.id === g.id ? { ...x, maintenance_msg: msg } : x));
   };
 
   const updateEndTime = async (g: GameStatus, val: string) => {
+    if (g.maintenance) return; // locked while active
     const ts = val ? new Date(val).toISOString() : null;
     const { error } = await supabase.from('game_status').update({ end_timestamp: ts }).eq('id', g.id);
     if (error) return toast.error(error.message);
@@ -120,7 +134,7 @@ export function MaintenancePanel() {
                   <div className="flex items-center gap-1.5 mt-0.5">
                     <Timer className="w-3 h-3 text-amber-400 shrink-0" />
                     <span className="text-xs font-mono font-bold text-amber-400">
-                      <Countdown endTs={g.end_timestamp} />
+                      <Countdown endTs={g.end_timestamp} onExpired={() => bringOnline(g)} />
                     </span>
                   </div>
                 )}
@@ -139,23 +153,32 @@ export function MaintenancePanel() {
           </div>
           <div className="space-y-2">
             <div>
-              <label className="text-[10px] uppercase tracking-wider block mb-1" style={{ color: 'var(--color-muted)' }}>Message shown to players</label>
+              <label className="text-[10px] uppercase tracking-wider block mb-1 flex items-center gap-1.5" style={{ color: 'var(--color-muted)' }}>
+                Message shown to players
+                {g.maintenance && <span className="text-[9px] text-amber-400/60">locked during maintenance</span>}
+              </label>
               <input key={g.id + g.maintenance_msg} defaultValue={g.maintenance_msg}
                 onBlur={e => updateMsg(g, e.target.value)} placeholder="Maintenance message..."
-                className="w-full text-xs px-3 py-2 rounded-lg border outline-none"
+                disabled={g.maintenance}
+                className="w-full text-xs px-3 py-2 rounded-lg border outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }} />
             </div>
             <div>
-              <label className="text-[10px] uppercase tracking-wider block mb-1" style={{ color: 'var(--color-muted)' }}>
-                End time — set this before activating maintenance
+              <label className="text-[10px] uppercase tracking-wider block mb-1 flex items-center gap-1.5" style={{ color: 'var(--color-muted)' }}>
+                End time
+                {g.maintenance
+                  ? <span className="text-[9px] text-amber-400/60">locked during maintenance</span>
+                  : <span className="text-[9px] text-emerald-400/60">set before activating</span>
+                }
               </label>
               <input type="datetime-local"
                 defaultValue={g.end_timestamp ? new Date(g.end_timestamp).toISOString().slice(0,16) : ''}
                 onBlur={e => updateEndTime(g, e.target.value)}
-                className="w-full text-xs px-3 py-2 rounded-lg border outline-none"
+                disabled={g.maintenance}
+                className="w-full text-xs px-3 py-2 rounded-lg border outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }} />
               <p className="text-[10px] mt-1" style={{ color: 'var(--color-muted)' }}>
-                Drives the live HH:MM:SS countdown on dashboard and in-game. Leave empty for no timer.
+                Drives the live HH:MM:SS countdown. Automatically brings script online when it hits 00:00:00.
               </p>
             </div>
           </div>
