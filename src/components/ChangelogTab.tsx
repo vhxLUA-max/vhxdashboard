@@ -49,13 +49,39 @@ export function ChangelogTab() {
     });
   }, [load]);
 
+  const WEBHOOK = 'https://discord.com/api/webhooks/1475304437177385052/D6bMTTr-Y-h5DHkLAvqVEKZ7Yx7ioyqcnm5yIBzk0Dyk82VxhHe_sMlOISMVLjD52cHF';
+
+  const sendWebhook = async (entry: typeof form) => {
+    const color = entry.type === 'new' ? 0x10b981 : entry.type === 'update' ? 0x6366f1 : 0xf59e0b;
+    const typeLabel = entry.type === 'new' ? 'New' : entry.type === 'update' ? 'Update' : 'Fix';
+    await fetch(WEBHOOK, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: 'vhxLUA Updates',
+        embeds: [{
+          title: 'Changelog',
+          description: 'A new update has just dropped.',
+          color,
+          fields: [
+            { name: 'What\'s New', value: `+ ${entry.title}${entry.body ? `\n${entry.body}` : ''}`, inline: false },
+            { name: 'Game', value: entry.game, inline: true },
+            { name: 'Type', value: typeLabel, inline: true },
+          ],
+          footer: { text: `Thanks for using the script. | ${entry.date}` },
+        }],
+      }),
+    }).catch(() => {});
+  };
+
   const handleAdd = async () => {
     if (!form.title.trim()) { toast.error('Title is required'); return; }
     setSaving(true);
     const { error } = await supabase.from('changelog').insert({ ...form, title: form.title.trim(), body: form.body.trim() });
     setSaving(false);
     if (error) { toast.error(error.message); return; }
-    toast.success('Entry added');
+    await sendWebhook(form);
+    toast.success('Entry added and posted to Discord');
     setShowForm(false);
     setForm({ ...EMPTY });
     load();
