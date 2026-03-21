@@ -45,6 +45,15 @@ export async function updatePassword(newPassword: string): Promise<{ success: bo
   return { success: true };
 }
 
+export async function loginWithGoogle(): Promise<{ success: boolean; error?: string }> {
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: window.location.origin },
+  });
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
 export async function loginWithDiscord(): Promise<{ success: boolean; error?: string }> {
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'discord',
