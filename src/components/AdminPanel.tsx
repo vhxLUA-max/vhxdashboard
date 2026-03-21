@@ -96,6 +96,7 @@ export function AdminPanel() {
   const [newMsg, setNewMsg]       = useState('');
   const [newType, setNewType]     = useState<Announcement['type']>('info');
   const [newExpiry, setNewExpiry] = useState('');
+  const [newTitle, setNewTitle]   = useState('');
   const [sendAsJson, setSendAsJson] = useState(false);
 
 
@@ -228,40 +229,73 @@ export function AdminPanel() {
 
   const ANNOUNCE_WEBHOOK = 'https://discord.com/api/webhooks/1475666913307918469/gpdq8YFcBTBekkaerhxfSOJy-qjhAKt5-DFyNecmcTNl6u0pc--uuBY7-iWOqhacCgox';
 
+  // Parse JSON input into Discord embed fields
+  const parseJsonInput = (raw: string) => {
+    try {
+      const j = JSON.parse(raw);
+      return { ok: true, data: j };
+    } catch {
+      return { ok: false, data: null };
+    }
+  };
+
+  const buildEmbed = (raw: string, type: typeof newType) => {
+    const colorMap: Record<string, number> = { info: 0x6366f1, warning: 0xf59e0b, success: 0x10b981, error: 0xef4444 };
+    const color = colorMap[type] ?? 0x6366f1;
+    if (!sendAsJson) {
+      return {
+        title: newTitle.trim() || `[${type.toUpperCase()}] Announcement`,
+        description: raw.trim(),
+        color,
+        footer: { text: `vhxLUA • ${new Date().toLocaleDateString()}` },
+      };
+    }
+    const parsed = parseJsonInput(raw);
+    if (!parsed.ok || !parsed.data) return null;
+    const j = parsed.data;
+    // Map JSON fields to embed — supports: title, description/message/content, color, fields (array), footer, url, image, thumbnail
+    return {
+      title: j.title ?? j.type ?? `[${type.toUpperCase()}]`,
+      description: j.description ?? j.message ?? j.content ?? '',
+      color: typeof j.color === 'number' ? j.color : color,
+      url: j.url ?? undefined,
+      fields: Array.isArray(j.fields)
+        ? j.fields.map((f: any) => ({ name: String(f.name ?? ''), value: String(f.value ?? ''), inline: !!f.inline }))
+        : undefined,
+      footer: j.footer ? { text: String(j.footer?.text ?? j.footer) } : { text: `vhxLUA • ${new Date().toLocaleDateString()}` },
+      image: j.image ? { url: String(j.image?.url ?? j.image) } : undefined,
+      thumbnail: j.thumbnail ? { url: String(j.thumbnail?.url ?? j.thumbnail) } : undefined,
+    };
+  };
+
   const postAnnouncement = async () => {
     if (!newMsg.trim()) return;
+    const embed = buildEmbed(newMsg, newType);
+    if (sendAsJson && !embed) { toast.error('Invalid JSON — check your input'); return; }
+
+    const displayMsg = sendAsJson
+      ? (parseJsonInput(newMsg).data?.description ?? parseJsonInput(newMsg).data?.message ?? newMsg)
+      : newMsg.trim();
+
     const { error } = await supabase.from('announcements').insert({
-      message: newMsg.trim(),
+      message: displayMsg,
       type: newType,
       active: true,
       expires_at: newExpiry ? new Date(newExpiry).toISOString() : null,
     });
     if (error) { toast.error('Post failed: ' + error.message); return; }
-    await logAction('post_announcement', { message: newMsg, type: newType });
+    await logAction('post_announcement', { message: displayMsg, type: newType });
 
-    // Send to Discord
-    const color = newType === 'info' ? 0x6366f1 : newType === 'warning' ? 0xf59e0b : newType === 'success' ? 0x10b981 : 0xef4444;
-    const tag = newType.toUpperCase();
-    const jsonBlock = sendAsJson
-      ? `\`\`\`json\n{\n  "type"    : "${tag}",\n  "message" : "${newMsg.trim()}",\n  "date"    : "${new Date().toISOString().slice(0,10)}"\n}\`\`\``
-      : null;
-    await fetch(ANNOUNCE_WEBHOOK, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        username: 'vhxLUA',
-        avatar_url: 'https://vhxlua.vercel.app/favicon.ico',
-        embeds: [{
-          title: `[${tag}] Announcement`,
-          description: jsonBlock ?? newMsg.trim(),
-          color,
-          footer: { text: `vhxLUA • ${new Date().toLocaleDateString()}` },
-        }],
-      }),
-    }).catch(() => {});
+    if (embed) {
+      await fetch(ANNOUNCE_WEBHOOK, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: 'vhxLUA', embeds: [embed] }),
+      }).catch(() => {});
+    }
 
     toast.success('Announcement posted and sent to Discord');
-    setNewMsg(''); setNewExpiry(''); setSendAsJson(false);
+    setNewMsg(''); setNewTitle(''); setNewExpiry(''); setSendAsJson(false);
     loadAnnouncements();
   };
 
@@ -474,10 +508,79 @@ export function AdminPanel() {
       {!loading && tab === 'announcements' && (
         <div className="space-y-4">
           <div className="p-4 rounded-xl border space-y-3" style={s}>
-            <p className="text-xs font-semibold" style={{ color: 'var(--color-text)' }}>Post announcement</p>
-            <Input value={newMsg} onChange={e => setNewMsg(e.target.value)} placeholder="Message..."
-              style={{ backgroundColor: 'var(--color-surface2)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }} />
-            <div className="flex gap-2">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold" style={{ color: 'var(--color-text)' }}>Post announcement</p>
+              <div className="flex gap-1">
+                <button onClick={() => setSendAsJson(false)}
+                  className="px-2.5 py-1 rounded-lg text-[10px] font-semibold border transition-all"
+                  style={{ borderColor: !sendAsJson ? 'var(--color-accent)' : 'var(--color-border)', backgroundColor: !sendAsJson ? 'color-mix(in srgb, var(--color-accent) 15%, transparent)' : 'transparent', color: !sendAsJson ? 'var(--color-accent)' : 'var(--color-muted)' }}>
+                  Text
+                </button>
+                <button onClick={() => setSendAsJson(true)}
+                  className="px-2.5 py-1 rounded-lg text-[10px] font-semibold border transition-all"
+                  style={{ borderColor: sendAsJson ? '#6366f1' : 'var(--color-border)', backgroundColor: sendAsJson ? '#6366f120' : 'transparent', color: sendAsJson ? '#6366f1' : 'var(--color-muted)' }}>
+                  {'{ } JSON'}
+                </button>
+              </div>
+            </div>
+
+            {!sendAsJson ? (
+              <>
+                <Input value={newTitle} onChange={e => setNewTitle(e.target.value)} placeholder="Title (optional)..."
+                  className="text-xs" style={{ backgroundColor: 'var(--color-surface2)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }} />
+                <Input value={newMsg} onChange={e => setNewMsg(e.target.value)} placeholder="Message..."
+                  style={{ backgroundColor: 'var(--color-surface2)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }} />
+              </>
+            ) : (
+              <div className="space-y-2">
+                <textarea value={newMsg} onChange={e => setNewMsg(e.target.value)}
+                  placeholder={`{
+  "title": "Update v2.0",
+  "description": "New features dropped!",
+  "color": 6618580,
+  "fields": [
+    { "name": "What's new", "value": "Kill Aura improvements", "inline": true }
+  ],
+  "footer": { "text": "vhxLUA" }
+}`}
+                  rows={8} spellCheck={false}
+                  className="w-full text-[11px] font-mono px-3 py-2 rounded-lg border outline-none resize-none"
+                  style={{ backgroundColor: 'var(--color-surface2)', borderColor: (newMsg && !parseJsonInput(newMsg).ok) ? '#ef4444' : 'var(--color-border)', color: 'var(--color-text)' }} />
+                {newMsg && !parseJsonInput(newMsg).ok && (
+                  <p className="text-[10px] text-rose-400">Invalid JSON — check syntax</p>
+                )}
+                {newMsg && parseJsonInput(newMsg).ok && (() => {
+                  const e = buildEmbed(newMsg, newType);
+                  if (!e) return null;
+                  const hexColor = '#' + (e.color ?? 0x6366f1).toString(16).padStart(6, '0');
+                  return (
+                    <div className="rounded-lg border p-3 space-y-1.5" style={{ backgroundColor: '#1e1f22', borderColor: '#3f3f46' }}>
+                      <p className="text-[9px] uppercase tracking-wider mb-2" style={{ color: '#71717a' }}>Discord embed preview</p>
+                      <div className="flex gap-2">
+                        <div className="w-1 rounded-full shrink-0" style={{ backgroundColor: hexColor, minHeight: '40px' }} />
+                        <div className="flex-1 min-w-0 space-y-1">
+                          {e.title && <p className="text-sm font-semibold text-white">{String(e.title)}</p>}
+                          {e.description && <p className="text-xs" style={{ color: '#d4d4d8' }}>{String(e.description)}</p>}
+                          {Array.isArray(e.fields) && e.fields.length > 0 && (
+                            <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 pt-1">
+                              {(e.fields as any[]).map((f: any, i: number) => (
+                                <div key={i}>
+                                  <p className="text-[10px] font-semibold text-white">{f.name}</p>
+                                  <p className="text-[10px]" style={{ color: '#a1a1aa' }}>{f.value}</p>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          {e.footer && <p className="text-[9px] pt-1" style={{ color: '#71717a' }}>{String((e.footer as any).text ?? '')}</p>}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+
+            <div className="flex gap-2 items-center flex-wrap">
               <div className="flex gap-1">
                 {(['info','warning','success','error'] as const).map(t => (
                   <button key={t} onClick={() => setNewType(t)}
@@ -490,12 +593,6 @@ export function AdminPanel() {
               <Input type="datetime-local" value={newExpiry} onChange={e => setNewExpiry(e.target.value)}
                 className="flex-1 text-xs h-8"
                 style={{ backgroundColor: 'var(--color-surface2)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }} />
-              <button onClick={() => setSendAsJson(v => !v)}
-                className="h-8 px-2.5 rounded-lg text-[10px] font-mono font-bold border transition-all shrink-0"
-                style={{ borderColor: sendAsJson ? '#6366f1' : 'var(--color-border)', backgroundColor: sendAsJson ? '#6366f120' : 'transparent', color: sendAsJson ? '#6366f1' : 'var(--color-muted)' }}
-                title="Send as JSON codeblock to Discord">
-                {'{}'} JSON
-              </button>
               <Button onClick={postAnnouncement} size="sm" className="h-8 px-3 border-0 shrink-0" style={{ backgroundColor: 'var(--color-accent)', color: 'var(--color-accent-fg)' }}>
                 <Plus className="w-3.5 h-3.5 mr-1" /> Post
               </Button>

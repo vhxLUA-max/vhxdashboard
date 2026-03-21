@@ -290,27 +290,48 @@ function App() {
       <AnnouncementBanner />
       <LiveToastFeed />
 
-      {/* ── Mobile bottom nav ─────────────────────────────────────────── */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 border-t"
-        style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
-        <div className="flex overflow-x-auto scrollbar-none">
-          {visibleTabs.map(tab => (
-            <button key={tab.id} onClick={() => switchTab(tab.id)}
-              className="flex flex-col items-center justify-center gap-1 py-2.5 px-3 min-w-[60px] flex-1 transition-all duration-200"
-              style={{
-                color: activeTab === tab.id
-                  ? tab.id === 'admin' ? '#f87171' : 'var(--color-accent)'
-                  : 'var(--color-muted)',
-              }}>
-              <tab.icon className="w-5 h-5 shrink-0 transition-transform duration-200" style={{ transform: activeTab === tab.id ? 'scale(1.15)' : 'scale(1)' }} />
-              <span className="text-[9px] font-medium leading-none whitespace-nowrap">{tab.label}</span>
-              {activeTab === tab.id && (
-                <span className="absolute bottom-0 w-6 h-0.5 rounded-full" style={{ backgroundColor: tab.id === 'admin' ? '#f87171' : 'var(--color-accent)' }} />
-              )}
-            </button>
-          ))}
-        </div>
-      </nav>
+      {/* ── Mobile bottom nav (5 tabs + prev/next) ─────────────────────── */}
+      {(() => {
+        const PAGE_SIZE = 5;
+        const activeIdx = visibleTabs.findIndex(t => t.id === activeTab);
+        const pageStart = Math.max(0, Math.min(
+          Math.floor(activeIdx / PAGE_SIZE) * PAGE_SIZE,
+          visibleTabs.length - PAGE_SIZE
+        ));
+        const pageTabs = visibleTabs.slice(pageStart, pageStart + PAGE_SIZE);
+        const hasPrev = pageStart > 0;
+        const hasNext = pageStart + PAGE_SIZE < visibleTabs.length;
+        return (
+          <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 border-t"
+            style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+            <div className="flex items-stretch">
+              {hasPrev ? (
+                <button onClick={() => switchTab(visibleTabs[pageStart - 1].id)}
+                  className="flex items-center justify-center w-8 shrink-0 transition-opacity"
+                  style={{ color: 'var(--color-muted)' }}>‹</button>
+              ) : <div className="w-8 shrink-0" />}
+              {pageTabs.map(tab => (
+                <button key={tab.id} onClick={() => switchTab(tab.id)}
+                  className="relative flex flex-col items-center justify-center gap-1 py-2.5 flex-1 transition-all duration-200"
+                  style={{ color: activeTab === tab.id ? tab.id === 'admin' ? '#f87171' : 'var(--color-accent)' : 'var(--color-muted)' }}>
+                  <tab.icon className="w-5 h-5 shrink-0 transition-transform duration-200"
+                    style={{ transform: activeTab === tab.id ? 'scale(1.15)' : 'scale(1)' }} />
+                  <span className="text-[9px] font-medium leading-none whitespace-nowrap">{tab.label}</span>
+                  {activeTab === tab.id && (
+                    <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-5 h-0.5 rounded-full"
+                      style={{ backgroundColor: tab.id === 'admin' ? '#f87171' : 'var(--color-accent)' }} />
+                  )}
+                </button>
+              ))}
+              {hasNext ? (
+                <button onClick={() => switchTab(visibleTabs[pageStart + PAGE_SIZE].id)}
+                  className="flex items-center justify-center w-8 shrink-0 transition-opacity"
+                  style={{ color: 'var(--color-muted)' }}>›</button>
+              ) : <div className="w-8 shrink-0" />}
+            </div>
+          </nav>
+        );
+      })()}
 
       <div className="flex flex-1">
         {/* ── Desktop sidebar ───────────────────────────────────────────── */}
