@@ -10,6 +10,7 @@ interface AccountManagerProps {
   onClose: () => void;
   onUsernameChange: (username: string) => void;
   onAvatarChange: (url: string | null) => void;
+  isPro?: boolean;
 }
 
 type Tab = 'account' | 'socials' | 'embed';
@@ -50,7 +51,7 @@ const SOCIAL_FIELDS: { key: keyof UserSocials; label: string; placeholder: strin
   },
 ];
 
-export function AccountManager({ onClose, onUsernameChange, onAvatarChange }: AccountManagerProps) {
+export function AccountManager({ onClose, onUsernameChange, onAvatarChange, isPro = false }: AccountManagerProps) {
   const [tab, setTab] = useState<Tab>('account');
   const [username, setUsername]       = useState('');
   const [newUsername, setNewUsername] = useState('');
@@ -95,6 +96,7 @@ export function AccountManager({ onClose, onUsernameChange, onAvatarChange }: Ac
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 4 * 1024 * 1024) { toast.error('Image must be under 4MB'); return; }
+    if (file.type === 'image/gif' && !isPro) { toast.error('Animated avatars are a Pro feature — upgrade to use GIFs!'); return; }
     setUploading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -280,12 +282,30 @@ export function AccountManager({ onClose, onUsernameChange, onAvatarChange }: Ac
                   )}
                 </div>
                 <input ref={bannerRef} type="file" accept="image/*" className="hidden" onChange={handleBannerUpload} />
+                {bannerUrl && (
+                  <div className="flex gap-2">
+                    <button onClick={() => bannerRef.current?.click()}
+                      className="flex-1 py-1.5 rounded-lg text-xs font-medium transition-all hover:opacity-90"
+                      style={{ backgroundColor: 'rgba(59,130,246,0.1)', color: '#3b82f6', border: '1px solid rgba(59,130,246,0.2)' }}>
+                      Change Banner
+                    </button>
+                    <button onClick={async () => {
+                      await supabase.auth.updateUser({ data: { banner_url: null } });
+                      setBannerUrl(null);
+                      toast.success('Banner removed');
+                    }}
+                      className="flex-1 py-1.5 rounded-lg text-xs font-medium transition-all hover:opacity-90"
+                      style={{ backgroundColor: 'rgba(239,68,68,0.08)', color: '#f87171', border: '1px solid rgba(239,68,68,0.2)' }}>
+                      Remove Banner
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div className="rounded-xl border p-4 space-y-3" style={s}>
                 <div>
                   <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>Profile Picture</h3>
-                  <p className="text-xs mt-0.5" style={{ color: 'var(--color-muted)' }}>Upload a new profile picture. GIFs are available for Pro users.</p>
+                  <p className="text-xs mt-0.5 flex items-center gap-1.5" style={{ color: 'var(--color-muted)' }}>Upload a new profile picture.{!isPro && <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ background: 'linear-gradient(135deg,#f59e0b,#f97316)', color: '#000' }}>✦ GIFs = Pro only</span>}</p>
                 </div>
                 <div className="flex flex-col items-center gap-3">
                   <div className="w-24 h-24 rounded-full overflow-hidden border-2 shrink-0" style={{ borderColor: 'var(--color-accent)' }}>

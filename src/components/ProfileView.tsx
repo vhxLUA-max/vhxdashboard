@@ -15,6 +15,7 @@ interface ProfileViewProps {
   username: string | null;
   avatarUrl: string | null;
   isAdmin: boolean;
+  isPro?: boolean;
   isLoggedIn: boolean;
   onEditProfile: () => void;
   compact?: boolean;
@@ -36,7 +37,6 @@ const VerifiedIcon = () => (
   </svg>
 );
 
-// Track real online presence using Supabase Realtime presence
 function usePresence(userId: string | null) {
   const [isOnline, setIsOnline] = useState(false);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
@@ -71,13 +71,15 @@ function usePresence(userId: string | null) {
   return isOnline;
 }
 
-export function ProfileView({ username, avatarUrl, isAdmin, isLoggedIn, onEditProfile, compact = false }: ProfileViewProps) {
+export function ProfileView({ username, avatarUrl, isAdmin, isPro = false, isLoggedIn, onEditProfile, compact = false }: ProfileViewProps) {
   const [bannerUrl, setBannerUrl] = useState<string | null>(null);
   const [bio, setBio] = useState<string>('');
+  // All badge/social data loaded eagerly from user_metadata — works offline
   const [socials, setSocials] = useState<UserSocials>({});
   const [joinedAt, setJoinedAt] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
 
+  // Presence only used for the dot — badges never depend on it
   const isOnline = usePresence(userId);
 
   useEffect(() => {
@@ -85,6 +87,7 @@ export function ProfileView({ username, avatarUrl, isAdmin, isLoggedIn, onEditPr
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return;
       setUserId(user.id);
+      // Everything loaded from user_metadata — cached locally, no network needed
       setBannerUrl(user.user_metadata?.banner_url ?? null);
       setBio(user.user_metadata?.bio ?? '');
       setSocials(user.user_metadata?.socials ?? {});
@@ -124,9 +127,10 @@ export function ProfileView({ username, avatarUrl, isAdmin, isLoggedIn, onEditPr
               {isOnline && <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-400 border-2" style={{ borderColor: '#111113' }} />}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="text-sm font-semibold truncate" style={{ color: '#f1f5f9', letterSpacing: '-0.01em' }}>{username ?? 'User'}</span>
                 {isVerified && <VerifiedIcon />}
+                {isPro && !isVerified && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded" style={{ background: 'linear-gradient(135deg,#f59e0b,#f97316)', color: '#000' }}>✦ PRO</span>}
                 {activeSocials.slice(0, 3).map(s => (
                   <a key={s.key} href={socials[s.key]} target="_blank" rel="noopener noreferrer"
                     className="w-5 h-5 rounded-full flex items-center justify-center" style={{ backgroundColor: s.bg, color: s.color }}>
@@ -139,7 +143,7 @@ export function ProfileView({ username, avatarUrl, isAdmin, isLoggedIn, onEditPr
                 {isAdmin && !isFounder && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded" style={{ background: 'rgba(99,102,241,0.12)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.2)', letterSpacing: '0.05em' }}>ADMIN</span>}
                 {isOnline
                   ? <span className="text-[10px] flex items-center gap-1" style={{ color: '#10b981' }}><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />Online</span>
-                  : <span className="text-[10px]" style={{ color: 'rgba(148,163,184,0.5)' }}>Offline</span>
+                  : <span className="text-[10px]" style={{ color: 'rgba(148,163,184,0.4)' }}>Offline</span>
                 }
               </div>
             </div>
@@ -186,6 +190,9 @@ export function ProfileView({ username, avatarUrl, isAdmin, isLoggedIn, onEditPr
         <div className="flex items-center gap-2 flex-wrap mb-1">
           <h2 className="text-xl font-bold" style={{ color: '#f1f5f9', letterSpacing: '-0.02em' }}>{username ?? 'User'}</h2>
           {isVerified && <VerifiedIcon />}
+          {isPro && !isVerified && (
+            <span className="flex items-center gap-0.5 text-[10px] font-bold px-2 py-0.5 rounded" style={{ background: 'linear-gradient(135deg,#f59e0b,#f97316)', color: '#000', letterSpacing: '0.03em' }}>✦ PRO</span>
+          )}
           {activeSocials.map(s => (
             <a key={s.key} href={socials[s.key]} target="_blank" rel="noopener noreferrer"
               className="flex items-center justify-center w-6 h-6 rounded-full transition-opacity hover:opacity-80"

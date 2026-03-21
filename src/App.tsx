@@ -16,7 +16,7 @@ import { RatingsPanel } from '@/components/RatingsPanel';
 import { ExecutionRateBadge } from '@/components/ExecutionRateBadge';
 import { AnnouncementBanner } from '@/components/AnnouncementBanner';
 import { LiveToastFeed } from '@/components/LiveToastFeed';
-import { Activity, Users, Clock, RefreshCw, BarChart3, Gamepad2, Search, Webhook, Key, ShieldCheck, Megaphone, Code, Loader2, Palette, Shield, MessageSquare, FileText } from 'lucide-react';
+import { Activity, Users, Clock, RefreshCw, BarChart3, Gamepad2, Search, Webhook, Key, ShieldCheck, Megaphone, Code, Loader2, Palette, Shield, MessageSquare, FileText, Crown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LoginModal } from '@/components/LoginModal';
 import { logout } from '@/lib/auth';
@@ -25,6 +25,7 @@ import { toast } from 'sonner';
 
 initTheme();
 
+const ProTab         = lazy(() => import('@/components/ProTab').then(m => ({ default: m.ProTab })));
 const AccountManager = lazy(() => import('@/components/AccountManager').then(m => ({ default: m.AccountManager })));
 const UserSearch     = lazy(() => import('@/components/UserSearch').then(m => ({ default: m.UserSearch })));
 const WebhookTab     = lazy(() => import('@/components/WebhookTab').then(m => ({ default: m.WebhookTab })));
@@ -182,7 +183,7 @@ async function checkIsAdmin(userId: string, username: string | null): Promise<bo
   return ADMIN_USERNAMES.includes(username?.toLowerCase() ?? '');
 }
 
-type SidebarTab = 'stats' | 'search' | 'webhook' | 'token' | 'scripts' | 'themes' | 'feedback' | 'status' | 'changelog' | 'admin' | 'socials' | 'privacy';
+type SidebarTab = 'stats' | 'search' | 'webhook' | 'token' | 'scripts' | 'themes' | 'feedback' | 'status' | 'changelog' | 'admin' | 'socials' | 'privacy' | 'pro';
 
 const TABS = [
   { id: 'stats',     label: 'Stats',     icon: BarChart3     },
@@ -197,6 +198,7 @@ const TABS = [
   { id: 'status',    label: 'Status',    icon: ShieldCheck   },
   { id: 'admin',     label: 'Admin',     icon: Shield        },
   { id: 'privacy',   label: 'Privacy',   icon: FileText      },
+  { id: 'pro',       label: 'Pro',        icon: Crown         },
 ] as const;
 
 const TabFallback = () => (
@@ -217,6 +219,8 @@ function App() {
   const [avatarUrl, setAvatarUrl]         = useState<string | null>(null);
   const [isAdmin, setIsAdmin]             = useState(false);
   const [isLoggedIn, setIsLoggedIn]       = useState(false);
+  const [isPro, setIsPro]                 = useState(false);
+  const [userExecs, setUserExecs]         = useState(0);
   const [showLogin, setShowLogin]         = useState(false);
   const [showAccount, setShowAccount]     = useState(false);
   const [showProfile, setShowProfile]     = useState(false);
@@ -277,6 +281,19 @@ function App() {
       setAvatarUrl(resolveAvatar(session.user));
       setIsLoggedIn(true);
       checkIsAdmin(session.user.id, u).then(setIsAdmin);
+      // Pro check
+      supabase.from('user_roles').select('role').eq('user_id', session.user.id).maybeSingle().then(({ data }) => {
+        setIsPro(data?.role === 'pro' || data?.role === 'founder' || data?.role === 'admin');
+      });
+      // Execution count for auto-grant
+      supabase.from('unique_users').select('execution_count').eq('roblox_user_id', session.user.id).then(({ data }) => {
+        const total = (data ?? []).reduce((s: number, r: { execution_count: number }) => s + (r.execution_count ?? 0), 0);
+        setUserExecs(total);
+        if (total >= 10000) {
+          supabase.from('user_roles').upsert({ user_id: session.user.id, username: u ?? '', role: 'pro' });
+          setIsPro(true);
+        }
+      });
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_, session) => {
       if (!session?.user) {
@@ -288,6 +305,9 @@ function App() {
       setAvatarUrl(resolveAvatar(session.user));
       setIsLoggedIn(true);
       checkIsAdmin(session.user.id, u).then(setIsAdmin);
+      supabase.from('user_roles').select('role').eq('user_id', session.user.id).maybeSingle().then(({ data }) => {
+        setIsPro(data?.role === 'pro' || data?.role === 'founder' || data?.role === 'admin');
+      });
     });
     if (new URLSearchParams(window.location.search).get('reset') === 'true')
       window.history.replaceState({}, '', window.location.pathname);
@@ -388,6 +408,7 @@ function App() {
             onClose={() => setShowAccount(false)}
             onUsernameChange={u => setAdminUsername(u)}
             onAvatarChange={url => setAvatarUrl(url)}
+            isPro={isPro}
           />
         </Suspense>
       )}
@@ -513,6 +534,7 @@ function App() {
                       username={adminUsername}
                       avatarUrl={avatarUrl}
                       isAdmin={isAdmin}
+                      isPro={isPro}
                       isLoggedIn={isLoggedIn}
                       onEditProfile={() => { setShowDrawer(false); setShowAccount(true); }}
                       compact
@@ -708,6 +730,7 @@ function App() {
                     {activeTab === 'changelog' && <ChangelogTab />}
                     {activeTab === 'socials'   && <SocialsTab />}
                     {activeTab === 'privacy'   && <PrivacyPolicy />}
+                    {activeTab === 'pro'       && <Suspense fallback={<TabFallback />}><ProTab isPro={isPro} isLoggedIn={isLoggedIn} userExecutions={userExecs} /></Suspense>}
                   </div>
                 </Suspense>
                 <div style={{ display: activeTab === 'admin' ? 'block' : 'none' }}>
