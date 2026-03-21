@@ -198,19 +198,19 @@ export function AdminPanel() {
         }
       }
 
-      // Fallback: query unique_users (no provider info, but shows all players)
+      // Fallback: use user_tokens table which only has dashboard-registered users
       const { data } = await supabase
-        .from('unique_users')
-        .select('roblox_user_id, username, first_seen, last_seen')
-        .order('last_seen', { ascending: false })
-        .limit(200);
+        .from('user_tokens')
+        .select('user_id, roblox_username, roblox_user_id, updated_at')
+        .order('updated_at', { ascending: false });
       setAccounts((data ?? []).map((u: any) => ({
-        id: String(u.roblox_user_id), email: '',
-        username: u.username ?? 'unknown',
+        id: u.user_id,
+        email: '',
+        username: u.roblox_username ?? 'unknown',
         roblox_user_id: u.roblox_user_id ?? null,
-        created_at: u.first_seen ?? u.last_seen,
-        last_sign_in_at: u.last_seen ?? null,
-        provider: 'unknown' as const,
+        created_at: u.updated_at,
+        last_sign_in_at: u.updated_at ?? null,
+        provider: 'email' as const,
       })));
     } catch (e) {
       console.error('loadAccounts error:', e);
@@ -221,11 +221,28 @@ export function AdminPanel() {
   const loadScriptUsers = useCallback(async () => {
     setLoading(true);
     const [{ data: rows }, { data: bansData }] = await Promise.all([
-      supabase.from('unique_users').select('*').order('execution_count', { ascending: false }),
+      supabase.from('unique_users').select('roblox_user_id,username,execution_count,first_seen,last_seen,token,place_id'),
       supabase.from('banned_users').select('roblox_user_id'),
     ]);
-    const bannedSet = new Set((bansData ?? []).map((b: { roblox_user_id: number }) => b.roblox_user_id));
-    setScriptUsers((rows ?? []).map((r: ScriptUser) => ({ ...r, banned: bannedSet.has(r.roblox_user_id) })));
+    const bannedSet = new Set((bansData ?? []).map((b: any) => b.roblox_user_id));
+
+    // Aggregate per user across all place_ids
+    const agg: Record<number, ScriptUser> = {};
+    for (const r of (rows ?? [])) {
+      const id = r.roblox_user_id;
+      if (!id) continue;
+      if (!agg[id]) {
+        agg[id] = { ...r, execution_count: 0, banned: bannedSet.has(id) };
+      }
+      agg[id].execution_count += r.execution_count ?? 0;
+      // Keep most recent last_seen
+      if (r.last_seen > agg[id].last_seen) agg[id].last_seen = r.last_seen;
+      // Keep earliest first_seen
+      if (r.first_seen < agg[id].first_seen) agg[id].first_seen = r.first_seen;
+    }
+
+    const sorted = Object.values(agg).sort((a, b) => b.execution_count - a.execution_count);
+    setScriptUsers(sorted);
     setLoading(false);
   }, []);
 
@@ -548,7 +565,7 @@ export function AdminPanel() {
                 style={{ borderColor: u.banned ? 'rgba(239,68,68,0.3)' : 'var(--color-border)', backgroundColor: u.banned ? 'rgba(239,68,68,0.05)' : 'var(--color-surface2)' }}>
                 <div className="flex items-center gap-3">
                   <img
-                    src={`https://www.roblox.com/headshot-thumbnail/image?userId=${u.roblox_user_id}&width=100&height=100&format=png`}
+                    src={`/api/roblox-avatar?userId=${u.roblox_user_id}`}
                     alt={u.username}
                     className="w-10 h-10 rounded-full shrink-0 object-cover border"
                     style={{ borderColor: 'var(--color-border)' }}
