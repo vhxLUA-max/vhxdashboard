@@ -56,3 +56,7 @@ export async function loginWithDiscord(): Promise<{ success: boolean; error?: st
   if (error) return { success: false, error: error.message };
   return { success: true };
 }
+
+export async function logout() {
+  await supabase.auth.signOut();
+}
