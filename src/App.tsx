@@ -38,6 +38,7 @@ const FeedbackTab    = lazy(() => import('@/components/FeedbackTab').then(m => (
 const SocialsTab     = lazy(() => import('@/components/SocialsTab').then(m => ({ default: m.SocialsTab })));
 const PrivacyPolicy  = lazy(() => import('@/components/PrivacyPolicy').then(m => ({ default: m.PrivacyPolicy })));
 import { SiteSearch } from '@/components/SiteSearch';
+import { ProfileView } from '@/components/ProfileView';
 
 function timeAgo(iso: string): string {
   const diff = (Date.now() - new Date(iso).getTime()) / 1000;
@@ -218,6 +219,7 @@ function App() {
   const [isLoggedIn, setIsLoggedIn]       = useState(false);
   const [showLogin, setShowLogin]         = useState(false);
   const [showAccount, setShowAccount]     = useState(false);
+  const [showProfile, setShowProfile]     = useState(false);
   const { loading, error, refresh }       = useSupabaseDashboard(dateRange);
   const handleRefresh                     = useCallback(() => refresh(), [refresh]);
   const connected                         = isConfigured();
@@ -335,7 +337,7 @@ function App() {
             <Search className="w-5 h-5" />
           </button>
           {isLoggedIn ? (
-            <button onClick={() => setShowAccount(true)}
+            <button onClick={() => setShowProfile(true)}
               className="w-9 h-9 flex items-center justify-center rounded-full overflow-hidden shrink-0"
               style={{ color: 'var(--color-muted)' }}>
               {avatarUrl
@@ -364,6 +366,26 @@ function App() {
       </header>
 
       {showLogin && <LoginModal onSuccess={() => { setShowLogin(false); toast.success('Signed in'); }} onClose={() => setShowLogin(false)} />}
+
+      {showProfile && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center lg:items-center p-0 lg:p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowProfile(false)} />
+          <div className="relative w-full lg:max-w-sm rounded-t-2xl lg:rounded-2xl overflow-hidden shadow-2xl" style={{ backgroundColor: 'var(--color-bg, #09090b)' }} onClick={e => e.stopPropagation()}>
+            <div className="flex justify-center pt-3 pb-1 lg:hidden">
+              <div className="w-10 h-1 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.15)' }} />
+            </div>
+            <div className="p-4">
+              <ProfileView
+                username={adminUsername}
+                avatarUrl={avatarUrl}
+                isAdmin={isAdmin}
+                isLoggedIn={isLoggedIn}
+                onEditProfile={() => { setShowProfile(false); setShowAccount(true); }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {showAccount && (
         <Suspense fallback={null}>
@@ -490,68 +512,16 @@ function App() {
               {/* Scrollable content */}
               <div className="overflow-y-auto flex-1 px-4 pb-6">
 
-                {/* Profile card (logged in) */}
                 {isLoggedIn && (
-                  <div className="rounded-xl p-4 mb-4" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
-                    {(() => {
-                      const uname = (adminUsername ?? '').toLowerCase();
-                      const isFounder = uname === 'vhxlua';
-                      const isVerified = isAdmin || isFounder;
-                      return (
-                        <div className="flex items-center gap-3 mb-3">
-                          <div className="relative shrink-0">
-                            {avatarUrl
-                              ? <img src={avatarUrl} alt="" className="w-12 h-12 rounded-full object-cover border-2" style={{ borderColor: '#3b82f6' }} />
-                              : <div className="w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold text-white border-2"
-                                  style={{ backgroundColor: '#3b82f6', borderColor: '#3b82f6' }}>
-                                  {adminUsername?.[0]?.toUpperCase() ?? 'U'}
-                                </div>
-                            }
-                            {/* Verified badge */}
-                            {isVerified && (
-                              <span className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full flex items-center justify-center border-2"
-                                style={{ backgroundColor: '#3b82f6', borderColor: '#111113' }}
-                                title={isFounder ? 'Founder' : 'Verified'}>
-                                <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                                </svg>
-                              </span>
-                            )}
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-1.5">
-                              <p className="text-sm font-bold" style={{ color: 'var(--color-text)' }}>{adminUsername ?? 'User'}</p>
-                              {isVerified && (
-                                <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="#3b82f6">
-                                  <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke="none" fill="none"/>
-                                  <path fillRule="evenodd" clipRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" />
-                                </svg>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-1.5 mt-0.5">
-                              {isFounder && (
-                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
-                                  style={{ backgroundColor: 'rgba(245,158,11,0.15)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.3)' }}>
-                                  FOUNDER
-                                </span>
-                              )}
-                              {isAdmin && !isFounder && (
-                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
-                                  style={{ backgroundColor: 'rgba(99,102,241,0.15)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.3)' }}>
-                                  ADMIN
-                                </span>
-                              )}
-                              {!isFounder && !isAdmin && <span className="text-[10px]" style={{ color: 'var(--color-muted)' }}>vhx hub member</span>}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })()}
-                    <button onClick={() => { setShowDrawer(false); setShowAccount(true); }}
-                      className="w-full py-2.5 rounded-xl text-sm font-semibold text-center border transition-colors"
-                      style={{ borderColor: 'rgba(255,255,255,0.15)', color: 'var(--color-text)', backgroundColor: 'rgba(255,255,255,0.04)' }}>
-                      View Profile
-                    </button>
+                  <div className="mb-4">
+                    <ProfileView
+                      username={adminUsername}
+                      avatarUrl={avatarUrl}
+                      isAdmin={isAdmin}
+                      isLoggedIn={isLoggedIn}
+                      onEditProfile={() => { setShowDrawer(false); setShowAccount(true); }}
+                      compact
+                    />
                   </div>
                 )}
 

@@ -4,6 +4,10 @@
 
 @layer base {
   :root {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-feature-settings: 'cv11', 'ss01';
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     --background: 0 0% 100%;
     --foreground: 0 0% 4%;
     --card: 0 0% 98%;
