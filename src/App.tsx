@@ -36,6 +36,7 @@ const ChangelogTab   = lazy(() => import('@/components/ChangelogTab').then(m => 
 import { AdminPanel } from '@/components/AdminPanel';
 const FeedbackTab    = lazy(() => import('@/components/FeedbackTab').then(m => ({ default: m.FeedbackTab })));
 const SocialsTab     = lazy(() => import('@/components/SocialsTab').then(m => ({ default: m.SocialsTab })));
+import { SiteSearch } from '@/components/SiteSearch';
 
 function timeAgo(iso: string): string {
   const diff = (Date.now() - new Date(iso).getTime()) / 1000;
@@ -225,12 +226,14 @@ function App() {
   });
 
   const [showDrawer, setShowDrawer] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       if (e.key === '?') { setShowShortcuts(v => !v); return; }
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); setShowSearch(true); return; }
       const idx = parseInt(e.key) - 1;
       if (idx >= 0 && idx < visibleTabs.length) switchTab(visibleTabs[idx].id as SidebarTab);
     };
@@ -297,7 +300,7 @@ function App() {
               {liveCount.toLocaleString()}
             </span>
           )}
-          <button onClick={() => setShowLogin(true)}
+          <button onClick={() => setShowSearch(true)}
             className="w-9 h-9 flex items-center justify-center rounded-full transition-colors"
             style={{ color: 'var(--color-muted)' }}>
             <Search className="w-5 h-5" />
@@ -345,6 +348,7 @@ function App() {
 
       <AnnouncementBanner />
       <LiveToastFeed />
+      {showSearch && <SiteSearch onClose={() => setShowSearch(false)} onNavigate={id => { switchTab(id as any); }} isAdmin={isAdmin} />}
 
       {/* ── Mobile bottom nav — 4 fixed tabs + Menu ────────────────────── */}
       {(() => {
