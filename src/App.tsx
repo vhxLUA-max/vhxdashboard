@@ -264,8 +264,6 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  const activeLabel = visibleTabs.find(t => t.id === activeTab)?.label ?? '';
-
   return (
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: 'var(--color-bg, #09090b)', color: 'var(--color-text)' }}>
 
@@ -281,32 +279,35 @@ function App() {
         />
       </div>
 
-      {/* ── Mobile header ─────────────────────────────────────────────── */}
-      <header className="lg:hidden flex items-center justify-between px-4 py-3 border-b sticky top-0 z-30"
-        style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-black text-white shrink-0"
+      {/* ── Mobile header — Rscripts style ───────────────────────────── */}
+      <header className="lg:hidden flex items-center justify-between px-5 h-14 sticky top-0 z-30"
+        style={{ backgroundColor: 'var(--color-bg, #09090b)' }}>
+        {/* Left: logo + name */}
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-xl flex items-center justify-center text-sm font-black text-white shrink-0"
             style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)' }}>V</div>
-          <div>
-            <p className="text-sm font-bold leading-none" style={{ color: 'var(--color-text)' }}>vhxLUA</p>
-            <p className="text-[10px] mt-0.5" style={{ color: 'var(--color-muted)' }}>{activeLabel}</p>
-          </div>
+          <span className="text-base font-bold tracking-tight" style={{ color: 'var(--color-text)' }}>vhxLUA</span>
         </div>
-        <div className="flex items-center gap-2">
+        {/* Right: action icons */}
+        <div className="flex items-center gap-1">
           {liveCount !== null && (
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-semibold"
-              style={{ backgroundColor: 'rgba(16,185,129,0.1)', color: '#10b981' }}>
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="mr-1 text-[10px] font-semibold px-2 py-0.5 rounded-full"
+              style={{ backgroundColor: 'rgba(16,185,129,0.12)', color: '#10b981' }}>
               {liveCount.toLocaleString()}
-            </div>
+            </span>
           )}
+          <button onClick={() => setShowLogin(true)}
+            className="w-9 h-9 flex items-center justify-center rounded-full transition-colors"
+            style={{ color: 'var(--color-muted)' }}>
+            <Search className="w-5 h-5" />
+          </button>
           {isLoggedIn ? (
             <button onClick={() => setShowAccount(true)}
-              className="w-8 h-8 rounded-full overflow-hidden border-2 shrink-0"
-              style={{ borderColor: 'var(--color-accent)' }}>
+              className="w-9 h-9 flex items-center justify-center rounded-full overflow-hidden shrink-0"
+              style={{ color: 'var(--color-muted)' }}>
               {avatarUrl
-                ? <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
-                : <div className="w-full h-full flex items-center justify-center text-xs font-bold text-white"
+                ? <img src={avatarUrl} alt="" className="w-7 h-7 rounded-full object-cover" />
+                : <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white"
                     style={{ backgroundColor: 'var(--color-accent)' }}>
                     {adminUsername?.[0]?.toUpperCase() ?? 'U'}
                   </div>
@@ -314,11 +315,18 @@ function App() {
             </button>
           ) : (
             <button onClick={() => setShowLogin(true)}
-              className="px-3 py-1.5 rounded-full text-xs font-semibold text-white"
-              style={{ backgroundColor: 'var(--color-accent)' }}>
-              Sign in
+              className="w-9 h-9 flex items-center justify-center rounded-full transition-colors"
+              style={{ color: 'var(--color-muted)' }}>
+              <Users className="w-5 h-5" />
             </button>
           )}
+          <button onClick={() => setShowShortcuts(true)}
+            className="w-9 h-9 flex items-center justify-center rounded-full transition-colors"
+            style={{ color: 'var(--color-muted)' }}>
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
         </div>
       </header>
 
@@ -351,40 +359,33 @@ function App() {
         return (
           <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40"
             style={{
-              backgroundColor: 'color-mix(in srgb, var(--color-surface) 90%, transparent)',
-              backdropFilter: 'blur(16px)',
-              WebkitBackdropFilter: 'blur(16px)',
-              borderTop: '1px solid var(--color-border)',
+              backgroundColor: 'var(--color-bg, #09090b)',
+              borderTop: '1px solid rgba(255,255,255,0.06)',
               paddingBottom: 'env(safe-area-inset-bottom)',
             }}>
-            <div className="flex items-stretch h-[58px]">
+            <div className="flex items-stretch h-[60px]">
+              {/* Prev arrow */}
               <button
                 onClick={() => hasPrev ? switchTab(visibleTabs[pageStart - 1].id) : undefined}
-                className="flex items-center justify-center w-9 shrink-0 text-lg transition-all duration-150"
-                style={{ color: hasPrev ? 'var(--color-muted)' : 'transparent', opacity: hasPrev ? 1 : 0 }}>‹</button>
+                className="flex items-center justify-center w-8 shrink-0 text-xl transition-opacity duration-150"
+                style={{ color: 'var(--color-muted)', opacity: hasPrev ? 0.7 : 0, pointerEvents: hasPrev ? 'auto' : 'none' }}>‹</button>
               {pageTabs.map(tab => {
                 const active = activeTab === tab.id;
-                const isAdmin = tab.id === 'admin';
-                const color = active ? (isAdmin ? '#f87171' : 'var(--color-accent)') : 'var(--color-muted)';
+                const accentColor = tab.id === 'admin' ? '#f87171' : 'var(--color-accent)';
                 return (
                   <button key={tab.id} onClick={() => switchTab(tab.id)}
-                    className="relative flex flex-col items-center justify-center flex-1 gap-[3px] transition-all duration-200 active:scale-90"
-                    style={{ color }}>
-                    {active && (
-                      <span className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-b-full transition-all duration-300"
-                        style={{ backgroundColor: isAdmin ? '#f87171' : 'var(--color-accent)' }} />
-                    )}
-                    <tab.icon className="w-[22px] h-[22px] shrink-0 transition-all duration-200"
-                      style={{ transform: active ? 'translateY(-1px) scale(1.1)' : 'none' }} />
-                    <span className="text-[10px] font-medium leading-none"
-                      style={{ fontWeight: active ? 600 : 400 }}>{tab.label}</span>
+                    className="flex flex-col items-center justify-center flex-1 gap-1 transition-all duration-150 active:opacity-60"
+                    style={{ color: active ? accentColor : 'rgba(160,160,175,0.7)' }}>
+                    <tab.icon className="w-6 h-6 shrink-0" />
+                    <span className="text-[10px] leading-none" style={{ fontWeight: active ? 600 : 400 }}>{tab.label}</span>
                   </button>
                 );
               })}
+              {/* Next arrow */}
               <button
                 onClick={() => hasNext ? switchTab(visibleTabs[pageStart + PAGE_SIZE].id) : undefined}
-                className="flex items-center justify-center w-9 shrink-0 text-lg transition-all duration-150"
-                style={{ color: hasNext ? 'var(--color-muted)' : 'transparent', opacity: hasNext ? 1 : 0 }}>›</button>
+                className="flex items-center justify-center w-8 shrink-0 text-xl transition-opacity duration-150"
+                style={{ color: 'var(--color-muted)', opacity: hasNext ? 0.7 : 0, pointerEvents: hasNext ? 'auto' : 'none' }}>›</button>
             </div>
           </nav>
         );
