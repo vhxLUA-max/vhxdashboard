@@ -181,7 +181,9 @@ task.spawn(function()
       countdownLabel.Text = "Opening now ✓"
       task.wait(0.4)
       -- Open dashboard
-      game:GetService("GuiService"):OpenBrowserWindow("${safeUrl}")
+      if setclipboard then setclipboard("${safeUrl}") end
+        countdownLabel.Text = "✓ URL copied! Paste in browser"
+        countdownLabel.TextColor3 = Color3.fromRGB(100, 220, 130)
     end
   end
 end)
