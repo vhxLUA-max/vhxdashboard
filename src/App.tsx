@@ -34,8 +34,8 @@ const ThemeManager   = lazy(() => import('@/components/ThemeManager').then(m => 
 const StatusTab      = lazy(() => import('@/components/StatusTab').then(m => ({ default: m.StatusTab })));
 const ChangelogTab   = lazy(() => import('@/components/ChangelogTab').then(m => ({ default: m.ChangelogTab })));
 import { AdminPanel } from '@/components/AdminPanel';
-import { FloatingScriptIcon } from '@/components/FloatingScriptIcon';
 const FeedbackTab    = lazy(() => import('@/components/FeedbackTab').then(m => ({ default: m.FeedbackTab })));
+const SocialsTab     = lazy(() => import('@/components/SocialsTab').then(m => ({ default: m.SocialsTab })));
 
 function timeAgo(iso: string): string {
   const diff = (Date.now() - new Date(iso).getTime()) / 1000;
@@ -173,18 +173,19 @@ async function checkIsAdmin(userId: string, username: string | null): Promise<bo
   return ADMIN_USERNAMES.includes(username?.toLowerCase() ?? '');
 }
 
-type SidebarTab = 'stats' | 'search' | 'webhook' | 'token' | 'scripts' | 'themes' | 'feedback' | 'status' | 'changelog' | 'admin';
+type SidebarTab = 'stats' | 'search' | 'webhook' | 'token' | 'scripts' | 'themes' | 'feedback' | 'status' | 'changelog' | 'admin' | 'socials';
 
 const TABS = [
   { id: 'stats',     label: 'Stats',     icon: BarChart3     },
-  { id: 'search',    label: 'Search',    icon: Search        },
-  { id: 'webhook',   label: 'Webhook',   icon: Webhook       },
-  { id: 'token',     label: 'Token',     icon: Key           },
   { id: 'scripts',   label: 'Scripts',   icon: Code          },
+  { id: 'search',    label: 'Search',    icon: Search        },
+  { id: 'token',     label: 'Token',     icon: Key           },
+  { id: 'changelog', label: 'Updates',   icon: Megaphone     },
+  { id: 'socials',   label: 'Socials',   icon: Users         },
+  { id: 'webhook',   label: 'Webhook',   icon: Webhook       },
   { id: 'themes',    label: 'Themes',    icon: Palette       },
   { id: 'feedback',  label: 'Feedback',  icon: MessageSquare },
   { id: 'status',    label: 'Status',    icon: ShieldCheck   },
-  { id: 'changelog', label: 'Changelog', icon: Megaphone     },
   { id: 'admin',     label: 'Admin',     icon: Shield        },
 ] as const;
 
@@ -287,17 +288,36 @@ function App() {
       )}
 
       <AnnouncementBanner />
-      <FloatingScriptIcon />
       <LiveToastFeed />
 
+      {/* ── Mobile bottom nav ─────────────────────────────────────────── */}
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 border-t"
+        style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+        <div className="flex overflow-x-auto scrollbar-none">
+          {visibleTabs.map(tab => (
+            <button key={tab.id} onClick={() => switchTab(tab.id)}
+              className="flex flex-col items-center justify-center gap-1 py-2.5 px-3 min-w-[60px] flex-1 transition-all duration-200"
+              style={{
+                color: activeTab === tab.id
+                  ? tab.id === 'admin' ? '#f87171' : 'var(--color-accent)'
+                  : 'var(--color-muted)',
+              }}>
+              <tab.icon className="w-5 h-5 shrink-0 transition-transform duration-200" style={{ transform: activeTab === tab.id ? 'scale(1.15)' : 'scale(1)' }} />
+              <span className="text-[9px] font-medium leading-none whitespace-nowrap">{tab.label}</span>
+              {activeTab === tab.id && (
+                <span className="absolute bottom-0 w-6 h-0.5 rounded-full" style={{ backgroundColor: tab.id === 'admin' ? '#f87171' : 'var(--color-accent)' }} />
+              )}
+            </button>
+          ))}
+        </div>
+      </nav>
+
       <div className="flex flex-1">
+        {/* ── Desktop sidebar ───────────────────────────────────────────── */}
         <aside className="hidden lg:flex flex-col gap-1 w-20 shrink-0 border-r border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 px-2 py-6 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto">
           {visibleTabs.map((tab, i) => (
-            <button
-              key={tab.id}
-              onClick={() => switchTab(tab.id)}
-              title={`${tab.label} (${i + 1})`}
-              className={`relative flex flex-col items-center gap-1.5 px-2 py-3 rounded-xl text-[10px] font-medium transition-all ${
+            <button key={tab.id} onClick={() => switchTab(tab.id)} title={`${tab.label} (${i + 1})`}
+              className={`relative flex flex-col items-center gap-1.5 px-2 py-3 rounded-xl text-[10px] font-medium transition-all duration-200 ${
                 activeTab === tab.id
                   ? tab.id === 'admin'
                     ? 'bg-rose-500/10 text-rose-400 shadow-sm border border-rose-500/30'
@@ -305,18 +325,14 @@ function App() {
                   : tab.id === 'admin'
                   ? 'text-rose-500/60 hover:text-rose-400 hover:bg-rose-500/5'
                   : 'text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-white dark:hover:bg-gray-800/60'
-              }`}
-            >
+              }`}>
               <tab.icon className="w-5 h-5 flex-shrink-0" />
               {tab.label}
               <span className="absolute top-1.5 right-1.5 text-[8px] text-gray-600 font-mono">{i + 1}</span>
             </button>
           ))}
-          <button
-            onClick={() => setShowShortcuts(true)}
-            title="Keyboard shortcuts (?)"
-            className="mt-auto flex flex-col items-center gap-1 px-2 py-2 rounded-xl text-[9px] font-mono text-gray-600 hover:text-gray-400 transition-colors"
-          >
+          <button onClick={() => setShowShortcuts(true)} title="Keyboard shortcuts (?)"
+            className="mt-auto flex flex-col items-center gap-1 px-2 py-2 rounded-xl text-[9px] font-mono text-gray-600 hover:text-gray-400 transition-colors">
             <span className="px-1.5 py-0.5 rounded border border-gray-700 text-[10px]">?</span>
             keys
           </button>
@@ -347,7 +363,7 @@ function App() {
         )}
 
         <div className="flex-1 min-w-0">
-          <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
+          <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 pb-24 lg:pb-8">
             {activeTab === 'stats' && (
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
                 <div>
@@ -371,24 +387,7 @@ function App() {
               </div>
             )}
 
-            <div className="lg:hidden flex items-center justify-between mb-2 px-1">
-              <span className="text-xs font-semibold" style={{ color: 'var(--color-text)' }}>{visibleTabs.find(t => t.id === activeTab)?.label}</span>
-            </div>
-            <div className="lg:hidden grid grid-cols-5 gap-1 bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-1 mb-6">
-              {visibleTabs.map(tab => (
-                <button key={tab.id} onClick={() => switchTab(tab.id)}
-                  className={`flex flex-col items-center justify-center gap-1 py-2.5 px-1 rounded-lg text-[10px] font-medium transition-all ${
-                    activeTab === tab.id
-                      ? tab.id === 'admin'
-                        ? 'bg-white dark:bg-gray-800 text-rose-400 shadow-sm'
-                        : 'bg-white dark:bg-gray-800 text-indigo-500 dark:text-indigo-400 shadow-sm'
-                      : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
-                  }`}>
-                  <tab.icon className="w-4 h-4 flex-shrink-0" />
-                  <span className="leading-none text-center">{tab.label}</span>
-                </button>
-              ))}
-            </div>
+
 
             {error && !loading && (
               <div className="mb-8"><ErrorState message={error.message} onRetry={handleRefresh} /></div>
@@ -449,6 +448,7 @@ function App() {
                     {activeTab === 'feedback'  && <FeedbackTab />}
                     {activeTab === 'status'    && <StatusTab />}
                     {activeTab === 'changelog' && <ChangelogTab />}
+                    {activeTab === 'socials'   && <SocialsTab />}
                   </div>
                 </Suspense>
                 <div style={{ display: activeTab === 'admin' ? 'block' : 'none' }}>
