@@ -6,12 +6,13 @@ import { MaintenancePanel } from '@/components/MaintenancePanel';
 import {
   Shield, Users, Key, Megaphone, ScrollText, Wrench,
   Loader2, Trash2, Ban, CheckCircle2, Plus, X,
-  RefreshCw, AlertTriangle, Info, Check, Zap
+  RefreshCw, AlertTriangle, Info, Check, Zap,
+  ChevronLeft, ChevronRight, Gamepad2, Calendar, Clock
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
-type AdminTab = 'accounts' | 'tokens' | 'bans' | 'announcements' | 'audit' | 'maintenance';
+type AdminTab = 'accounts' | 'users' | 'tokens' | 'bans' | 'announcements' | 'audit' | 'maintenance';
 
 type DashboardUser = {
   id: string;
@@ -56,6 +57,46 @@ type TokenRow = {
   user_id: string;
 };
 
+type ScriptUser = {
+  roblox_user_id: number; username: string;
+  execution_count: number; first_seen: string;
+  last_seen: string; token: string | null;
+  place_id: number; banned: boolean;
+};
+
+const PAGE_SIZE = 20;
+
+function Pagination({ page, total, onChange }: { page: number; total: number; onChange: (p: number) => void }) {
+  if (total <= 1) return null;
+  const pages = Math.min(total, 7);
+  const start = total <= 7 ? 1 : page <= 4 ? 1 : page >= total - 3 ? total - 6 : page - 3;
+  return (
+    <div className="flex items-center justify-between mt-4">
+      <p className="text-xs" style={{ color: 'var(--color-muted)' }}>Page {page} of {total}</p>
+      <div className="flex items-center gap-1">
+        <button onClick={() => onChange(page - 1)} disabled={page <= 1}
+          className="p-1.5 rounded-lg border disabled:opacity-30"
+          style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-surface2)' }}>
+          <ChevronLeft className="w-3.5 h-3.5" style={{ color: 'var(--color-muted)' }} />
+        </button>
+        {Array.from({ length: pages }, (_, i) => start + i).map(p => (
+          <button key={p} onClick={() => onChange(p)}
+            className="w-7 h-7 rounded-lg text-xs font-medium border transition-colors"
+            style={p === page
+              ? { backgroundColor: 'var(--color-accent)', borderColor: 'var(--color-accent)', color: 'var(--color-accent-fg)' }
+              : { borderColor: 'var(--color-border)', backgroundColor: 'var(--color-surface2)', color: 'var(--color-muted)' }}>
+            {p}
+          </button>
+        ))}
+        <button onClick={() => onChange(page + 1)} disabled={page >= total}
+          className="p-1.5 rounded-lg border disabled:opacity-30"
+          style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-surface2)' }}>
+          <ChevronRight className="w-3.5 h-3.5" style={{ color: 'var(--color-muted)' }} />
+        </button>
+      </div>
+    </div>
+  );
+}
 const WORDS = ['FIRE','IRON','VOID','DARK','SOUL','BONE','VEIL','GRIM','ASH','FLUX','BOLT','CLAW','DUSK','ECHO','FADE','GALE','HEX','JADE','KEEN','MIST','NOVA','ONYX','PIKE','RUIN','SAGE','TIDE','VILE','WARP','ZEAL','FANG'];
 function generateToken() {
   return WORDS[Math.floor(Math.random() * WORDS.length)] + (Math.floor(Math.random() * 9000) + 1000);
@@ -80,6 +121,11 @@ export function AdminPanel() {
 
 
   const [accounts, setAccounts]   = useState<DashboardUser[]>([]);
+  const [acctPage, setAcctPage]   = useState(1);
+
+  const [scriptUsers, setScriptUsers] = useState<ScriptUser[]>([]);
+  const [userPage, setUserPage]       = useState(1);
+  const [userSearch, setUserSearch]   = useState('');
 
 
   const [tokens, setTokens]       = useState<TokenRow[]>([]);
@@ -172,6 +218,17 @@ export function AdminPanel() {
     setLoading(false);
   }, []);
 
+  const loadScriptUsers = useCallback(async () => {
+    setLoading(true);
+    const [{ data: rows }, { data: bansData }] = await Promise.all([
+      supabase.from('unique_users').select('*').order('execution_count', { ascending: false }),
+      supabase.from('banned_users').select('roblox_user_id'),
+    ]);
+    const bannedSet = new Set((bansData ?? []).map((b: { roblox_user_id: number }) => b.roblox_user_id));
+    setScriptUsers((rows ?? []).map((r: ScriptUser) => ({ ...r, banned: bannedSet.has(r.roblox_user_id) })));
+    setLoading(false);
+  }, []);
+
   const loadTokens = useCallback(async () => {
     setLoading(true);
     const { data } = await supabase.from('user_tokens').select('*').order('updated_at', { ascending: false });
@@ -203,11 +260,12 @@ export function AdminPanel() {
   useEffect(() => {
     if (!isAdmin) return;
     if (tab === 'accounts')      loadAccounts();
+    if (tab === 'users')         loadScriptUsers();
     if (tab === 'tokens')        loadTokens();
     if (tab === 'bans')          loadBans();
     if (tab === 'announcements') loadAnnouncements();
     if (tab === 'audit')         loadAudit();
-  }, [tab, isAdmin, loadAccounts, loadTokens, loadBans, loadAnnouncements, loadAudit]);
+  }, [tab, isAdmin, loadAccounts, loadScriptUsers, loadTokens, loadBans, loadAnnouncements, loadAudit]);
 
   const resetToken = async (row: TokenRow) => {
     if (!window.confirm(`Reset token for @${row.roblox_username}? Their current token will stop working.`)) return;
@@ -379,6 +437,7 @@ export function AdminPanel() {
 
   const TABS: { id: AdminTab; label: string; icon: React.ElementType }[] = [
     { id: 'accounts',      label: 'Accounts',      icon: Users       },
+    { id: 'users',         label: 'Script Users',  icon: Gamepad2    },
     { id: 'tokens',        label: 'Tokens',         icon: Key         },
     { id: 'bans',          label: 'Bans',           icon: Ban         },
     { id: 'announcements', label: 'Announcements',  icon: Megaphone   },
@@ -417,7 +476,7 @@ export function AdminPanel() {
           ? <UserProfile userId={profileUser.userId} username={profileUser.username} onBack={() => setProfileUser(null)} isAdmin={true} />
           : <div className="space-y-2">
               <p className="text-xs" style={{ color: 'var(--color-muted)' }}>{accounts.length} players — click to view profile</p>
-              {accounts.map(a => (
+              {accounts.slice((acctPage - 1) * PAGE_SIZE, acctPage * PAGE_SIZE).map(a => (
                 <div key={a.id} className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover:opacity-75 transition-opacity" style={s2}
                   onClick={() => a.roblox_user_id ? setProfileUser({ userId: a.roblox_user_id, username: a.username }) : null}>
                   <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 font-bold text-sm"
@@ -462,9 +521,77 @@ export function AdminPanel() {
               {accounts.length === 0 && (
                 <p className="text-center text-xs py-8" style={{ color: 'var(--color-muted)' }}>No players found</p>
               )}
+              <Pagination page={acctPage} total={Math.max(1, Math.ceil(accounts.length / PAGE_SIZE))} onChange={setAcctPage} />
             </div>
       )}
 
+
+      {!loading && tab === 'users' && (() => {
+        const filtered = userSearch
+          ? scriptUsers.filter(u => u.username?.toLowerCase().includes(userSearch.toLowerCase()))
+          : scriptUsers;
+        const paged = filtered.slice((userPage - 1) * PAGE_SIZE, userPage * PAGE_SIZE);
+        return (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <input
+                value={userSearch}
+                onChange={e => { setUserSearch(e.target.value); setUserPage(1); }}
+                placeholder="Search by username..."
+                className="flex-1 rounded-lg px-3 py-2 text-xs border outline-none"
+                style={{ backgroundColor: 'var(--color-surface2)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }}
+              />
+              <p className="text-xs shrink-0" style={{ color: 'var(--color-muted)' }}>{filtered.length} users</p>
+            </div>
+            {paged.map((u, i) => (
+              <div key={`${u.roblox_user_id}-${i}`} className="p-3 rounded-lg border"
+                style={{ borderColor: u.banned ? 'rgba(239,68,68,0.3)' : 'var(--color-border)', backgroundColor: u.banned ? 'rgba(239,68,68,0.05)' : 'var(--color-surface2)' }}>
+                <div className="flex items-center gap-3">
+                  <img
+                    src={`https://www.roblox.com/headshot-thumbnail/image?userId=${u.roblox_user_id}&width=100&height=100&format=png`}
+                    alt={u.username}
+                    className="w-10 h-10 rounded-full shrink-0 object-cover border"
+                    style={{ borderColor: 'var(--color-border)' }}
+                    onError={e => { (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(u.username)}&background=6366f1&color=fff`; }}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-sm font-semibold" style={{ color: u.banned ? '#f87171' : 'var(--color-text)', textDecoration: u.banned ? 'line-through' : 'none' }}>
+                        {u.username}
+                      </p>
+                      {u.banned && (
+                        <span className="flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                          <Ban className="w-2.5 h-2.5" /> banned
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3 mt-0.5 flex-wrap">
+                      <span className="flex items-center gap-1 text-[10px]" style={{ color: 'var(--color-accent)' }}>
+                        <Zap className="w-3 h-3" />{(u.execution_count ?? 0).toLocaleString()} execs
+                      </span>
+                      <span className="flex items-center gap-1 text-[10px]" style={{ color: 'var(--color-muted)' }}>
+                        <Calendar className="w-3 h-3" />first {timeAgo(u.first_seen)}
+                      </span>
+                      <span className="flex items-center gap-1 text-[10px]" style={{ color: 'var(--color-muted)' }}>
+                        <Clock className="w-3 h-3" />last {timeAgo(u.last_seen)}
+                      </span>
+                      <span className="text-[10px]" style={{ color: 'var(--color-muted)' }}>ID {u.roblox_user_id}</span>
+                    </div>
+                  </div>
+                  {u.token && (
+                    <code className="text-[10px] font-mono px-2 py-1 rounded border shrink-0"
+                      style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)', color: 'var(--color-accent)' }}>
+                      {u.token}
+                    </code>
+                  )}
+                </div>
+              </div>
+            ))}
+            {paged.length === 0 && <p className="text-center text-xs py-6" style={{ color: 'var(--color-muted)' }}>No users found</p>}
+            <Pagination page={userPage} total={Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))} onChange={setUserPage} />
+          </div>
+        );
+      })()}
 
       {!loading && tab === 'tokens' && (
         <div className="space-y-2">
