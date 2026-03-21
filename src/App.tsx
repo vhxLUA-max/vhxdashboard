@@ -146,7 +146,7 @@ function useLiveLastExecution() {
       if (val) setIso(val);
     };
     fetch();
-    const poll = setInterval(fetch, 5000); // poll every 5s to catch new executions
+    const poll = setInterval(fetch, 5000);
     const ch = supabase.channel('live-last-exec')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'game_executions' }, fetch)
       .subscribe();
@@ -227,7 +227,6 @@ function App() {
   const liveUsers                         = useLiveUniqueUsers();
   const liveNewUsers                      = useLiveNewUsers();
   const lastExecution                     = useLiveLastExecution();
-  // All tabs visible to everyone — gated tabs show a sign-in note inside the tab
   const visibleTabs = TABS.filter(t => {
     if (t.id === 'admin') return isAdmin;
     return true;
@@ -251,10 +250,8 @@ function App() {
 
   useEffect(() => {
     const resolveUsername = async (user: import('@supabase/supabase-js').User): Promise<string | null> => {
-      // Use stored username first
       let u = user.user_metadata?.username as string | null ?? null;
       if (u) return u;
-      // For Google/Discord OAuth — derive from name or email
       const fullName = user.user_metadata?.full_name ?? user.user_metadata?.name ?? null;
       const email = user.email ?? null;
       if (fullName) {
@@ -263,7 +260,6 @@ function App() {
         u = email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20);
       }
       if (u) {
-        // Save derived username back to metadata so it persists
         await supabase.auth.updateUser({ data: { username: u } });
       }
       return u;

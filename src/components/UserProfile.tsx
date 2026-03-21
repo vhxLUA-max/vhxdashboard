@@ -65,7 +65,6 @@ export function UserProfile({ userId, username, onBack, isAdmin }: Props) {
       if (userRows) setRows(userRows);
       if (banRow)   setBan(banRow);
 
-      // Fetch Roblox info via proxy (avoids CORS)
       const [userInfo, avatar, friends, followers, following] = await Promise.all([
         robloxProxy(`/v1/users/${userId}`) as Promise<{ displayName?: string; description?: string; created?: string; isBanned?: boolean } | null>,
         robloxProxy(`/v1/users/avatar-headshot?userIds=${userId}&size=150x150&format=Png`) as Promise<{ data?: { imageUrl?: string }[] } | null>,
@@ -89,7 +88,6 @@ export function UserProfile({ userId, username, onBack, isAdmin }: Props) {
     })();
   }, [userId, username]);
 
-  // Aggregate rows by game name
   const gameAgg: Record<string, { count: number; first: string; last: string }> = {};
   for (const r of rows) {
     const name = gName(r);

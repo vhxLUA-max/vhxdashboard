@@ -12,7 +12,6 @@ export function LiveToastFeed() {
   const mountedRef = useRef(false);
 
   useEffect(() => {
-    // Skip first batch on mount to avoid flooding on load
     const ch = supabase.channel('live-feed')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'unique_users' }, (payload) => {
         if (!mountedRef.current) return;

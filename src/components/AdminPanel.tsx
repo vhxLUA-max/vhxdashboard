@@ -189,7 +189,6 @@ export function AdminPanel() {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
 
-      // Try admin API (needs SUPABASE_SERVICE_ROLE_KEY in Vercel env)
       if (token) {
         const res = await fetch('/api/admin-users', {
           headers: { Authorization: `Bearer ${token}` },
@@ -211,14 +210,11 @@ export function AdminPanel() {
         }
       }
 
-      // Fallback: build account list from user_tokens (verified users) merged with
-      // any users found in audit_log (anyone who took an action)
       const [{ data: tokenUsers }, { data: auditUsers }] = await Promise.all([
         supabase.from('user_tokens').select('user_id, roblox_username, updated_at'),
         supabase.from('audit_log').select('user_id, username, created_at').not('user_id', 'is', null),
       ]);
 
-      // Dedupe by user_id
       const seen = new Map<string, DashboardUser>();
       for (const u of (tokenUsers ?? [])) {
         if (!u.user_id) continue;
@@ -245,7 +241,6 @@ export function AdminPanel() {
         });
       }
 
-      // Always make sure the current user appears
       if (session?.user && !seen.has(session.user.id)) {
         seen.set(session.user.id, {
           id: session.user.id,
@@ -286,7 +281,6 @@ export function AdminPanel() {
       if (!agg[id].token && r.token) agg[id].token = r.token;
     }
 
-    // Sort by most recently seen first
     const sorted = Object.values(agg).sort((a, b) =>
       new Date(b.last_seen).getTime() - new Date(a.last_seen).getTime()
     );
@@ -327,7 +321,6 @@ export function AdminPanel() {
     setRoles(data ?? []);
   }, []);
 
-  // ── Always-on realtime (works even when not on that tab) ──────
   useEffect(() => {
     const ch = supabase.channel('admin-always-on')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'unique_users' },    loadScriptUsers)
@@ -438,7 +431,6 @@ export function AdminPanel() {
     loadBans();
   };
 
-  // Parse JSON input into Discord embed fields
   const parseJsonInput = (raw: string) => {
     try {
       const j = JSON.parse(raw);
@@ -462,7 +454,6 @@ export function AdminPanel() {
     const parsed = parseJsonInput(raw);
     if (!parsed.ok || !parsed.data) return null;
     const j = parsed.data;
-    // Map JSON fields to embed — supports: title, description/message/content, color, fields (array), footer, url, image, thumbnail
     return {
       title: j.title ?? j.type ?? `[${type.toUpperCase()}]`,
       description: j.description ?? j.message ?? j.content ?? '',
@@ -582,7 +573,6 @@ export function AdminPanel() {
 
       {/* ── Dashboard Accounts ── */}
       {!loading && tab === 'accounts' && (() => {
-        // Detail view for a selected account
         if (selectedAccount) {
           const a = selectedAccount;
           const userRole = roles.find(r => r.user_id === a.id);
@@ -676,7 +666,6 @@ export function AdminPanel() {
           );
         }
 
-        // List view
         return (
           <div className="space-y-2">
             <p className="text-xs" style={{ color: 'var(--color-muted)' }}>{accounts.length} dashboard accounts — click to view</p>

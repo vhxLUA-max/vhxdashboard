@@ -15,7 +15,7 @@ const DEFAULT_GAMES = ['Pixel Blade', 'Loot Hero', 'Flick', 'Survive Lava', 'UNC
 
 function getRemainingSeconds(endTs: string | null): number {
   if (!endTs) return -1;
-  const endMs = Date.parse(endTs); // always UTC
+  const endMs = Date.parse(endTs);
   if (isNaN(endMs)) return -1;
   return Math.max(0, Math.floor((endMs - Date.now()) / 1000));
 }
@@ -51,7 +51,6 @@ function Countdown({ endTs, onExpired }: { endTs: string | null; onExpired?: () 
   return <>{formatSeconds(secs)}</>;
 }
 
-// Duration picker — HH MM SS spinners, no timezone involved
 function DurationPicker({ value, onChange, disabled }: {
   value: { h: number; m: number; s: number };
   onChange: (v: { h: number; m: number; s: number }) => void;
@@ -93,7 +92,6 @@ export function MaintenancePanel() {
   const [games,    setGames]    = useState<GameStatus[]>([]);
   const [loading,  setLoading]  = useState(true);
   const [saving,   setSaving]   = useState<string | null>(null);
-  // Per-game duration state
   const [durations, setDurations] = useState<Record<string, { h:number; m:number; s:number }>>({});
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
@@ -142,7 +140,6 @@ export function MaintenancePanel() {
   const activate = async (g: GameStatus) => {
     const dur = getDuration(g.id);
     const totalSecs = dur.h * 3600 + dur.m * 60 + dur.s;
-    // Calculate end timestamp from NOW — no timezone issues
     const endTs = totalSecs > 0 ? new Date(Date.now() + totalSecs * 1000).toISOString() : null;
     setSaving(g.id);
     const update: any = { maintenance: true, end_timestamp: endTs, updated_at: new Date().toISOString() };
