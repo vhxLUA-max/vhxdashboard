@@ -19,14 +19,14 @@ const SCRIPTS = [
 const LINKS = [
   { label: 'Discord Server', url: 'https://discord.gg/AuQqvrJE79' },
   { label: 'TikTok',         url: 'https://tiktok.com/@vhxlua'   },
-  { label: 'YouTube',        url: 'https://youtube.com/@vhxLUA'  },
+  { label: 'YouTube',        url: 'https://youtube.com/@vhx hub'  },
 ];
 
 const TAB_META = [
   { id: 'stats',     label: 'Stats',     sub: 'Execution metrics & analytics',  icon: <BarChart3 className="w-4 h-4" />     },
   { id: 'scripts',   label: 'Scripts',   sub: 'Browse & copy loadstrings',       icon: <Code className="w-4 h-4" />         },
   { id: 'search',    label: 'Search',    sub: 'Find users by token or username', icon: <Search className="w-4 h-4" />       },
-  { id: 'token',     label: 'Token',     sub: 'Your vhxLUA token',               icon: <Key className="w-4 h-4" />          },
+  { id: 'token',     label: 'Token',     sub: 'Your vhx hub token',               icon: <Key className="w-4 h-4" />          },
   { id: 'changelog', label: 'Updates',   sub: 'Changelogs & patch notes',        icon: <Megaphone className="w-4 h-4" />    },
   { id: 'socials',   label: 'Socials',   sub: 'Discord, TikTok, YouTube',        icon: <Users className="w-4 h-4" />        },
   { id: 'webhook',   label: 'Webhook',   sub: 'Configure Discord webhooks',      icon: <Webhook className="w-4 h-4" />      },

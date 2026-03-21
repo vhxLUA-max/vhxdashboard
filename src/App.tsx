@@ -290,7 +290,7 @@ function App() {
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-xl flex items-center justify-center text-sm font-black text-white shrink-0"
             style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)' }}>V</div>
-          <span className="text-base font-bold tracking-tight" style={{ color: 'var(--color-text)' }}>vhxLUA</span>
+          <span className="text-base font-bold tracking-tight" style={{ color: 'var(--color-text)' }}>vhx hub</span>
         </div>
         {/* Right: action icons */}
         <div className="flex items-center gap-1">
@@ -451,7 +451,7 @@ function App() {
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-xl flex items-center justify-center text-sm font-black text-white"
                     style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)' }}>V</div>
-                  <span className="text-base font-bold" style={{ color: 'var(--color-text)' }}>vhxLUA</span>
+                  <span className="text-base font-bold" style={{ color: 'var(--color-text)' }}>vhx hub</span>
                 </div>
                 <button onClick={() => setShowDrawer(false)}
                   className="w-8 h-8 flex items-center justify-center rounded-full text-lg"
@@ -464,19 +464,60 @@ function App() {
                 {/* Profile card (logged in) */}
                 {isLoggedIn && (
                   <div className="rounded-xl p-4 mb-4" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
-                    <div className="flex items-center gap-3 mb-3">
-                      {avatarUrl
-                        ? <img src={avatarUrl} alt="" className="w-12 h-12 rounded-full object-cover border-2" style={{ borderColor: 'var(--color-accent)' }} />
-                        : <div className="w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold text-white border-2"
-                            style={{ backgroundColor: 'var(--color-accent)', borderColor: 'var(--color-accent)' }}>
-                            {adminUsername?.[0]?.toUpperCase() ?? 'U'}
+                    {(() => {
+                      const uname = (adminUsername ?? '').toLowerCase();
+                      const isFounder = ['vhxlua-max','vhxlua','vhxlua_'].includes(uname);
+                      const isVerified = isAdmin || isFounder;
+                      return (
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="relative shrink-0">
+                            {avatarUrl
+                              ? <img src={avatarUrl} alt="" className="w-12 h-12 rounded-full object-cover border-2" style={{ borderColor: isFounder ? '#f59e0b' : 'var(--color-accent)' }} />
+                              : <div className="w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold text-white border-2"
+                                  style={{ backgroundColor: isFounder ? '#f59e0b' : 'var(--color-accent)', borderColor: isFounder ? '#f59e0b' : 'var(--color-accent)' }}>
+                                  {adminUsername?.[0]?.toUpperCase() ?? 'U'}
+                                </div>
+                            }
+                            {/* Verified badge */}
+                            {isVerified && (
+                              <span className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full flex items-center justify-center border-2"
+                                style={{ backgroundColor: isFounder ? '#f59e0b' : '#6366f1', borderColor: '#111113' }}
+                                title={isFounder ? 'Founder' : 'Verified'}>
+                                <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                </svg>
+                              </span>
+                            )}
                           </div>
-                      }
-                      <div>
-                        <p className="text-sm font-bold" style={{ color: 'var(--color-text)' }}>{adminUsername ?? 'User'}</p>
-                        <p className="text-xs mt-0.5" style={{ color: 'var(--color-muted)' }}>vhxLUA member</p>
-                      </div>
-                    </div>
+                          <div>
+                            <div className="flex items-center gap-1.5">
+                              <p className="text-sm font-bold" style={{ color: 'var(--color-text)' }}>{adminUsername ?? 'User'}</p>
+                              {isVerified && (
+                                <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill={isFounder ? '#f59e0b' : '#6366f1'}>
+                                  <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke="none" fill="none"/>
+                                  <path fillRule="evenodd" clipRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" />
+                                </svg>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              {isFounder && (
+                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+                                  style={{ backgroundColor: 'rgba(245,158,11,0.15)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.3)' }}>
+                                  FOUNDER
+                                </span>
+                              )}
+                              {isAdmin && !isFounder && (
+                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+                                  style={{ backgroundColor: 'rgba(99,102,241,0.15)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.3)' }}>
+                                  ADMIN
+                                </span>
+                              )}
+                              <span className="text-[10px]" style={{ color: 'var(--color-muted)' }}>vhx hub member</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
                     <button onClick={() => { setShowDrawer(false); setShowAccount(true); }}
                       className="w-full py-2.5 rounded-xl text-sm font-semibold text-center border transition-colors"
                       style={{ borderColor: 'rgba(255,255,255,0.15)', color: 'var(--color-text)', backgroundColor: 'rgba(255,255,255,0.04)' }}>
@@ -488,7 +529,7 @@ function App() {
                 {/* Not logged in CTA */}
                 {!isLoggedIn && (
                   <div className="rounded-xl p-4 mb-4 text-center" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
-                    <p className="text-sm font-semibold mb-1" style={{ color: 'var(--color-text)' }}>Welcome to vhxLUA</p>
+                    <p className="text-sm font-semibold mb-1" style={{ color: 'var(--color-text)' }}>Welcome to vhx hub</p>
                     <p className="text-xs mb-3" style={{ color: 'var(--color-muted)' }}>Sign in to unlock all features</p>
                     <button onClick={() => { setShowDrawer(false); setShowLogin(true); }}
                       className="w-full py-2.5 rounded-xl text-sm font-semibold text-white"

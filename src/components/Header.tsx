@@ -20,7 +20,7 @@ export function Header({ isConnected = true, username, avatarUrl, onLoginClick, 
               <Activity className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-lg font-semibold" style={{ color: 'var(--color-text)' }}>vhxLUA Hub</h1>
+              <h1 className="text-lg font-semibold" style={{ color: 'var(--color-text)' }}>vhx hub</h1>
               <p className="text-xs" style={{ color: 'var(--color-muted)' }}>Scripts · Analytics · Tools</p>
             </div>
           </div>
