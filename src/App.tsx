@@ -173,7 +173,7 @@ function useLiveAllExecutions() {
   return execs;
 }
 
-const ADMIN_USERNAMES = ['vhxlua-max', 'vhxlua'];
+const ADMIN_USERNAMES = ['vhxlua-max'];
 
 async function checkIsAdmin(userId: string, username: string | null): Promise<boolean> {
   try {

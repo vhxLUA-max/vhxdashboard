@@ -8,7 +8,17 @@ export type AuthState = {
 
 const toEmail = (u: string) => `${u.trim().toLowerCase()}@vhx.local`;
 
+export function isUsernameVhxReserved(username: string): boolean {
+  const lower = username.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+  const isVhx = lower.includes('vhx');
+  const isAllowed = lower === 'vhxluamax' || lower === 'vhxlua-max' || lower === 'vhxluamax';
+  return isVhx && !isAllowed;
+}
+
 export async function register(username: string, password: string): Promise<{ success: boolean; error?: string }> {
+  if (isUsernameVhxReserved(username)) {
+    return { success: false, error: 'This username is reserved and cannot be registered.' };
+  }
   const { error } = await supabase.auth.signUp({
     email: toEmail(username),
     password,

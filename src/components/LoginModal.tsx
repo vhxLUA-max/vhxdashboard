@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { login, register, checkUsernameAvailable, loginWithDiscord, loginWithGoogle } from '@/lib/auth';
+import { login, register, checkUsernameAvailable, loginWithDiscord, loginWithGoogle, isUsernameVhxReserved } from '@/lib/auth';
 import { Lock, User, Loader2, AlertCircle, X, CheckCircle2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -49,6 +49,7 @@ export function LoginModal({ onSuccess, onClose }: LoginModalProps) {
     setError('');
     if (mode !== 'register') return;
     if (value.trim().length < 3) { setUsernameStatus('idle'); return; }
+    if (isUsernameVhxReserved(value)) { setUsernameStatus('taken'); return; }
     setUsernameStatus('checking');
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
@@ -66,6 +67,7 @@ export function LoginModal({ onSuccess, onClose }: LoginModalProps) {
       if (username.trim().length < 3) { setError('Username must be at least 3 characters.'); return; }
       if (usernameStatus === 'taken') { setError('Username is already taken.'); return; }
       if (usernameStatus === 'checking') { setError('Please wait while we check your username.'); return; }
+      if (isUsernameVhxReserved(username)) { setError('This username is reserved and cannot be registered.'); return; }
     }
     setLoading(true);
     const result = mode === 'login'

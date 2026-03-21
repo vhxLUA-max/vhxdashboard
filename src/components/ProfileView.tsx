@@ -96,7 +96,7 @@ export function ProfileView({ username, avatarUrl, isAdmin, isPro = false, isLog
   }, [isLoggedIn]);
 
   const uname = (username ?? '').toLowerCase();
-  const isFounder = uname === 'vhxlua' || uname === 'vhxlua_';
+  const isFounder = uname === 'vhxlua-max';
   const isVerified = isAdmin || isFounder;
 
   const joinedFmt = joinedAt

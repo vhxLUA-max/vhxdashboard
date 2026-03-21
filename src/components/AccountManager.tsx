@@ -74,6 +74,7 @@ export function AccountManager({ onClose, onUsernameChange, onAvatarChange, isPr
   const [embedTheme, setEmbedTheme]   = useState<'dark' | 'light'>('dark');
   const [pwError, setPwError]         = useState('');
   const [subscriptionTier, setSubscriptionTier] = useState('Free');
+  // role loaded for subscription display
   const fileRef   = useRef<HTMLInputElement>(null);
   const bannerRef = useRef<HTMLInputElement>(null);
 
@@ -87,6 +88,15 @@ export function AccountManager({ onClose, onUsernameChange, onAvatarChange, isPr
       setBio(user.user_metadata?.bio ?? '');
       setSocials(user.user_metadata?.socials ?? {});
       setSubscriptionTier(user.user_metadata?.subscription_tier ?? 'Free');
+      // Load actual role from DB for accurate subscription display
+      supabase.from('user_roles').select('role').eq('user_id', user.id).maybeSingle().then(({ data }) => {
+        const role = data?.role ?? null;
+
+        if (role === 'founder') setSubscriptionTier('Founder');
+        else if (role === 'pro') setSubscriptionTier('Pro');
+        else if (role === 'admin' || role === 'moderator') setSubscriptionTier('Staff');
+        else setSubscriptionTier('Free');
+      });
       const email = user.email ?? '';
       if (!email.endsWith('@vhx.local')) { setCurrentEmail(email); setEmailInput(email); }
     });
@@ -401,7 +411,12 @@ export function AccountManager({ onClose, onUsernameChange, onAvatarChange, isPr
                   </div>
                   <div>
                     <p className="text-[10px]" style={{ color: 'var(--color-muted)' }}>Subscription Tier</p>
-                    <p className="text-sm font-bold mt-0.5" style={{ color: 'var(--color-text)' }}>{subscriptionTier}</p>
+                    <p className="text-sm font-bold mt-0.5" style={{
+                      color: subscriptionTier === 'Founder' ? '#f59e0b'
+                           : subscriptionTier === 'Pro' ? '#f97316'
+                           : subscriptionTier === 'Staff' ? '#3b82f6'
+                           : 'var(--color-muted)'
+                    }}>{subscriptionTier}</p>
                   </div>
                 </div>
               </div>
