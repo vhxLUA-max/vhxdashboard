@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
-import { ArrowLeft, Shield, Ban, Gamepad2, Clock, Key, Fingerprint, Monitor, AlertTriangle, Calendar, Users, Star, ExternalLink, Copy, Check } from 'lucide-react';
+import { ArrowLeft, Shield, Ban, Gamepad2, Clock, Key, Fingerprint, Monitor, AlertTriangle, Calendar, Star, ExternalLink, Copy, Check } from 'lucide-react';
 
 interface UserRow {
   roblox_user_id: number; username: string; game_name: string;
@@ -220,22 +220,7 @@ export function UserProfile({ userId, username, onBack, isAdmin }: Props) {
         ))}
       </div>
 
-      {/* Roblox social stats */}
-      {rblx && (
-        <div className="grid grid-cols-3 gap-3">
-          {[
-            { label: 'Friends',   value: rblx.friendCount },
-            { label: 'Followers', value: rblx.followerCount },
-            { label: 'Following', value: rblx.followingCount },
-          ].map(s => (
-            <div key={s.label} className="rounded-xl border p-3 text-center" style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-surface)' }}>
-              <Users className="w-4 h-4 mx-auto mb-1" style={{ color: 'var(--color-muted)' }} />
-              <div className="text-base font-bold" style={{ color: 'var(--color-text)' }}>{s.value.toLocaleString()}</div>
-              <div className="text-[10px]" style={{ color: 'var(--color-muted)' }}>{s.label}</div>
-            </div>
-          ))}
-        </div>
-      )}
+
 
       {/* Game breakdown — aggregated, no duplicates */}
       <div className="rounded-xl border p-5" style={s}>
