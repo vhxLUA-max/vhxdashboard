@@ -224,9 +224,8 @@ export function AdminPanel() {
       supabase.from('unique_users').select('roblox_user_id,username,execution_count,first_seen,last_seen,token,place_id'),
       supabase.from('banned_users').select('roblox_user_id'),
     ]);
-    const bannedSet = new Set((bansData ?? []).map((b: any) => b.roblox_user_id));
+    const bannedSet = new Set((bansData ?? []).map((b: { roblox_user_id: number }) => b.roblox_user_id));
 
-    // Aggregate per user across all place_ids
     const agg: Record<number, ScriptUser> = {};
     for (const r of (rows ?? [])) {
       const id = r.roblox_user_id;
@@ -235,13 +234,15 @@ export function AdminPanel() {
         agg[id] = { ...r, execution_count: 0, banned: bannedSet.has(id) };
       }
       agg[id].execution_count += r.execution_count ?? 0;
-      // Keep most recent last_seen
       if (r.last_seen > agg[id].last_seen) agg[id].last_seen = r.last_seen;
-      // Keep earliest first_seen
       if (r.first_seen < agg[id].first_seen) agg[id].first_seen = r.first_seen;
+      if (!agg[id].token && r.token) agg[id].token = r.token;
     }
 
-    const sorted = Object.values(agg).sort((a, b) => b.execution_count - a.execution_count);
+    // Sort by most recently seen first
+    const sorted = Object.values(agg).sort((a, b) =>
+      new Date(b.last_seen).getTime() - new Date(a.last_seen).getTime()
+    );
     setScriptUsers(sorted);
     setLoading(false);
   }, []);
@@ -283,6 +284,16 @@ export function AdminPanel() {
     if (tab === 'announcements') loadAnnouncements();
     if (tab === 'audit')         loadAudit();
   }, [tab, isAdmin, loadAccounts, loadScriptUsers, loadTokens, loadBans, loadAnnouncements, loadAudit]);
+
+  // Realtime updates for script users tab
+  useEffect(() => {
+    if (tab !== 'users') return;
+    const ch = supabase.channel('admin-script-users')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'unique_users' }, loadScriptUsers)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'banned_users' }, loadScriptUsers)
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [tab, loadScriptUsers]);
 
   const resetToken = async (row: TokenRow) => {
     if (!window.confirm(`Reset token for @${row.roblox_username}? Their current token will stop working.`)) return;
