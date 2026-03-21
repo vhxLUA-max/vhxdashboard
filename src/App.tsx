@@ -466,22 +466,22 @@ function App() {
                   <div className="rounded-xl p-4 mb-4" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
                     {(() => {
                       const uname = (adminUsername ?? '').toLowerCase();
-                      const isFounder = ['vhxlua-max','vhxlua','vhxlua_'].includes(uname);
+                      const isFounder = uname === 'vhxlua';
                       const isVerified = isAdmin || isFounder;
                       return (
                         <div className="flex items-center gap-3 mb-3">
                           <div className="relative shrink-0">
                             {avatarUrl
-                              ? <img src={avatarUrl} alt="" className="w-12 h-12 rounded-full object-cover border-2" style={{ borderColor: isFounder ? '#f59e0b' : 'var(--color-accent)' }} />
+                              ? <img src={avatarUrl} alt="" className="w-12 h-12 rounded-full object-cover border-2" style={{ borderColor: '#3b82f6' }} />
                               : <div className="w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold text-white border-2"
-                                  style={{ backgroundColor: isFounder ? '#f59e0b' : 'var(--color-accent)', borderColor: isFounder ? '#f59e0b' : 'var(--color-accent)' }}>
+                                  style={{ backgroundColor: '#3b82f6', borderColor: '#3b82f6' }}>
                                   {adminUsername?.[0]?.toUpperCase() ?? 'U'}
                                 </div>
                             }
                             {/* Verified badge */}
                             {isVerified && (
                               <span className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full flex items-center justify-center border-2"
-                                style={{ backgroundColor: isFounder ? '#f59e0b' : '#6366f1', borderColor: '#111113' }}
+                                style={{ backgroundColor: '#3b82f6', borderColor: '#111113' }}
                                 title={isFounder ? 'Founder' : 'Verified'}>
                                 <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
@@ -493,7 +493,7 @@ function App() {
                             <div className="flex items-center gap-1.5">
                               <p className="text-sm font-bold" style={{ color: 'var(--color-text)' }}>{adminUsername ?? 'User'}</p>
                               {isVerified && (
-                                <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill={isFounder ? '#f59e0b' : '#6366f1'}>
+                                <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="#3b82f6">
                                   <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke="none" fill="none"/>
                                   <path fillRule="evenodd" clipRule="evenodd" d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12zm13.36-1.814a.75.75 0 10-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 00-1.06 1.06l2.25 2.25a.75.75 0 001.14-.094l3.75-5.25z" />
                                 </svg>
@@ -512,7 +512,7 @@ function App() {
                                   ADMIN
                                 </span>
                               )}
-                              <span className="text-[10px]" style={{ color: 'var(--color-muted)' }}>vhx hub member</span>
+                              {!isFounder && !isAdmin && <span className="text-[10px]" style={{ color: 'var(--color-muted)' }}>vhx hub member</span>}
                             </div>
                           </div>
                         </div>
