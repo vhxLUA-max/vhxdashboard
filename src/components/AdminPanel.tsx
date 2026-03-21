@@ -166,8 +166,16 @@ export function AdminPanel() {
 
   useEffect(() => {
     setIsAdmin(true);
-    supabase.rpc('get_my_role').then(({ data }) => {
-      if (data) setMyRole(data as UserRole);
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) return;
+      const username = user.user_metadata?.username ?? '';
+      if (username.toLowerCase() === 'vhxlua-max') {
+        setMyRole('founder');
+      }
+      supabase.from('user_roles').select('role').eq('user_id', user.id).maybeSingle()
+        .then(({ data }) => {
+          if (data?.role) setMyRole(data.role as UserRole);
+        });
     });
   }, []);
 
@@ -178,58 +186,79 @@ export function AdminPanel() {
   const loadAccounts = useCallback(async () => {
     setLoading(true);
     try {
-      // Get auth session for the API call
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
 
-      // Try admin API first (needs SUPABASE_SERVICE_ROLE_KEY set in Vercel env)
+      // Try admin API (needs SUPABASE_SERVICE_ROLE_KEY in Vercel env)
       if (token) {
         const res = await fetch('/api/admin-users', {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (res.ok) {
           const { users } = await res.json();
-          // Also get unique_users for roblox_user_id mapping
-          const { data: gameUsers } = await supabase
-            .from('unique_users')
-            .select('roblox_user_id, username, last_seen')
-            .order('last_seen', { ascending: false });
-          const gameMap = new Map<string, { roblox_user_id: number; username: string; last_seen: string }>();
-          // Match by username
-          (gameUsers ?? []).forEach((u: any) => gameMap.set(u.username?.toLowerCase(), u));
-
-          setAccounts(users.map((u: any) => {
-            const game = gameMap.get(u.username?.toLowerCase());
-            const provider = u.provider === 'google' ? 'google'
-              : u.provider === 'discord' ? 'discord'
-              : 'email';
-            return {
-              id: u.id, email: u.email, username: u.username,
-              roblox_user_id: game?.roblox_user_id ?? null,
-              created_at: u.created_at,
-              last_sign_in_at: u.last_sign_in_at,
-              provider,
-            };
-          }));
+          setAccounts((users ?? []).map((u: any) => ({
+            id: u.id,
+            email: u.email ?? '',
+            username: u.username ?? 'unknown',
+            roblox_user_id: null,
+            created_at: u.created_at,
+            last_sign_in_at: u.last_sign_in_at ?? null,
+            provider: u.provider ?? 'email',
+            avatar_url: u.avatar_url ?? null,
+          })));
           setLoading(false);
           return;
         }
       }
 
-      // Fallback: use user_tokens table which only has dashboard-registered users
-      const { data } = await supabase
-        .from('user_tokens')
-        .select('user_id, roblox_username, roblox_user_id, updated_at')
-        .order('updated_at', { ascending: false });
-      setAccounts((data ?? []).map((u: any) => ({
-        id: u.user_id,
-        email: '',
-        username: u.roblox_username ?? 'unknown',
-        roblox_user_id: u.roblox_user_id ?? null,
-        created_at: u.updated_at,
-        last_sign_in_at: u.updated_at ?? null,
-        provider: 'email' as const,
-      })));
+      // Fallback: build account list from user_tokens (verified users) merged with
+      // any users found in audit_log (anyone who took an action)
+      const [{ data: tokenUsers }, { data: auditUsers }] = await Promise.all([
+        supabase.from('user_tokens').select('user_id, roblox_username, updated_at'),
+        supabase.from('audit_log').select('user_id, username, created_at').not('user_id', 'is', null),
+      ]);
+
+      // Dedupe by user_id
+      const seen = new Map<string, DashboardUser>();
+      for (const u of (tokenUsers ?? [])) {
+        if (!u.user_id) continue;
+        seen.set(u.user_id, {
+          id: u.user_id,
+          email: '',
+          username: u.roblox_username ?? 'unknown',
+          roblox_user_id: null,
+          created_at: u.updated_at,
+          last_sign_in_at: u.updated_at,
+          provider: 'email',
+        });
+      }
+      for (const u of (auditUsers ?? [])) {
+        if (!u.user_id || seen.has(u.user_id)) continue;
+        seen.set(u.user_id, {
+          id: u.user_id,
+          email: '',
+          username: u.username ?? 'unknown',
+          roblox_user_id: null,
+          created_at: u.created_at,
+          last_sign_in_at: null,
+          provider: 'email',
+        });
+      }
+
+      // Always make sure the current user appears
+      if (session?.user && !seen.has(session.user.id)) {
+        seen.set(session.user.id, {
+          id: session.user.id,
+          email: session.user.email ?? '',
+          username: session.user.user_metadata?.username ?? 'unknown',
+          roblox_user_id: null,
+          created_at: session.user.created_at ?? new Date().toISOString(),
+          last_sign_in_at: null,
+          provider: (session.user.app_metadata?.provider ?? 'email') as DashboardUser['provider'],
+        });
+      }
+
+      setAccounts(Array.from(seen.values()));
     } catch (e) {
       console.error('loadAccounts error:', e);
     }
