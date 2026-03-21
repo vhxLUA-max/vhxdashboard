@@ -206,8 +206,8 @@ export function AccountManager({ onClose, onUsernameChange, onAvatarChange }: Ac
     toast.error('Account deletion requires contacting support.');
   };
 
-  const embedUrl = `https://vhxhub.app/api/embed/user/${username}?theme=${embedTheme}`;
-  const embedCode = `<a href="https://vhxhub.app/user/${username}" target="_blank"><img alt="${username} on vhx hub" loading="lazy" width="360" height="132" src="${embedUrl}" /></a>`;
+  const embedUrl = `https://vhxdashboard.vercel.app/api/embed/user/${username}?theme=${embedTheme}`;
+  const embedCode = `<a href="https://vhxdashboard.vercel.app/user/${username}" target="_blank"><img alt="${username} on vhxLUA Hub" loading="lazy" width="360" height="132" src="${embedUrl}" /></a>`;
 
   const s = { borderColor: 'var(--color-border)', backgroundColor: 'var(--color-surface)' };
 

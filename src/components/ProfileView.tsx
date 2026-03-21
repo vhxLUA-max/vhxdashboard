@@ -149,6 +149,9 @@ export function ProfileView({ username, avatarUrl, isAdmin, isLoggedIn, onEditPr
             style={{ background: 'rgba(255,255,255,0.06)', color: '#94a3b8', border: '1px solid rgba(255,255,255,0.08)', letterSpacing: '-0.01em' }}>
             <Pencil className="w-3 h-3" /> Edit Profile
           </button>
+          {bio && (
+            <p className="text-[11px] mt-2 leading-relaxed line-clamp-2" style={{ color: 'rgba(148,163,184,0.7)' }}>{bio}</p>
+          )}
         </div>
       </div>
     );
