@@ -57,7 +57,6 @@ export function AccountManager({ onClose, onUsernameChange, onAvatarChange }: Ac
   const [avatarUrl, setAvatarUrl]     = useState<string | null>(null);
   const [bannerUrl, setBannerUrl]     = useState<string | null>(null);
   const [bio, setBio]                 = useState('');
-  const [socials, setSocials]         = useState<UserSocials>({});
   const [currentEmail, setCurrentEmail] = useState('');
   const [emailInput, setEmailInput]   = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
@@ -69,13 +68,11 @@ export function AccountManager({ onClose, onUsernameChange, onAvatarChange }: Ac
   const [savingEmail, setSavingEmail] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
   const [savingBio, setSavingBio]     = useState(false);
-  const [socials, setSocials]         = useState<Record<string, string>>({});
+  const [socials, setSocials]         = useState<UserSocials>({});
   const [savingSocials, setSavingSocials] = useState(false);
   const [embedTheme, setEmbedTheme]   = useState<'dark' | 'light'>('dark');
-  const [savingSocials, setSavingSocials] = useState(false);
   const [pwError, setPwError]         = useState('');
   const [subscriptionTier, setSubscriptionTier] = useState('Free');
-  const [embedTheme, setEmbedTheme]   = useState<'dark' | 'light'>('dark');
   const fileRef   = useRef<HTMLInputElement>(null);
   const bannerRef = useRef<HTMLInputElement>(null);
 
@@ -87,7 +84,6 @@ export function AccountManager({ onClose, onUsernameChange, onAvatarChange }: Ac
       setAvatarUrl(user.user_metadata?.avatar_url ?? null);
       setBannerUrl(user.user_metadata?.banner_url ?? null);
       setBio(user.user_metadata?.bio ?? '');
-      setSocials(user.user_metadata?.socials ?? {});
       setSocials(user.user_metadata?.socials ?? {});
       setSubscriptionTier(user.user_metadata?.subscription_tier ?? 'Free');
       const email = user.email ?? '';
@@ -162,15 +158,6 @@ export function AccountManager({ onClose, onUsernameChange, onAvatarChange }: Ac
     setSavingBio(false);
     if (error) { toast.error(error.message); return; }
     toast.success('Bio updated!');
-  };
-
-  const handleSaveSocials = async () => {
-    setSavingSocials(true);
-    const cleaned = Object.fromEntries(Object.entries(socials).filter(([, v]) => v.trim()));
-    const { error } = await supabase.auth.updateUser({ data: { socials: cleaned } });
-    setSavingSocials(false);
-    if (error) { toast.error(error.message); return; }
-    toast.success('Social links saved!');
   };
 
   const handleSaveSocials = async () => {

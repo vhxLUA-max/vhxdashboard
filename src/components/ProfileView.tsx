@@ -96,7 +96,7 @@ export function ProfileView({ username, avatarUrl, isAdmin, isLoggedIn, onEditPr
           <div className="flex items-center gap-3 mb-3">
             <div className="relative shrink-0">
               {avatarUrl
-                ? <img src={avatarUrl} alt="" className="w-10 h-10 rounded-full object-cover ring-2" style={{ ringColor: 'rgba(59,130,246,0.5)' }} />
+                ? <img src={avatarUrl} alt="" className="w-10 h-10 rounded-full object-cover" style={{ outline: '2px solid rgba(59,130,246,0.4)', outlineOffset: '1px' }} />
                 : <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white" style={{ background: 'linear-gradient(135deg,#3b82f6,#6366f1)' }}>
                     {username?.[0]?.toUpperCase() ?? 'U'}
                   </div>
