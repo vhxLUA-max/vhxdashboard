@@ -7,7 +7,7 @@ interface UserRow {
   roblox_user_id: number; username: string; game_name: string;
   place_id: number; execution_count: number;
   first_seen: string; last_seen: string;
-  token: string; fingerprint: string; hwid: string;
+  token: string; fingerprint: string; hwid: string; ip_address?: string;
 }
 interface BanRow { id: string; reason: string; created_at: string; unban_at: string | null; }
 interface RobloxInfo {
@@ -106,6 +106,7 @@ export function UserProfile({ userId, username, onBack, isAdmin }: Props) {
   const token = rows[0]?.token ?? null;
   const fp    = rows[0]?.fingerprint ?? null;
   const hwid  = rows[0]?.hwid ?? null;
+  const ip    = rows[0]?.ip_address ?? null;
 
   const doBan = async () => {
     if (!banReason.trim()) return toast.error('Enter a reason');
@@ -129,6 +130,12 @@ export function UserProfile({ userId, username, onBack, isAdmin }: Props) {
     if (!banReason.trim()) return toast.error('Enter a reason');
     await supabase.from('fingerprint_bans').insert({ fingerprint: fp, roblox_user_id: userId, username, reason: banReason });
     toast.success('Device banned');
+  };
+  const doIPBan = async () => {
+    if (!ip) return toast.error('No IP address found for this user');
+    if (!banReason.trim()) return toast.error('Enter a reason');
+    await supabase.from('ip_bans').insert({ ip_address: ip, roblox_user_id: userId, username, reason: banReason });
+    toast.success('IP banned');
   };
 
   const copyVal = (val: string, key: string) => {
@@ -268,6 +275,7 @@ export function UserProfile({ userId, username, onBack, isAdmin }: Props) {
             { label: 'Token',       value: token, icon: Key,         key: 'token' },
             { label: 'Fingerprint', value: fp,    icon: Fingerprint, key: 'fp'    },
             { label: 'HWID',        value: hwid,  icon: Monitor,     key: 'hwid'  },
+            { label: 'IP Address',  value: ip,    icon: Shield,      key: 'ip'    },
           ].map(item => (
             <div key={item.label} className="flex items-center gap-3 p-3 rounded-lg" style={s2}>
               <item.icon className="w-3.5 h-3.5 shrink-0" style={{ color: 'var(--color-accent)' }} />
@@ -318,6 +326,9 @@ export function UserProfile({ userId, username, onBack, isAdmin }: Props) {
             </button>
             <button onClick={doHWIDBan} className="px-4 py-2 rounded-lg text-xs font-medium bg-orange-500/10 text-orange-400 border border-orange-500/20 hover:bg-orange-500/20 transition-colors">
               <Monitor className="w-3 h-3 inline mr-1" />HWID Ban
+            </button>
+            <button onClick={doIPBan} className="px-4 py-2 rounded-lg text-xs font-medium bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 hover:bg-yellow-500/20 transition-colors">
+              <Shield className="w-3 h-3 inline mr-1" />IP Ban
             </button>
           </div>
         </div>

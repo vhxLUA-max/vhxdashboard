@@ -275,6 +275,27 @@ export function AdminPanel() {
     setLoading(false);
   }, []);
 
+  // Auto-reload accounts when auth changes and subscribe to user_tokens for new registrations
+  useEffect(() => {
+    if (tab !== 'accounts') return;
+    const ch = supabase
+      .channel('admin-accounts-rt')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'user_tokens' }, loadAccounts)
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [tab, loadAccounts]);
+
+  // Realtime: refresh bans tab and script users whenever banned_users changes
+  useEffect(() => {
+    const ch = supabase.channel('admin-bans-rt')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'banned_users' }, () => {
+        loadBans();
+        loadScriptUsers();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [loadBans, loadScriptUsers]);
+
   useEffect(() => {
     if (!isAdmin) return;
     if (tab === 'accounts')      loadAccounts();
@@ -317,6 +338,14 @@ export function AdminPanel() {
     setEditingToken(null);
     setNewTokenVal('');
     loadTokens();
+  };
+
+  const quickUnban = async (robloxUserId: number, username: string) => {
+    await supabase.from('banned_users').delete().eq('roblox_user_id', robloxUserId);
+    await logAction('unban_user', { username });
+    toast.success(`@${username} unbanned`);
+    loadScriptUsers();
+    loadBans();
   };
 
   const banUser = async () => {
@@ -617,6 +646,14 @@ export function AdminPanel() {
                       style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)', color: 'var(--color-accent)' }}>
                       {u.token}
                     </code>
+                  )}
+                  {u.banned && (
+                    <button
+                      onClick={e => { e.stopPropagation(); quickUnban(u.roblox_user_id, u.username); }}
+                      className="text-[10px] px-2 py-1 rounded-lg border shrink-0 transition-colors hover:bg-emerald-500/20"
+                      style={{ borderColor: 'rgba(16,185,129,0.3)', color: '#10b981' }}>
+                      Unban
+                    </button>
                   )}
                 </div>
               </button>
