@@ -1,4 +1,4 @@
-<a href="https://vhxhub.app/user/vhxlua-max" target="_blank"><img alt="vhxlua-max on vhx hub" loading="lazy" width="360" height="132" src="https://vhxhub.app/api/embed/user/vhxlua-max?theme=dark" /></a>
+<a href="https://vhxdashboard.vercel.app/user/vhxlua-max" target="_blank"><img alt="vhxlua-max on vhxLUA Hub" loading="lazy" width="360" height="132" src="https://vhxdashboard.vercel.app/api/embed/user/vhxlua-max?theme=dark" /></a>
 
 
 
