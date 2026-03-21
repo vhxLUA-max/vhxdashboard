@@ -368,21 +368,16 @@ function App() {
       {showLogin && <LoginModal onSuccess={() => { setShowLogin(false); toast.success('Signed in'); }} onClose={() => setShowLogin(false)} />}
 
       {showProfile && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center lg:items-center p-0 lg:p-4">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowProfile(false)} />
-          <div className="relative w-full lg:max-w-sm rounded-t-2xl lg:rounded-2xl overflow-hidden shadow-2xl" style={{ backgroundColor: 'var(--color-bg, #09090b)' }} onClick={e => e.stopPropagation()}>
-            <div className="flex justify-center pt-3 pb-1 lg:hidden">
-              <div className="w-10 h-1 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.15)' }} />
-            </div>
-            <div className="p-4">
-              <ProfileView
-                username={adminUsername}
-                avatarUrl={avatarUrl}
-                isAdmin={isAdmin}
-                isLoggedIn={isLoggedIn}
-                onEditProfile={() => { setShowProfile(false); setShowAccount(true); }}
-              />
-            </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setShowProfile(false)} />
+          <div className="relative w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl" style={{ backgroundColor: '#09090b', border: '1px solid rgba(255,255,255,0.08)' }} onClick={e => e.stopPropagation()}>
+            <ProfileView
+              username={adminUsername}
+              avatarUrl={avatarUrl}
+              isAdmin={isAdmin}
+              isLoggedIn={isLoggedIn}
+              onEditProfile={() => { setShowProfile(false); setShowAccount(true); }}
+            />
           </div>
         </div>
       )}
