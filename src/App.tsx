@@ -16,7 +16,7 @@ import { RatingsPanel } from '@/components/RatingsPanel';
 import { ExecutionRateBadge } from '@/components/ExecutionRateBadge';
 import { AnnouncementBanner } from '@/components/AnnouncementBanner';
 import { LiveToastFeed } from '@/components/LiveToastFeed';
-import { Activity, Users, Clock, RefreshCw, BarChart3, Gamepad2, Search, Webhook, Key, ShieldCheck, Megaphone, Code, Loader2, Palette, Shield, MessageSquare } from 'lucide-react';
+import { Activity, Users, Clock, RefreshCw, BarChart3, Gamepad2, Search, Webhook, Key, ShieldCheck, Megaphone, Code, Loader2, Palette, Shield, MessageSquare, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LoginModal } from '@/components/LoginModal';
 import { logout } from '@/lib/auth';
@@ -36,6 +36,7 @@ const ChangelogTab   = lazy(() => import('@/components/ChangelogTab').then(m => 
 import { AdminPanel } from '@/components/AdminPanel';
 const FeedbackTab    = lazy(() => import('@/components/FeedbackTab').then(m => ({ default: m.FeedbackTab })));
 const SocialsTab     = lazy(() => import('@/components/SocialsTab').then(m => ({ default: m.SocialsTab })));
+const PrivacyPolicy  = lazy(() => import('@/components/PrivacyPolicy').then(m => ({ default: m.PrivacyPolicy })));
 import { SiteSearch } from '@/components/SiteSearch';
 
 function timeAgo(iso: string): string {
@@ -174,7 +175,7 @@ async function checkIsAdmin(userId: string, username: string | null): Promise<bo
   return ADMIN_USERNAMES.includes(username?.toLowerCase() ?? '');
 }
 
-type SidebarTab = 'stats' | 'search' | 'webhook' | 'token' | 'scripts' | 'themes' | 'feedback' | 'status' | 'changelog' | 'admin' | 'socials';
+type SidebarTab = 'stats' | 'search' | 'webhook' | 'token' | 'scripts' | 'themes' | 'feedback' | 'status' | 'changelog' | 'admin' | 'socials' | 'privacy';
 
 const TABS = [
   { id: 'stats',     label: 'Stats',     icon: BarChart3     },
@@ -188,6 +189,7 @@ const TABS = [
   { id: 'feedback',  label: 'Feedback',  icon: MessageSquare },
   { id: 'status',    label: 'Status',    icon: ShieldCheck   },
   { id: 'admin',     label: 'Admin',     icon: Shield        },
+  { id: 'privacy',   label: 'Privacy',   icon: FileText      },
 ] as const;
 
 const TabFallback = () => (
@@ -242,21 +244,46 @@ function App() {
   }, [visibleTabs, switchTab]);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    const resolveUsername = async (user: import('@supabase/supabase-js').User): Promise<string | null> => {
+      // Use stored username first
+      let u = user.user_metadata?.username as string | null ?? null;
+      if (u) return u;
+      // For Google/Discord OAuth — derive from name or email
+      const fullName = user.user_metadata?.full_name ?? user.user_metadata?.name ?? null;
+      const email = user.email ?? null;
+      if (fullName) {
+        u = (fullName as string).toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20);
+      } else if (email) {
+        u = email.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20);
+      }
+      if (u) {
+        // Save derived username back to metadata so it persists
+        await supabase.auth.updateUser({ data: { username: u } });
+      }
+      return u;
+    };
+
+    const resolveAvatar = (user: import('@supabase/supabase-js').User): string | null =>
+      user.user_metadata?.avatar_url ?? user.user_metadata?.picture ?? null;
+
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session) return;
-      const u = session.user?.user_metadata?.username ?? null;
+      const u = await resolveUsername(session.user);
       setAdminUsername(u);
-      setAvatarUrl(session.user?.user_metadata?.avatar_url ?? null);
+      setAvatarUrl(resolveAvatar(session.user));
       setIsLoggedIn(true);
       checkIsAdmin(session.user.id, u).then(setIsAdmin);
     });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
-      const u = session?.user?.user_metadata?.username ?? null;
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_, session) => {
+      if (!session?.user) {
+        setAdminUsername(null); setAvatarUrl(null);
+        setIsLoggedIn(false); setIsAdmin(false); return;
+      }
+      const u = await resolveUsername(session.user);
       setAdminUsername(u);
-      setAvatarUrl(session?.user?.user_metadata?.avatar_url ?? null);
-      setIsLoggedIn(!!session?.user);
-      if (session?.user) checkIsAdmin(session.user.id, u).then(setIsAdmin);
-      else setIsAdmin(false);
+      setAvatarUrl(resolveAvatar(session.user));
+      setIsLoggedIn(true);
+      checkIsAdmin(session.user.id, u).then(setIsAdmin);
     });
     if (new URLSearchParams(window.location.search).get('reset') === 'true')
       window.history.replaceState({}, '', window.location.pathname);
@@ -713,6 +740,7 @@ function App() {
                     {activeTab === 'status'    && <StatusTab />}
                     {activeTab === 'changelog' && <ChangelogTab />}
                     {activeTab === 'socials'   && <SocialsTab />}
+                    {activeTab === 'privacy'   && <PrivacyPolicy />}
                   </div>
                 </Suspense>
                 <div style={{ display: activeTab === 'admin' ? 'block' : 'none' }}>

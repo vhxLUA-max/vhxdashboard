@@ -226,6 +226,9 @@ export function LoginModal({ onSuccess, onClose }: LoginModalProps) {
               : mode === 'login' ? 'Sign In' : 'Create Account'
             }
           </Button>
+          <p className="text-center text-[10px] pt-1" style={{ color: 'rgba(160,160,175,0.5)' }}>
+            By signing in you agree to our Privacy Policy
+          </p>
         </div>
       </div>
     </div>
