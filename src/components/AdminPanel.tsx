@@ -227,8 +227,6 @@ export function AdminPanel() {
     loadBans();
   };
 
-  const ANNOUNCE_WEBHOOK = 'https://discord.com/api/webhooks/1475666913307918469/gpdq8YFcBTBekkaerhxfSOJy-qjhAKt5-DFyNecmcTNl6u0pc--uuBY7-iWOqhacCgox';
-
   // Parse JSON input into Discord embed fields
   const parseJsonInput = (raw: string) => {
     try {
@@ -287,11 +285,16 @@ export function AdminPanel() {
     await logAction('post_announcement', { message: displayMsg, type: newType });
 
     if (embed) {
-      await fetch(ANNOUNCE_WEBHOOK, {
+      const r = await fetch('/api/announce', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: 'vhxLUA', embeds: [embed] }),
-      }).catch(() => {});
+        body: JSON.stringify({ embed }),
+      });
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        toast.error('Discord send failed: ' + (err.error ?? r.status));
+        return;
+      }
     }
 
     toast.success('Announcement posted and sent to Discord');
