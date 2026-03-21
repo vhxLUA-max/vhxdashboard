@@ -224,6 +224,7 @@ function App() {
     return true;
   });
 
+  const [showDrawer, setShowDrawer] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
 
   useEffect(() => {
@@ -320,7 +321,7 @@ function App() {
               <Users className="w-5 h-5" />
             </button>
           )}
-          <button onClick={() => setShowShortcuts(true)}
+          <button onClick={() => setShowDrawer(true)}
             className="w-9 h-9 flex items-center justify-center rounded-full transition-colors"
             style={{ color: 'var(--color-muted)' }}>
             <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
@@ -431,10 +432,133 @@ function App() {
                     <kbd className="px-2 py-0.5 rounded border text-[10px] font-mono" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text)', backgroundColor: 'var(--color-surface2)' }}>{i + 1}</kbd>
                   </div>
                 ))}
-                <div className="flex items-center justify-between pt-2 border-t" style={{ borderColor: 'var(--color-border)' }}>
-                  <span className="text-xs" style={{ color: 'var(--color-muted)' }}>Toggle shortcuts</span>
-                  <kbd className="px-2 py-0.5 rounded border text-[10px] font-mono" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text)', backgroundColor: 'var(--color-surface2)' }}>?</kbd>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Mobile drawer (hamburger menu) ────────────────────────────── */}
+        {showDrawer && (
+          <div className="lg:hidden fixed inset-0 z-50" onClick={() => setShowDrawer(false)}>
+            {/* Backdrop */}
+            <div className="absolute inset-0 bg-black/70" />
+            {/* Sheet slides up from bottom */}
+            <div className="absolute bottom-0 left-0 right-0 rounded-t-2xl overflow-hidden flex flex-col max-h-[88vh]"
+              style={{ backgroundColor: '#111113' }}
+              onClick={e => e.stopPropagation()}>
+
+              {/* Drag handle */}
+              <div className="flex justify-center pt-3 pb-1 shrink-0">
+                <div className="w-10 h-1 rounded-full" style={{ backgroundColor: 'rgba(255,255,255,0.15)' }} />
+              </div>
+
+              {/* Sheet header */}
+              <div className="flex items-center justify-between px-5 py-3 shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl flex items-center justify-center text-sm font-black text-white"
+                    style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)' }}>V</div>
+                  <span className="text-base font-bold" style={{ color: 'var(--color-text)' }}>vhxLUA</span>
                 </div>
+                <button onClick={() => setShowDrawer(false)}
+                  className="w-8 h-8 flex items-center justify-center rounded-full text-lg"
+                  style={{ color: 'var(--color-muted)', backgroundColor: 'rgba(255,255,255,0.06)' }}>✕</button>
+              </div>
+
+              {/* Scrollable content */}
+              <div className="overflow-y-auto flex-1 px-4 pb-6">
+
+                {/* Profile card (logged in) */}
+                {isLoggedIn && (
+                  <div className="rounded-xl p-4 mb-4" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
+                    <div className="flex items-center gap-3 mb-3">
+                      {avatarUrl
+                        ? <img src={avatarUrl} alt="" className="w-12 h-12 rounded-full object-cover border-2" style={{ borderColor: 'var(--color-accent)' }} />
+                        : <div className="w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold text-white border-2"
+                            style={{ backgroundColor: 'var(--color-accent)', borderColor: 'var(--color-accent)' }}>
+                            {adminUsername?.[0]?.toUpperCase() ?? 'U'}
+                          </div>
+                      }
+                      <div>
+                        <p className="text-sm font-bold" style={{ color: 'var(--color-text)' }}>{adminUsername ?? 'User'}</p>
+                        <p className="text-xs mt-0.5" style={{ color: 'var(--color-muted)' }}>vhxLUA member</p>
+                      </div>
+                    </div>
+                    <button onClick={() => { setShowDrawer(false); setShowAccount(true); }}
+                      className="w-full py-2.5 rounded-xl text-sm font-semibold text-center border transition-colors"
+                      style={{ borderColor: 'rgba(255,255,255,0.15)', color: 'var(--color-text)', backgroundColor: 'rgba(255,255,255,0.04)' }}>
+                      View Profile
+                    </button>
+                  </div>
+                )}
+
+                {/* Not logged in CTA */}
+                {!isLoggedIn && (
+                  <div className="rounded-xl p-4 mb-4 text-center" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
+                    <p className="text-sm font-semibold mb-1" style={{ color: 'var(--color-text)' }}>Welcome to vhxLUA</p>
+                    <p className="text-xs mb-3" style={{ color: 'var(--color-muted)' }}>Sign in to unlock all features</p>
+                    <button onClick={() => { setShowDrawer(false); setShowLogin(true); }}
+                      className="w-full py-2.5 rounded-xl text-sm font-semibold text-white"
+                      style={{ backgroundColor: 'var(--color-accent)' }}>
+                      Log in / Sign up
+                    </button>
+                  </div>
+                )}
+
+                {/* NAVIGATE section */}
+                <p className="text-[10px] font-semibold tracking-widest mb-2 px-1" style={{ color: 'var(--color-muted)' }}>NAVIGATE</p>
+                <div className="rounded-xl overflow-hidden mb-4" style={{ backgroundColor: 'rgba(255,255,255,0.04)' }}>
+                  {visibleTabs.map((tab, i) => (
+                    <button key={tab.id} onClick={() => { switchTab(tab.id); setShowDrawer(false); }}
+                      className="w-full flex items-center gap-4 px-4 py-4 transition-colors text-left"
+                      style={{
+                        backgroundColor: activeTab === tab.id ? 'rgba(99,102,241,0.12)' : 'transparent',
+                        color: activeTab === tab.id
+                          ? tab.id === 'admin' ? '#f87171' : 'var(--color-accent)'
+                          : 'var(--color-text)',
+                        borderBottom: i < visibleTabs.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none',
+                      }}>
+                      <tab.icon className="w-5 h-5 shrink-0" style={{ color: activeTab === tab.id ? (tab.id === 'admin' ? '#f87171' : 'var(--color-accent)') : 'var(--color-muted)' }} />
+                      <span className="text-sm font-medium">{tab.label}</span>
+                      {activeTab === tab.id && <span className="ml-auto w-1.5 h-1.5 rounded-full" style={{ backgroundColor: tab.id === 'admin' ? '#f87171' : 'var(--color-accent)' }} />}
+                    </button>
+                  ))}
+                </div>
+
+                {/* COMMUNITY section */}
+                <p className="text-[10px] font-semibold tracking-widest mb-2 px-1" style={{ color: 'var(--color-muted)' }}>COMMUNITY</p>
+                <div className="rounded-xl overflow-hidden mb-6" style={{ backgroundColor: 'rgba(255,255,255,0.04)' }}>
+                  {[
+                    { label: 'Discord Server', url: 'https://discord.gg/AuQqvrJE79', icon: '💬' },
+                    { label: 'TikTok', url: 'https://tiktok.com/@vhxlua', icon: '🎵' },
+                    { label: 'YouTube', url: 'https://youtube.com/@vhxLUA', icon: '▶' },
+                  ].map((item, i, arr) => (
+                    <a key={item.label} href={item.url} target="_blank" rel="noopener noreferrer"
+                      className="w-full flex items-center gap-4 px-4 py-4 transition-colors"
+                      style={{
+                        color: 'var(--color-text)',
+                        borderBottom: i < arr.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none',
+                        textDecoration: 'none',
+                      }}>
+                      <span className="w-5 h-5 flex items-center justify-center text-sm">{item.icon}</span>
+                      <span className="text-sm font-medium flex-1">{item.label}</span>
+                      <svg className="w-4 h-4 shrink-0" style={{ color: 'var(--color-muted)' }} fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                      </svg>
+                    </a>
+                  ))}
+                </div>
+
+                {/* Log out */}
+                {isLoggedIn && (
+                  <button onClick={async () => { await logout(); setAdminUsername(null); setAvatarUrl(null); setIsAdmin(false); setIsLoggedIn(false); setShowDrawer(false); toast.success('Signed out'); }}
+                    className="flex items-center gap-3 px-1 py-2 transition-colors"
+                    style={{ color: '#ef4444' }}>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                    <span className="text-sm font-semibold">Log Out</span>
+                  </button>
+                )}
               </div>
             </div>
           </div>
