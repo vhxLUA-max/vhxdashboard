@@ -544,6 +544,9 @@ export function AdminPanel() {
 
 
       {!loading && tab === 'users' && (() => {
+        if (profileUser) {
+          return <UserProfile userId={profileUser.userId} username={profileUser.username} onBack={() => setProfileUser(null)} isAdmin={true} />;
+        }
         const filtered = userSearch
           ? scriptUsers.filter(u => u.username?.toLowerCase().includes(userSearch.toLowerCase()))
           : scriptUsers;
@@ -558,10 +561,13 @@ export function AdminPanel() {
                 className="flex-1 rounded-lg px-3 py-2 text-xs border outline-none"
                 style={{ backgroundColor: 'var(--color-surface2)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }}
               />
-              <p className="text-xs shrink-0" style={{ color: 'var(--color-muted)' }}>{filtered.length} users</p>
+              <p className="text-xs shrink-0" style={{ color: 'var(--color-muted)' }}>{filtered.length} unique users</p>
             </div>
             {paged.map((u, i) => (
-              <div key={`${u.roblox_user_id}-${i}`} className="p-3 rounded-lg border"
+              <button
+                key={`${u.roblox_user_id}-${i}`}
+                onClick={() => setProfileUser({ userId: u.roblox_user_id, username: u.username })}
+                className="w-full text-left p-3 rounded-lg border transition-all hover:opacity-80"
                 style={{ borderColor: u.banned ? 'rgba(239,68,68,0.3)' : 'var(--color-border)', backgroundColor: u.banned ? 'rgba(239,68,68,0.05)' : 'var(--color-surface2)' }}>
                 <div className="flex items-center gap-3">
                   <img
@@ -602,7 +608,7 @@ export function AdminPanel() {
                     </code>
                   )}
                 </div>
-              </div>
+              </button>
             ))}
             {paged.length === 0 && <p className="text-center text-xs py-6" style={{ color: 'var(--color-muted)' }}>No users found</p>}
             <Pagination page={userPage} total={Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))} onChange={setUserPage} />
