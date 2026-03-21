@@ -57,6 +57,40 @@ export async function loginWithDiscord(): Promise<{ success: boolean; error?: st
   return { success: true };
 }
 
+export async function sendVerificationOTP(email: string): Promise<{ success: boolean; error?: string }> {
+  const { error } = await supabase.auth.signInWithOtp({
+    email: email.trim().toLowerCase(),
+    options: { shouldCreateUser: false },
+  });
+  // Supabase returns error if email not found — treat as success to avoid enumeration
+  if (error && !error.message.toLowerCase().includes('not found') && !error.message.toLowerCase().includes('rate')) {
+    return { success: false, error: error.message };
+  }
+  return { success: true };
+}
+
+export async function verifyOTPAndResetPassword(
+  email: string,
+  token: string,
+  newPassword: string
+): Promise<{ success: boolean; error?: string }> {
+  const { error: verifyErr } = await supabase.auth.verifyOtp({
+    email: email.trim().toLowerCase(),
+    token,
+    type: 'email',
+  });
+  if (verifyErr) return { success: false, error: 'Invalid or expired code.' };
+  const { error: pwErr } = await supabase.auth.updateUser({ password: newPassword });
+  if (pwErr) return { success: false, error: pwErr.message };
+  return { success: true };
+}
+
+export async function updateUserEmail(email: string): Promise<{ success: boolean; error?: string }> {
+  const { error } = await supabase.auth.updateUser({ email: email.trim().toLowerCase() });
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
 export async function logout() {
   await supabase.auth.signOut();
 }
