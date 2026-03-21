@@ -132,6 +132,7 @@ export function AdminPanel() {
   const [roles, setRoles]         = useState<RoleEntry[]>([]);
   
   const [promotingUser, setPromotingUser] = useState('');
+  const [selectedAccount, setSelectedAccount] = useState<DashboardUser | null>(null);
 
 
   const [accounts, setAccounts]   = useState<DashboardUser[]>([]);
@@ -550,86 +551,139 @@ export function AdminPanel() {
       {loading && <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin" style={{ color: 'var(--color-muted)' }} /></div>}
 
 
-      {/* ── Dashboard Accounts (users registered on the web dashboard) ── */}
-      {!loading && tab === 'accounts' && (
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <p className="text-xs" style={{ color: 'var(--color-muted)' }}>{accounts.length} dashboard accounts</p>
-            <p className="text-[10px] px-2 py-0.5 rounded-full border" style={{ borderColor: 'var(--color-border)', color: 'var(--color-muted)' }}>
-              Users registered on this dashboard — not Roblox accounts
-            </p>
-          </div>
-          {accounts.slice((acctPage - 1) * PAGE_SIZE, acctPage * PAGE_SIZE).map(a => {
-            const userRole = roles.find(r => r.user_id === a.id);
-            return (
-              <div key={a.id} className="flex items-center gap-3 p-3 rounded-lg border" style={s2}>
-                <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 font-bold text-sm"
-                  style={{ backgroundColor: 'color-mix(in srgb, var(--color-accent) 15%, transparent)', color: 'var(--color-accent)' }}>
+      {/* ── Dashboard Accounts ── */}
+      {!loading && tab === 'accounts' && (() => {
+        // Detail view for a selected account
+        if (selectedAccount) {
+          const a = selectedAccount;
+          const userRole = roles.find(r => r.user_id === a.id);
+          return (
+            <div className="space-y-4">
+              <button onClick={() => setSelectedAccount(null)} className="flex items-center gap-2 text-sm hover:opacity-80 transition-opacity" style={{ color: 'var(--color-muted)' }}>
+                <span>←</span> Back to accounts
+              </button>
+
+              {/* Profile card */}
+              <div className="rounded-xl border p-5 flex items-center gap-5" style={s}>
+                <div className="w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold shrink-0"
+                  style={{ backgroundColor: 'color-mix(in srgb, var(--color-accent) 20%, transparent)', color: 'var(--color-accent)', border: '2px solid var(--color-accent)' }}>
                   {(a.username[0] ?? '?').toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <p className="text-sm font-medium truncate" style={{ color: 'var(--color-text)' }}>@{a.username}</p>
-                    {/* Role badge */}
-                    {userRole?.role === 'founder' && (
-                      <span className="flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ backgroundColor: 'rgba(234,179,8,0.15)', color: '#eab308', border: '1px solid rgba(234,179,8,0.3)' }}>
-                        <Crown className="w-2.5 h-2.5" /> Founder
-                      </span>
-                    )}
-                    {userRole?.role === 'admin' && (
-                      <span className="flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ backgroundColor: 'rgba(239,68,68,0.12)', color: '#f87171', border: '1px solid rgba(239,68,68,0.25)' }}>
-                        <Shield className="w-2.5 h-2.5" /> Admin
-                      </span>
-                    )}
-                    {userRole?.role === 'moderator' && (
-                      <span className="flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ backgroundColor: 'rgba(99,102,241,0.12)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.25)' }}>
-                        <ShieldCheck className="w-2.5 h-2.5" /> Moderator
-                      </span>
-                    )}
-                    {/* Provider icon */}
-                    {a.provider === 'google' && (
-                      <span title="Google"><svg viewBox="0 0 24 24" className="w-3.5 h-3.5 shrink-0"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg></span>
-                    )}
-                    {a.provider === 'discord' && (
-                      <span title="Discord"><svg viewBox="0 0 24 24" fill="#5865F2" className="w-3.5 h-3.5 shrink-0"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/></svg></span>
-                    )}
-                    {a.provider === 'email' && (
-                      <span title="Email/Password" className="text-[9px] px-1 py-0.5 rounded" style={{ backgroundColor: 'rgba(99,102,241,0.12)', color: '#818cf8' }}>pw</span>
-                    )}
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    <h2 className="text-lg font-bold" style={{ color: 'var(--color-text)' }}>@{a.username}</h2>
+                    {userRole?.role === 'founder' && <span className="flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ backgroundColor: 'rgba(234,179,8,0.15)', color: '#eab308', border: '1px solid rgba(234,179,8,0.3)' }}><Crown className="w-2.5 h-2.5" /> Founder</span>}
+                    {userRole?.role === 'admin' && <span className="flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ backgroundColor: 'rgba(239,68,68,0.12)', color: '#f87171', border: '1px solid rgba(239,68,68,0.25)' }}><Shield className="w-2.5 h-2.5" /> Admin</span>}
+                    {userRole?.role === 'moderator' && <span className="flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ backgroundColor: 'rgba(99,102,241,0.12)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.25)' }}><ShieldCheck className="w-2.5 h-2.5" /> Moderator</span>}
                   </div>
-                  <p className="text-[10px]" style={{ color: 'var(--color-muted)' }}>
-                    joined {timeAgo(a.created_at)}
-                  </p>
-                </div>
-                <div className="text-right shrink-0">
-                  <p className="text-[10px]" style={{ color: 'var(--color-muted)' }}>
-                    {a.last_sign_in_at ? `last seen ${timeAgo(a.last_sign_in_at)}` : 'never signed in'}
-                  </p>
-                  {myRole === 'founder' && !userRole && (
-                    <div className="flex gap-1 mt-1">
-                      <button onClick={() => promoteUser(a.id, a.username, 'admin')}
-                        className="text-[9px] px-1.5 py-0.5 rounded border transition-colors hover:opacity-80"
-                        style={{ borderColor: 'rgba(239,68,68,0.3)', color: '#f87171' }}>+ Admin</button>
-                      <button onClick={() => promoteUser(a.id, a.username, 'moderator')}
-                        className="text-[9px] px-1.5 py-0.5 rounded border transition-colors hover:opacity-80"
-                        style={{ borderColor: 'rgba(99,102,241,0.3)', color: '#818cf8' }}>+ Mod</button>
-                    </div>
-                  )}
-                  {myRole === 'founder' && userRole && userRole.role !== 'founder' && (
-                    <button onClick={() => removeRole(userRole)}
-                      className="text-[9px] px-1.5 py-0.5 rounded border mt-1 transition-colors hover:opacity-80"
-                      style={{ borderColor: 'var(--color-border)', color: 'var(--color-muted)' }}>Remove role</button>
-                  )}
+                  <p className="text-xs" style={{ color: 'var(--color-muted)' }}>{a.email || 'No email'}</p>
                 </div>
               </div>
-            );
-          })}
-          {accounts.length === 0 && (
-            <p className="text-center text-xs py-8" style={{ color: 'var(--color-muted)' }}>No dashboard accounts yet</p>
-          )}
-          <Pagination page={acctPage} total={Math.max(1, Math.ceil(accounts.length / PAGE_SIZE))} onChange={setAcctPage} />
-        </div>
-      )}
+
+              {/* Info grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {[
+                  { label: 'Joined', value: timeAgo(a.created_at) },
+                  { label: 'Last Seen', value: a.last_sign_in_at ? timeAgo(a.last_sign_in_at) : 'Never' },
+                  { label: 'Login Method', value: a.provider === 'google' ? 'Google' : a.provider === 'discord' ? 'Discord' : 'Email/Password' },
+                ].map(item => (
+                  <div key={item.label} className="rounded-xl border p-3" style={s2}>
+                    <p className="text-[10px] mb-1" style={{ color: 'var(--color-muted)' }}>{item.label}</p>
+                    <p className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>{item.value}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Role actions — founder only */}
+              {myRole === 'founder' && (
+                <div className="rounded-xl border p-4 space-y-3" style={s}>
+                  <h3 className="text-sm font-semibold flex items-center gap-2" style={{ color: 'var(--color-text)' }}>
+                    <Crown className="w-4 h-4 text-yellow-400" /> Role Management
+                  </h3>
+                  {userRole && userRole.role !== 'founder' ? (
+                    <div className="space-y-2">
+                      <p className="text-xs" style={{ color: 'var(--color-muted)' }}>Current role: <strong style={{ color: 'var(--color-text)' }}>{userRole.role}</strong></p>
+                      <div className="flex gap-2 flex-wrap">
+                        {userRole.role !== 'admin' && (
+                          <button onClick={() => promoteUser(a.id, a.username, 'admin')}
+                            className="px-3 py-1.5 rounded-lg text-xs font-semibold border-0"
+                            style={{ backgroundColor: 'rgba(239,68,68,0.12)', color: '#f87171', border: '1px solid rgba(239,68,68,0.25)' }}>
+                            <Shield className="w-3 h-3 inline mr-1" />Promote to Admin
+                          </button>
+                        )}
+                        {userRole.role !== 'moderator' && (
+                          <button onClick={() => promoteUser(a.id, a.username, 'moderator')}
+                            className="px-3 py-1.5 rounded-lg text-xs font-semibold"
+                            style={{ backgroundColor: 'rgba(99,102,241,0.12)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.25)' }}>
+                            <ShieldCheck className="w-3 h-3 inline mr-1" />Demote to Moderator
+                          </button>
+                        )}
+                        <button onClick={() => { removeRole(userRole); setSelectedAccount({ ...a }); }}
+                          className="px-3 py-1.5 rounded-lg text-xs font-semibold"
+                          style={{ backgroundColor: 'var(--color-surface2)', color: 'var(--color-muted)', border: '1px solid var(--color-border)' }}>
+                          Remove Role
+                        </button>
+                      </div>
+                    </div>
+                  ) : !userRole ? (
+                    <div className="flex gap-2 flex-wrap">
+                      <button onClick={() => promoteUser(a.id, a.username, 'admin')}
+                        className="px-3 py-1.5 rounded-lg text-xs font-semibold border-0"
+                        style={{ backgroundColor: 'rgba(239,68,68,0.12)', color: '#f87171', border: '1px solid rgba(239,68,68,0.25)' }}>
+                        <Shield className="w-3 h-3 inline mr-1" />Make Admin
+                      </button>
+                      <button onClick={() => promoteUser(a.id, a.username, 'moderator')}
+                        className="px-3 py-1.5 rounded-lg text-xs font-semibold"
+                        style={{ backgroundColor: 'rgba(99,102,241,0.12)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.25)' }}>
+                        <ShieldCheck className="w-3 h-3 inline mr-1" />Make Moderator
+                      </button>
+                    </div>
+                  ) : (
+                    <p className="text-xs" style={{ color: 'var(--color-muted)' }}>Founder role cannot be modified.</p>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        }
+
+        // List view
+        return (
+          <div className="space-y-2">
+            <p className="text-xs" style={{ color: 'var(--color-muted)' }}>{accounts.length} dashboard accounts — click to view</p>
+            {accounts.slice((acctPage - 1) * PAGE_SIZE, acctPage * PAGE_SIZE).map(a => {
+              const userRole = roles.find(r => r.user_id === a.id);
+              return (
+                <button key={a.id} onClick={() => setSelectedAccount(a)}
+                  className="w-full text-left flex items-center gap-3 p-3 rounded-lg border transition-all hover:opacity-80"
+                  style={s2}>
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 font-bold text-sm"
+                    style={{ backgroundColor: 'color-mix(in srgb, var(--color-accent) 15%, transparent)', color: 'var(--color-accent)' }}>
+                    {(a.username[0] ?? '?').toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <p className="text-sm font-medium truncate" style={{ color: 'var(--color-text)' }}>@{a.username}</p>
+                      {userRole?.role === 'founder'   && <span className="flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ backgroundColor:'rgba(234,179,8,0.15)', color:'#eab308', border:'1px solid rgba(234,179,8,0.3)' }}><Crown className="w-2.5 h-2.5" />Founder</span>}
+                      {userRole?.role === 'admin'      && <span className="flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ backgroundColor:'rgba(239,68,68,0.12)', color:'#f87171', border:'1px solid rgba(239,68,68,0.25)' }}><Shield className="w-2.5 h-2.5" />Admin</span>}
+                      {userRole?.role === 'moderator'  && <span className="flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ backgroundColor:'rgba(99,102,241,0.12)', color:'#818cf8', border:'1px solid rgba(99,102,241,0.25)' }}><ShieldCheck className="w-2.5 h-2.5" />Moderator</span>}
+                      {a.provider === 'google'  && <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 shrink-0"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>}
+                      {a.provider === 'discord' && <svg viewBox="0 0 24 24" fill="#5865F2" className="w-3.5 h-3.5 shrink-0"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/></svg>}
+                      {a.provider === 'email'   && <span className="text-[9px] px-1 py-0.5 rounded" style={{ backgroundColor:'rgba(99,102,241,0.12)', color:'#818cf8' }}>pw</span>}
+                    </div>
+                    <p className="text-[10px]" style={{ color: 'var(--color-muted)' }}>joined {timeAgo(a.created_at)}</p>
+                  </div>
+                  <p className="text-[10px] shrink-0" style={{ color: 'var(--color-muted)' }}>
+                    {a.last_sign_in_at ? timeAgo(a.last_sign_in_at) : 'never'}
+                  </p>
+                </button>
+              );
+            })}
+            {accounts.length === 0 && <p className="text-center text-xs py-8" style={{ color: 'var(--color-muted)' }}>No dashboard accounts yet</p>}
+            <Pagination page={acctPage} total={Math.max(1, Math.ceil(accounts.length / PAGE_SIZE))} onChange={setAcctPage} />
+          </div>
+        );
+      })()}
 
 
       {!loading && tab === 'users' && (() => {
