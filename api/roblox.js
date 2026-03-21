@@ -23,6 +23,8 @@ export default async function handler(req, res) {
     path.startsWith('/v1/usernames')
   ) {
     domain = 'https://users.roblox.com';
+  } else if (path.includes('/friends') || path.includes('/followers') || path.includes('/followings')) {
+    domain = 'https://friends.roblox.com';
   } else if (path.startsWith('/universes/')) {
     domain = 'https://apis.roblox.com';
   } else if (path.startsWith('/v1/games') || path.startsWith('/v2/games')) {
