@@ -77,7 +77,7 @@ export function FloatingScriptIcon() {
         <div
           className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-2xl transition-transform active:scale-95"
           style={{
-            background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+            background: 'linear-gradient(135deg,#2563eb,#3b82f6)',
             boxShadow: '0 4px 24px rgba(99,102,241,0.5)',
           }}>
           {open

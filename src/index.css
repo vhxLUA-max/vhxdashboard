@@ -36,8 +36,8 @@
     --color-border:   #e5e7eb;
     --color-text:     #111827;
     --color-muted:    #6b7280;
-    --color-accent:   #6366f1;
-    --color-accent2:  #8b5cf6;
+    --color-accent:   #3b82f6;
+    --color-accent2:  #2563eb;
     --color-accent-fg:#ffffff;
   }
 
@@ -68,8 +68,8 @@
     --color-border:   #1f2937;
     --color-text:     #f9fafb;
     --color-muted:    #6b7280;
-    --color-accent:   #6366f1;
-    --color-accent2:  #8b5cf6;
+    --color-accent:   #3b82f6;
+    --color-accent2:  #2563eb;
     --color-accent-fg:#ffffff;
   }
 }
@@ -97,12 +97,12 @@
 .t-accent-subtle { background-color: color-mix(in srgb, var(--color-accent) 12%, transparent) !important; }
 
 /* Global accent overrides — all accent-colored elements follow the theme */
-.bg-indigo-600, .hover\:bg-indigo-500:hover { background-color: var(--color-accent) !important; }
-.bg-indigo-500 { background-color: var(--color-accent) !important; filter: brightness(0.9); }
+.bg-indigo-600, .hover\:bg-blue-600:hover { background-color: var(--color-accent) !important; }
+.bg-blue-600 { background-color: var(--color-accent) !important; filter: brightness(0.9); }
 .text-indigo-400, .text-indigo-500 { color: var(--color-accent) !important; }
 .text-purple-400 { color: var(--color-accent2) !important; }
 .border-indigo-500, .focus\:border-indigo-500:focus { border-color: var(--color-accent) !important; }
-.bg-indigo-500\/10 { background-color: color-mix(in srgb, var(--color-accent) 12%, transparent) !important; }
+.bg-blue-600\/10 { background-color: color-mix(in srgb, var(--color-accent) 12%, transparent) !important; }
 .bg-indigo-600\/20 { background-color: color-mix(in srgb, var(--color-accent) 20%, transparent) !important; }
 .text-indigo-300 { color: color-mix(in srgb, var(--color-accent) 80%, white) !important; }
 .hover\:text-indigo-400:hover { color: var(--color-accent) !important; }

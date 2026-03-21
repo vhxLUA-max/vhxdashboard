@@ -62,7 +62,7 @@ export function RecentActivityList({ executions, loading = false }: RecentActivi
           key={game.name}
           className="flex items-center gap-4 p-4 bg-gray-900 rounded-lg border border-gray-800 hover:border-gray-700 transition-colors"
         >
-          <div className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center bg-indigo-500/10">
+          <div className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center bg-blue-600/10">
             <Gamepad2 className="w-5 h-5 text-indigo-400" />
           </div>
 

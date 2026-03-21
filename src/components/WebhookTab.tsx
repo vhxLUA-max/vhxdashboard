@@ -237,7 +237,7 @@ export function WebhookTab() {
         <Button
           onClick={handleSend}
           disabled={loading || !webhookUrl.trim() || token.length < 4}
-          className="w-full bg-indigo-600 hover:bg-indigo-500 text-white border-0"
+          className="w-full bg-indigo-600 hover:bg-blue-600 text-white border-0"
         >
           {loading
             ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Sending...</>

@@ -50,10 +50,10 @@ export function ExecutionHeatmap({ executions, loading = false }: Props) {
                 const intensity = val / max;
                 const bg = intensity === 0
                   ? 'bg-gray-800'
-                  : intensity < 0.25 ? 'bg-indigo-900'
-                  : intensity < 0.5  ? 'bg-indigo-700'
-                  : intensity < 0.75 ? 'bg-indigo-500'
-                  : 'bg-indigo-400';
+                  : intensity < 0.25 ? 'bg-blue-950'
+                  : intensity < 0.5  ? 'bg-blue-800'
+                  : intensity < 0.75 ? 'bg-blue-600'
+                  : 'bg-blue-500';
                 return (
                   <div
                     key={hi}
@@ -66,7 +66,7 @@ export function ExecutionHeatmap({ executions, loading = false }: Props) {
           ))}
           <div className="flex items-center gap-1.5 mt-2 justify-end">
             <span className="text-[9px] text-gray-600">Less</span>
-            {['bg-gray-800', 'bg-indigo-900', 'bg-indigo-700', 'bg-indigo-500', 'bg-indigo-400'].map(c => (
+            {['bg-gray-800', 'bg-blue-950', 'bg-blue-800', 'bg-blue-600', 'bg-blue-500'].map(c => (
               <div key={c} className={`w-2.5 h-2.5 rounded-[2px] ${c}`} />
             ))}
             <span className="text-[9px] text-gray-600">More</span>

@@ -320,7 +320,7 @@ function App() {
         {/* Left: logo + name */}
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-xl flex items-center justify-center text-sm font-black text-white shrink-0"
-            style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)' }}>V</div>
+            style={{ background: 'linear-gradient(135deg,#2563eb,#3b82f6)' }}>V</div>
           <span className="text-base font-bold tracking-tight" style={{ color: 'var(--color-text)' }}>vhx hub</span>
         </div>
         {/* Right: action icons */}
@@ -496,7 +496,7 @@ function App() {
               <div className="flex items-center justify-between px-5 py-3 shrink-0">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-xl flex items-center justify-center text-sm font-black text-white"
-                    style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)' }}>V</div>
+                    style={{ background: 'linear-gradient(135deg,#2563eb,#3b82f6)' }}>V</div>
                   <span className="text-base font-bold" style={{ color: 'var(--color-text)' }}>vhx hub</span>
                 </div>
                 <button onClick={() => setShowDrawer(false)}

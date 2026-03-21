@@ -117,7 +117,7 @@ export function ProfileView({ username, avatarUrl, isAdmin, isLoggedIn, onEditPr
             <div className="relative shrink-0">
               {avatarUrl
                 ? <img src={avatarUrl} alt="" className="w-10 h-10 rounded-full object-cover" style={{ border: '2px solid rgba(59,130,246,0.4)' }} />
-                : <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white" style={{ background: 'linear-gradient(135deg,#3b82f6,#6366f1)' }}>
+                : <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white" style={{ background: 'linear-gradient(135deg,#1d4ed8,#3b82f6)' }}>
                     {username?.[0]?.toUpperCase() ?? 'U'}
                   </div>
               }
@@ -169,7 +169,7 @@ export function ProfileView({ username, avatarUrl, isAdmin, isLoggedIn, onEditPr
         <div className="relative">
           {avatarUrl
             ? <img src={avatarUrl} alt={username ?? ''} className="rounded-full object-cover border-4" style={{ width: 80, height: 80, borderColor: '#09090b' }} />
-            : <div className="rounded-full flex items-center justify-center text-2xl font-bold text-white border-4" style={{ width: 80, height: 80, borderColor: '#09090b', background: 'linear-gradient(135deg,#3b82f6,#6366f1)' }}>
+            : <div className="rounded-full flex items-center justify-center text-2xl font-bold text-white border-4" style={{ width: 80, height: 80, borderColor: '#09090b', background: 'linear-gradient(135deg,#1d4ed8,#3b82f6)' }}>
                 {username?.[0]?.toUpperCase() ?? '?'}
               </div>
           }

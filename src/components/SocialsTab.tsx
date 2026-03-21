@@ -66,7 +66,7 @@ export function SocialsTab() {
       <div className="rounded-2xl border p-6 text-center mb-6"
         style={{ borderColor: 'var(--color-border)', background: 'linear-gradient(135deg, rgba(99,102,241,0.08) 0%, rgba(139,92,246,0.08) 100%)' }}>
         <div className="w-16 h-16 rounded-2xl mx-auto mb-3 flex items-center justify-center text-2xl font-black"
-          style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: '#fff' }}>V</div>
+          style={{ background: 'linear-gradient(135deg,#2563eb,#3b82f6)', color: '#fff' }}>V</div>
         <h2 className="text-lg font-bold mb-1" style={{ color: 'var(--color-text)' }}>vhxLUA</h2>
         <p className="text-xs" style={{ color: 'var(--color-muted)' }}>
           The best Roblox script hub — follow for updates, clips and drops

@@ -498,7 +498,7 @@ export function AccountManager({ onClose, onUsernameChange, onAvatarChange }: Ac
                   </div>
                   <div className="p-4">
                     <div className="rounded-xl border overflow-hidden" style={{ borderColor: embedTheme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', backgroundColor: embedTheme === 'dark' ? '#09090b' : '#fff' }}>
-                      <div className="h-1.5 w-full" style={{ background: 'linear-gradient(90deg, #6366f1, #8b5cf6)' }} />
+                      <div className="h-1.5 w-full" style={{ background: 'linear-gradient(90deg,#2563eb,#3b82f6)' }} />
                       <div className="flex items-center gap-3 p-4">
                         {avatarUrl
                           ? <img src={avatarUrl} alt={username} className="w-14 h-14 rounded-full object-cover border-2" style={{ borderColor: 'rgba(99,102,241,0.5)' }} />
@@ -516,7 +516,7 @@ export function AccountManager({ onClose, onUsernameChange, onAvatarChange }: Ac
                       </div>
                       <div className="flex items-center justify-between px-4 pb-3">
                         <div className="flex items-center gap-1.5">
-                          <div className="w-4 h-4 rounded flex items-center justify-center" style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)' }}>
+                          <div className="w-4 h-4 rounded flex items-center justify-center" style={{ background: 'linear-gradient(135deg,#2563eb,#3b82f6)' }}>
                             <span className="text-[8px] font-black text-white">V</span>
                           </div>
                           <span className="text-[10px] font-bold tracking-wider" style={{ color: embedTheme === 'dark' ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)' }}>VHX HUB</span>

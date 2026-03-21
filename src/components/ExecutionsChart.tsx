@@ -68,15 +68,15 @@ export function ExecutionsChart({ executions, dateRange, loading = false }: Prop
         <AreaChart data={data} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
           <defs>
             <linearGradient id="execGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
-              <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+              <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+              <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
             </linearGradient>
           </defs>
           <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
           <XAxis dataKey="label" tick={{ fill: '#6b7280', fontSize: 10 }} ticks={ticks} />
           <YAxis tick={{ fill: '#6b7280', fontSize: 10 }} allowDecimals={false} />
           <Tooltip content={<CustomTooltip />} />
-          <Area type="monotone" dataKey="executions" stroke="#6366f1" strokeWidth={2} fill="url(#execGrad)" dot={false} activeDot={{ r: 4, fill: '#6366f1' }} />
+          <Area type="monotone" dataKey="executions" stroke="#3b82f6" strokeWidth={2} fill="url(#execGrad)" dot={false} activeDot={{ r: 4, fill: '#3b82f6' }} />
         </AreaChart>
       </ResponsiveContainer>
     </div>

@@ -20,8 +20,8 @@ type Theme = {
 const THEMES: Theme[] = [
   {
     id: 'default', name: 'Default', description: 'Clean neutral look for everyday use.', icon: '▲', dark: true,
-    vars: { bg:'#030712', surface:'#111827', surface2:'#1f2937', border:'#1f2937', text:'#f9fafb', muted:'#6b7280', accent:'#6366f1', accent2:'#8b5cf6', accentFg:'#fff' },
-    swatches: ['#6366f1', '#8b5cf6', '#34d399', '#1f2937'],
+    vars: { bg:'#030712', surface:'#111827', surface2:'#1f2937', border:'#1f2937', text:'#f9fafb', muted:'#6b7280', accent:'#3b82f6', accent2:'#2563eb', accentFg:'#fff' },
+    swatches: ['#3b82f6', '#2563eb', '#34d399', '#1f2937'],
   },
   {
     id: 'synthwave', name: 'Synthwave', description: 'Neon sunset colors straight out of the arcade.', icon: '🌆', dark: true,

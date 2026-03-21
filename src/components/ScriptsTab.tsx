@@ -185,7 +185,7 @@ function GameDetailPanel({ info, placeId, loader, onBack }: { info: GameInfo; pl
                 className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-semibold transition-all border ${
                   copied
                     ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
-                    : 'bg-indigo-600 hover:bg-indigo-500 border-indigo-600 text-white'
+                    : 'bg-indigo-600 hover:bg-blue-600 border-indigo-600 text-white'
                 }`}
               >
                 {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}

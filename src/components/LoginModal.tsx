@@ -108,7 +108,7 @@ export function LoginModal({ onSuccess, onClose }: LoginModalProps) {
         </button>
 
         <div className="flex flex-col items-center mb-6">
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center mb-3">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center mb-3">
             <Lock className="w-5 h-5 text-white" />
           </div>
           <h2 className="text-lg font-semibold text-white">
@@ -219,7 +219,7 @@ export function LoginModal({ onSuccess, onClose }: LoginModalProps) {
           <Button
             onClick={handleSubmit}
             disabled={loading || !username.trim() || !password.trim()}
-            className="w-full bg-indigo-600 hover:bg-indigo-500 text-white border-0"
+            className="w-full bg-indigo-600 hover:bg-blue-600 text-white border-0"
           >
             {loading
               ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{mode === 'login' ? 'Signing in...' : 'Creating account...'}</>

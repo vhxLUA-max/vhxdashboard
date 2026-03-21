@@ -78,7 +78,7 @@ function buildSVG({ username, avatarUrl, totalExecs, scriptCount, theme }) {
   <defs>
     <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="0%">
       <stop offset="0%" stop-color="#3b82f6"/>
-      <stop offset="100%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#3b82f6"/>
     </linearGradient>
     <clipPath id="avatarClip">
       <circle cx="46" cy="50" r="26"/>

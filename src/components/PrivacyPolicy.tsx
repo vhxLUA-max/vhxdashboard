@@ -78,7 +78,7 @@ export function PrivacyPolicy() {
       <div className="rounded-2xl p-6 border" style={{ borderColor: 'var(--color-border)', background: 'linear-gradient(135deg, rgba(99,102,241,0.06), rgba(139,92,246,0.06))' }}>
         <div className="flex items-center gap-3 mb-3">
           <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-black text-sm shrink-0"
-            style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)' }}>V</div>
+            style={{ background: 'linear-gradient(135deg,#2563eb,#3b82f6)' }}>V</div>
           <div>
             <h1 className="text-lg font-bold" style={{ color: 'var(--color-text)' }}>Privacy Policy</h1>
             <p className="text-xs" style={{ color: 'var(--color-muted)' }}>vhxLUA Hub · Last updated March 2026</p>

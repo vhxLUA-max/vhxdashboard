@@ -15,7 +15,7 @@ type Entry = {
 };
 
 const TYPE_STYLE: Record<Entry['type'], string> = {
-  update: 'bg-indigo-500/10 text-indigo-400',
+  update: 'bg-blue-600/10 text-indigo-400',
   fix:    'bg-rose-500/10 text-rose-400',
   new:    'bg-emerald-500/10 text-emerald-400',
 };
