@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
-import { updatePassword, sendVerificationOTP, verifyOTPAndResetPassword, updateUserEmail } from '@/lib/auth';
+import { updateUserEmail, sendVerificationOTP, verifyOTPAndResetPassword } from '@/lib/auth';
 import { X, User, Lock, Camera, Loader2, Check, Mail, ShieldCheck } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
