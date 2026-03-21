@@ -96,6 +96,7 @@ export function AdminPanel() {
   const [newMsg, setNewMsg]       = useState('');
   const [newType, setNewType]     = useState<Announcement['type']>('info');
   const [newExpiry, setNewExpiry] = useState('');
+  const [sendAsJson, setSendAsJson] = useState(false);
 
 
   const [audit, setAudit]         = useState<AuditEntry[]>([]);
@@ -225,6 +226,8 @@ export function AdminPanel() {
     loadBans();
   };
 
+  const ANNOUNCE_WEBHOOK = 'https://discord.com/api/webhooks/1475666913307918469/gpdq8YFcBTBekkaerhxfSOJy-qjhAKt5-DFyNecmcTNl6u0pc--uuBY7-iWOqhacCgox';
+
   const postAnnouncement = async () => {
     if (!newMsg.trim()) return;
     const { error } = await supabase.from('announcements').insert({
@@ -235,8 +238,30 @@ export function AdminPanel() {
     });
     if (error) { toast.error('Post failed: ' + error.message); return; }
     await logAction('post_announcement', { message: newMsg, type: newType });
-    toast.success('Announcement posted — visible to all users now');
-    setNewMsg(''); setNewExpiry('');
+
+    // Send to Discord
+    const color = newType === 'info' ? 0x6366f1 : newType === 'warning' ? 0xf59e0b : newType === 'success' ? 0x10b981 : 0xef4444;
+    const tag = newType.toUpperCase();
+    const jsonBlock = sendAsJson
+      ? `\`\`\`json\n{\n  "type"    : "${tag}",\n  "message" : "${newMsg.trim()}",\n  "date"    : "${new Date().toISOString().slice(0,10)}"\n}\`\`\``
+      : null;
+    await fetch(ANNOUNCE_WEBHOOK, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: 'vhxLUA',
+        avatar_url: 'https://vhxlua.vercel.app/favicon.ico',
+        embeds: [{
+          title: `[${tag}] Announcement`,
+          description: jsonBlock ?? newMsg.trim(),
+          color,
+          footer: { text: `vhxLUA • ${new Date().toLocaleDateString()}` },
+        }],
+      }),
+    }).catch(() => {});
+
+    toast.success('Announcement posted and sent to Discord');
+    setNewMsg(''); setNewExpiry(''); setSendAsJson(false);
     loadAnnouncements();
   };
 
@@ -465,6 +490,12 @@ export function AdminPanel() {
               <Input type="datetime-local" value={newExpiry} onChange={e => setNewExpiry(e.target.value)}
                 className="flex-1 text-xs h-8"
                 style={{ backgroundColor: 'var(--color-surface2)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }} />
+              <button onClick={() => setSendAsJson(v => !v)}
+                className="h-8 px-2.5 rounded-lg text-[10px] font-mono font-bold border transition-all shrink-0"
+                style={{ borderColor: sendAsJson ? '#6366f1' : 'var(--color-border)', backgroundColor: sendAsJson ? '#6366f120' : 'transparent', color: sendAsJson ? '#6366f1' : 'var(--color-muted)' }}
+                title="Send as JSON codeblock to Discord">
+                {'{}'} JSON
+              </button>
               <Button onClick={postAnnouncement} size="sm" className="h-8 px-3 border-0 shrink-0" style={{ backgroundColor: 'var(--color-accent)', color: 'var(--color-accent-fg)' }}>
                 <Plus className="w-3.5 h-3.5 mr-1" /> Post
               </Button>

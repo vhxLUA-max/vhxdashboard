@@ -15,6 +15,7 @@ import { ExecutionHeatmap } from '@/components/ExecutionHeatmap';
 import { RatingsPanel } from '@/components/RatingsPanel';
 import { ExecutionRateBadge } from '@/components/ExecutionRateBadge';
 import { AnnouncementBanner } from '@/components/AnnouncementBanner';
+import { LiveToastFeed } from '@/components/LiveToastFeed';
 import { Activity, Users, Clock, RefreshCw, BarChart3, Gamepad2, Search, Webhook, Key, ShieldCheck, Megaphone, Code, Loader2, Palette, Shield, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LoginModal } from '@/components/LoginModal';
@@ -287,6 +288,7 @@ function App() {
 
       <AnnouncementBanner />
       <FloatingScriptIcon />
+      <LiveToastFeed />
 
       <div className="flex flex-1">
         <aside className="hidden lg:flex flex-col gap-1 w-20 shrink-0 border-r border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 px-2 py-6 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto">

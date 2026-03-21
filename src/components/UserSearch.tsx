@@ -292,15 +292,20 @@ export function UserSearch({ isAdmin = false }: { isAdmin?: boolean }) {
   const [searched, setSearched]     = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserResult | null>(null);
   const [sortBy, setSortBy]         = useState<'executions' | 'recent'>('executions');
+  const [filterGame, setFilterGame] = useState('');
+  const [filterMinExecs, setFilterMinExecs] = useState('');
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const sortedResults = useMemo(() => {
-    return [...results].sort((a, b) =>
+    let filtered = [...results];
+    if (filterGame.trim()) filtered = filtered.filter(u => u.places.some(p => (p.game_name ?? '').toLowerCase().includes(filterGame.toLowerCase())));
+    if (filterMinExecs.trim()) { const min = parseInt(filterMinExecs); if (!isNaN(min)) filtered = filtered.filter(u => u.total_executions >= min); }
+    return filtered.sort((a, b) =>
       sortBy === 'executions'
         ? b.total_executions - a.total_executions
         : new Date(b.latest_seen).getTime() - new Date(a.latest_seen).getTime()
     );
-  }, [results, sortBy]);
+  }, [results, sortBy, filterGame, filterMinExecs]);
 
   const exportCSV = async (allUsers = false) => {
     let exportData = results;
@@ -334,6 +339,20 @@ export function UserSearch({ isAdmin = false }: { isAdmin?: boolean }) {
     a.href = url; a.download = `vhx-users-${query}.csv`; a.click();
     URL.revokeObjectURL(url);
     toast.success('CSV exported');
+  };
+
+  const exportJSON = () => {
+    const data = sortedResults.map(u => ({
+      username: u.username, roblox_user_id: u.roblox_user_id,
+      total_executions: u.total_executions, games: u.places.length,
+      first_seen: u.earliest_seen, last_seen: u.latest_seen,
+    }));
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url;
+    a.download = `vhx-users-${query || 'export'}.json`; a.click();
+    URL.revokeObjectURL(url);
+    toast.success('JSON exported');
   };
 
   const search = useCallback(async (value: string) => {
@@ -487,10 +506,20 @@ export function UserSearch({ isAdmin = false }: { isAdmin?: boolean }) {
                 </button>
               ))}
             </div>
-            <div className="flex gap-1.5">
+            <div className="flex gap-1.5 flex-wrap items-center">
+              <input value={filterGame} onChange={e => setFilterGame(e.target.value)} placeholder="Game..."
+                className="px-2 py-1 rounded-lg text-[11px] border w-20 outline-none"
+                style={{ backgroundColor: 'var(--color-surface2)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }} />
+              <input value={filterMinExecs} onChange={e => setFilterMinExecs(e.target.value)} placeholder="Min execs" type="number" min={0}
+                className="px-2 py-1 rounded-lg text-[11px] border w-20 outline-none"
+                style={{ backgroundColor: 'var(--color-surface2)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }} />
               <button onClick={() => exportCSV(false)}
                 className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:text-indigo-400 hover:border-indigo-500/40 transition-all">
-                <Download className="w-3 h-3" /> Export
+                <Download className="w-3 h-3" /> CSV
+              </button>
+              <button onClick={() => exportJSON()}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:text-violet-400 hover:border-violet-500/40 transition-all">
+                <Download className="w-3 h-3" /> JSON
               </button>
               {isAdmin && (
                 <button onClick={() => exportCSV(true)}
