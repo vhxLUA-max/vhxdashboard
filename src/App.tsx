@@ -346,17 +346,9 @@ function App() {
       <AnnouncementBanner />
       <LiveToastFeed />
 
-      {/* ── Mobile bottom nav ─────────────────────────────────────────── */}
+      {/* ── Mobile bottom nav — 4 fixed tabs + Menu ────────────────────── */}
       {(() => {
-        const PAGE_SIZE = 5;
-        const activeIdx = visibleTabs.findIndex(t => t.id === activeTab);
-        const pageStart = Math.max(0, Math.min(
-          Math.floor(activeIdx / PAGE_SIZE) * PAGE_SIZE,
-          visibleTabs.length - PAGE_SIZE
-        ));
-        const pageTabs = visibleTabs.slice(pageStart, pageStart + PAGE_SIZE);
-        const hasPrev = pageStart > 0;
-        const hasNext = pageStart + PAGE_SIZE < visibleTabs.length;
+        const BOTTOM_TABS = visibleTabs.filter(t => ['stats','scripts','search','token'].includes(t.id));
         return (
           <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40"
             style={{
@@ -365,28 +357,26 @@ function App() {
               paddingBottom: 'env(safe-area-inset-bottom)',
             }}>
             <div className="flex items-stretch h-[60px]">
-              {/* Prev arrow */}
-              <button
-                onClick={() => hasPrev ? switchTab(visibleTabs[pageStart - 1].id) : undefined}
-                className="flex items-center justify-center w-8 shrink-0 text-xl transition-opacity duration-150"
-                style={{ color: 'var(--color-muted)', opacity: hasPrev ? 0.7 : 0, pointerEvents: hasPrev ? 'auto' : 'none' }}>‹</button>
-              {pageTabs.map(tab => {
+              {BOTTOM_TABS.map(tab => {
                 const active = activeTab === tab.id;
-                const accentColor = tab.id === 'admin' ? '#f87171' : 'var(--color-accent)';
                 return (
                   <button key={tab.id} onClick={() => switchTab(tab.id)}
                     className="flex flex-col items-center justify-center flex-1 gap-1 transition-all duration-150 active:opacity-60"
-                    style={{ color: active ? accentColor : 'rgba(160,160,175,0.7)' }}>
+                    style={{ color: active ? 'var(--color-accent)' : 'rgba(160,160,175,0.7)' }}>
                     <tab.icon className="w-6 h-6 shrink-0" />
                     <span className="text-[10px] leading-none" style={{ fontWeight: active ? 600 : 400 }}>{tab.label}</span>
                   </button>
                 );
               })}
-              {/* Next arrow */}
-              <button
-                onClick={() => hasNext ? switchTab(visibleTabs[pageStart + PAGE_SIZE].id) : undefined}
-                className="flex items-center justify-center w-8 shrink-0 text-xl transition-opacity duration-150"
-                style={{ color: 'var(--color-muted)', opacity: hasNext ? 0.7 : 0, pointerEvents: hasNext ? 'auto' : 'none' }}>›</button>
+              {/* Menu button — opens drawer */}
+              <button onClick={() => setShowDrawer(true)}
+                className="flex flex-col items-center justify-center flex-1 gap-1 transition-all duration-150 active:opacity-60"
+                style={{ color: showDrawer ? 'var(--color-accent)' : 'rgba(160,160,175,0.7)' }}>
+                <svg className="w-6 h-6 shrink-0" fill="none" stroke="currentColor" strokeWidth={1.8} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+                <span className="text-[10px] leading-none">Menu</span>
+              </button>
             </div>
           </nav>
         );
