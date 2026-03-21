@@ -17,9 +17,11 @@ const SCRIPTS = [
 ];
 
 const LINKS = [
-  { label: 'Discord Server', url: 'https://discord.gg/AuQqvrJE79' },
-  { label: 'TikTok',         url: 'https://tiktok.com/@vhxlua'   },
-  { label: 'YouTube',        url: 'https://youtube.com/@vhx hub'  },
+  { label: 'Discord Server', url: 'https://discord.gg/usEnYvqnaJ' },
+  { label: 'YouTube',        url: 'https://youtube.com/@vhxlua?si=0j9rYLl0qPf3gu1Y' },
+  { label: 'TikTok',         url: 'https://www.tiktok.com/@vhxlua_?lang=en' },
+  { label: 'Rscripts',       url: 'https://rscripts.net/@vhxLUA_' },
+  { label: 'GitHub',         url: 'https://github.com/vhxLUA-max' },
 ];
 
 const TAB_META = [
