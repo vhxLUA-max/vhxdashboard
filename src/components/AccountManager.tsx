@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
-import { updateUserEmail, sendVerificationOTP, verifyOTPAndResetPassword } from '@/lib/auth';
-import { X, User, Lock, Camera, Loader2, Check, Mail, ShieldCheck } from 'lucide-react';
+import { updatePassword, updateUserEmail } from '@/lib/auth';
+import { X, User, Lock, Camera, Loader2, Check, Mail } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -12,22 +12,19 @@ interface AccountManagerProps {
   onAvatarChange: (url: string | null) => void;
 }
 
-type PwStep = 'idle' | 'email' | 'otp' | 'newpw';
-
 export function AccountManager({ onClose, onUsernameChange, onAvatarChange }: AccountManagerProps) {
   const [username, setUsername]       = useState('');
   const [newUsername, setNewUsername] = useState('');
   const [avatarUrl, setAvatarUrl]     = useState<string | null>(null);
   const [currentEmail, setCurrentEmail] = useState('');
   const [emailInput, setEmailInput]   = useState('');
-  const [otpInput, setOtpInput]       = useState('');
+  const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPw, setConfirmPw]     = useState('');
   const [uploading, setUploading]     = useState(false);
   const [savingUsername, setSavingUsername] = useState(false);
   const [savingEmail, setSavingEmail] = useState(false);
-  const [pwStep, setPwStep]           = useState<PwStep>('idle');
-  const [pwLoading, setPwLoading]     = useState(false);
+  const [savingPassword, setSavingPassword] = useState(false);
   const [pwError, setPwError]         = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -95,40 +92,23 @@ export function AccountManager({ onClose, onUsernameChange, onAvatarChange }: Ac
     toast.success('Confirmation sent — check your new email inbox');
   };
 
-  // Step 1 — send OTP to email
-  const handleSendOTP = async () => {
-    if (!emailInput.trim()) { setPwError('Enter your email first'); return; }
-    setPwLoading(true); setPwError('');
-    const result = await sendVerificationOTP(emailInput.trim());
-    setPwLoading(false);
-    if (!result.success) { setPwError(result.error ?? 'Failed to send code'); return; }
-    setPwStep('otp');
-    toast.success('Verification code sent to ' + emailInput.trim());
-  };
-
-  // Step 2 — verify OTP
-  const handleVerifyOTP = async () => {
-    if (!otpInput.trim()) { setPwError('Enter the code'); return; }
-    setPwLoading(true); setPwError('');
-    // Just advance — actual verify happens with password submit
-    setPwLoading(false);
-    setPwStep('newpw');
-  };
-
-  // Step 3 — set new password
   const handleSavePassword = async () => {
-    if (!newPassword || !confirmPw) return;
+    if (!currentPassword || !newPassword || !confirmPw) return;
     if (newPassword !== confirmPw) { setPwError('Passwords do not match'); return; }
     if (newPassword.length < 6) { setPwError('Password must be at least 6 characters'); return; }
-    setPwLoading(true); setPwError('');
-    const result = await verifyOTPAndResetPassword(emailInput.trim(), otpInput.trim(), newPassword);
-    setPwLoading(false);
-    if (!result.success) { setPwError(result.error ?? 'Failed'); return; }
-    setNewPassword(''); setConfirmPw(''); setOtpInput(''); setPwStep('idle');
+    setSavingPassword(true); setPwError('');
+    // Verify current password by re-authenticating
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user?.email) {
+      const { error: signInErr } = await supabase.auth.signInWithPassword({ email: user.email, password: currentPassword });
+      if (signInErr) { setSavingPassword(false); setPwError('Current password is incorrect'); return; }
+    }
+    const result = await updatePassword(newPassword);
+    setSavingPassword(false);
+    if (!result.success) { setPwError(result.error ?? 'Failed to update password'); return; }
+    setCurrentPassword(''); setNewPassword(''); setConfirmPw('');
     toast.success('Password updated!');
   };
-
-  const resetPwFlow = () => { setPwStep('idle'); setPwError(''); setOtpInput(''); setNewPassword(''); setConfirmPw(''); };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -197,91 +177,27 @@ export function AccountManager({ onClose, onUsernameChange, onAvatarChange }: Ac
             {currentEmail && <p className="text-[10px]" style={{ color: 'var(--color-muted)' }}>Current: {currentEmail}</p>}
           </div>
 
-          {/* Change Password — email OTP gated */}
+          {/* Change Password */}
           <div className="space-y-2">
             <label className="text-xs font-medium flex items-center gap-1.5" style={{ color: 'var(--color-muted)' }}>
               <Lock className="w-3.5 h-3.5" /> Change Password
             </label>
-
-            {pwStep === 'idle' && (
-              <Button onClick={() => { setPwStep('email'); setPwError(''); }}
-                variant="outline" className="w-full text-xs"
-                style={{ borderColor: 'var(--color-border)', color: 'var(--color-muted)' }}>
-                Change password
-              </Button>
-            )}
-
-            {pwStep === 'email' && (
-              <div className="space-y-2 p-3 rounded-xl border" style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-surface2)' }}>
-                <p className="text-xs" style={{ color: 'var(--color-muted)' }}>
-                  We'll send a 6-digit code to your email to verify it's you.
-                </p>
-                <Input value={emailInput} onChange={e => setEmailInput(e.target.value)}
-                  placeholder="your@email.com" type="email"
-                  style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }} />
-                {pwError && <p className="text-[11px] text-rose-400">{pwError}</p>}
-                <div className="flex gap-2">
-                  <Button onClick={resetPwFlow} variant="outline" className="flex-1 text-xs h-8"
-                    style={{ borderColor: 'var(--color-border)', color: 'var(--color-muted)' }}>Cancel</Button>
-                  <Button onClick={handleSendOTP} disabled={pwLoading || !emailInput.trim()} className="flex-1 text-xs h-8 border-0"
-                    style={{ backgroundColor: 'var(--color-accent)', color: 'var(--color-accent-fg)' }}>
-                    {pwLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Send Code'}
-                  </Button>
-                </div>
-              </div>
-            )}
-
-            {pwStep === 'otp' && (
-              <div className="space-y-2 p-3 rounded-xl border" style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-surface2)' }}>
-                <div className="flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <p className="text-xs" style={{ color: 'var(--color-muted)' }}>
-                    Code sent to <strong style={{ color: 'var(--color-text)' }}>{emailInput}</strong>
-                  </p>
-                </div>
-                <Input value={otpInput} onChange={e => setOtpInput(e.target.value.replace(/\D/g,'').slice(0,6))}
-                  placeholder="6-digit code" maxLength={6}
-                  className="text-center text-xl font-mono tracking-[0.5em]"
-                  style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }} />
-                {pwError && <p className="text-[11px] text-rose-400">{pwError}</p>}
-                <div className="flex gap-2">
-                  <Button onClick={resetPwFlow} variant="outline" className="flex-1 text-xs h-8"
-                    style={{ borderColor: 'var(--color-border)', color: 'var(--color-muted)' }}>Cancel</Button>
-                  <Button onClick={handleVerifyOTP} disabled={pwLoading || otpInput.length < 6} className="flex-1 text-xs h-8 border-0"
-                    style={{ backgroundColor: 'var(--color-accent)', color: 'var(--color-accent-fg)' }}>
-                    {pwLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Verify Code'}
-                  </Button>
-                </div>
-                <button onClick={handleSendOTP} className="text-[11px] w-full text-center" style={{ color: 'var(--color-muted)' }}>
-                  Didn't receive it? Resend
-                </button>
-              </div>
-            )}
-
-            {pwStep === 'newpw' && (
-              <div className="space-y-2 p-3 rounded-xl border" style={{ borderColor: 'rgba(16,185,129,0.3)', backgroundColor: 'rgba(16,185,129,0.05)' }}>
-                <div className="flex items-center gap-2 mb-1">
-                  <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-                  <p className="text-xs text-emerald-400 font-medium">Identity verified — set your new password</p>
-                </div>
-                <Input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)}
-                  placeholder="New password"
-                  style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }} />
-                <Input type="password" value={confirmPw} onChange={e => setConfirmPw(e.target.value)}
-                  placeholder="Confirm new password"
-                  onKeyDown={e => e.key === 'Enter' && handleSavePassword()}
-                  style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }} />
-                {pwError && <p className="text-[11px] text-rose-400">{pwError}</p>}
-                <div className="flex gap-2">
-                  <Button onClick={resetPwFlow} variant="outline" className="flex-1 text-xs h-8"
-                    style={{ borderColor: 'var(--color-border)', color: 'var(--color-muted)' }}>Cancel</Button>
-                  <Button onClick={handleSavePassword} disabled={pwLoading || !newPassword || !confirmPw} className="flex-1 text-xs h-8 border-0"
-                    style={{ backgroundColor: '#10b981', color: '#fff' }}>
-                    {pwLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Update Password'}
-                  </Button>
-                </div>
-              </div>
-            )}
+            <Input type="password" value={currentPassword} onChange={e => { setCurrentPassword(e.target.value); setPwError(''); }}
+              placeholder="Current password" autoComplete="current-password"
+              style={{ backgroundColor: 'var(--color-surface2)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }} />
+            <Input type="password" value={newPassword} onChange={e => { setNewPassword(e.target.value); setPwError(''); }}
+              placeholder="New password" autoComplete="new-password"
+              style={{ backgroundColor: 'var(--color-surface2)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }} />
+            <Input type="password" value={confirmPw} onChange={e => { setConfirmPw(e.target.value); setPwError(''); }}
+              placeholder="Confirm new password" autoComplete="new-password"
+              onKeyDown={e => e.key === 'Enter' && handleSavePassword()}
+              style={{ backgroundColor: 'var(--color-surface2)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }} />
+            {pwError && <p className="text-[11px] text-rose-400">{pwError}</p>}
+            <Button onClick={handleSavePassword}
+              disabled={savingPassword || !currentPassword || !newPassword || !confirmPw}
+              className="w-full border-0" style={{ backgroundColor: 'var(--color-accent)', color: 'var(--color-accent-fg)' }}>
+              {savingPassword ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving...</> : 'Update Password'}
+            </Button>
           </div>
 
         </div>
