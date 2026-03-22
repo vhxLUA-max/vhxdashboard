@@ -34,7 +34,15 @@ function timeAgo(iso: string): string {
 
 async function getRobloxAvatarUrl(robloxUserId: number): Promise<string | null> {
   try {
-    const res = await fetch(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${robloxUserId}&size=150x150&format=Png&isCircular=false`);
+    // Route through our proxy to avoid CORS
+    const res = await fetch('/api/roblox', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        path: `/v1/users/avatar-headshot?userIds=${robloxUserId}&size=420x420&format=Png&isCircular=false`,
+        domain: 'https://thumbnails.roblox.com',
+      }),
+    });
     if (!res.ok) return null;
     const data = await res.json();
     return data?.data?.[0]?.imageUrl ?? null;
@@ -154,8 +162,6 @@ export function WebhookTab() {
       const profileUrl   = `https://www.roblox.com/users/${robloxUserId}/profile`;
 
       const embed = {
-        username: 'vhxLUA',
-        avatar_url: avatarUrl ?? 'https://i.imgur.com/4M34hi2.png',
         embeds: [{
           author: {
             name: displayName,
