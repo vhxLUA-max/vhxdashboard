@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
-import { fetchSheetUsers } from '@/lib/sheets';
+
 import { toast } from 'sonner';
 import { UserProfile } from '@/components/UserProfile';
 import { MaintenancePanel } from '@/components/MaintenancePanel';
@@ -108,6 +108,7 @@ function Pagination({ page, total, onChange }: { page: number; total: number; on
     </div>
   );
 }
+
 const WORDS = ['FIRE','IRON','VOID','DARK','SOUL','BONE','VEIL','GRIM','ASH','FLUX','BOLT','CLAW','DUSK','ECHO','FADE','GALE','HEX','JADE','KEEN','MIST','NOVA','ONYX','PIKE','RUIN','SAGE','TIDE','VILE','WARP','ZEAL','FANG'];
 function generateToken() {
   return WORDS[Math.floor(Math.random() * WORDS.length)] + (Math.floor(Math.random() * 9000) + 1000);
@@ -269,28 +270,18 @@ export function AdminPanel() {
 
   const loadScriptUsers = useCallback(async () => {
     setLoading(true);
-    const [sheetUsers, { data: bansData }] = await Promise.all([
-      fetchSheetUsers(),
+    const [{ data: rows }, { data: bansData }] = await Promise.all([
+      supabase.from('unique_users').select('roblox_user_id,username,execution_count,first_seen,last_seen,place_id,game_name,hwid,ip_address').order('last_seen', { ascending: false }),
       supabase.from('banned_users').select('roblox_user_id'),
     ]);
-    const bannedSet = new Set((bansData ?? []).map((b: { roblox_user_id: number }) => b.roblox_user_id));
+    const bannedSet = new Set((bansData ?? []).map((b: any) => b.roblox_user_id));
 
-    // Aggregate by roblox_user_id (multiple rows per user = multiple games)
-    const agg: Record<string, ScriptUser> = {};
-    for (const r of sheetUsers) {
+    const agg: Record<number, ScriptUser> = {};
+    for (const r of (rows ?? [])) {
       const id = r.roblox_user_id;
       if (!id) continue;
       if (!agg[id]) {
-        agg[id] = {
-          roblox_user_id: Number(id),
-          username:       r.username,
-          execution_count: 0,
-          first_seen:     r.first_seen,
-          last_seen:      r.last_seen,
-          token:          null,
-          place_id:       0,
-          banned:         bannedSet.has(Number(id)),
-        };
+        agg[id] = { roblox_user_id: id, username: r.username, execution_count: 0, first_seen: r.first_seen, last_seen: r.last_seen, place_id: r.place_id, token: null, banned: bannedSet.has(id) };
       }
       agg[id].execution_count += r.execution_count ?? 0;
       if (r.last_seen > agg[id].last_seen) agg[id].last_seen = r.last_seen;
@@ -803,6 +794,13 @@ export function AdminPanel() {
                       Unban
                     </button>
                   )}
+                  <button
+                    onClick={e => { e.stopPropagation(); }}
+                    className="text-[10px] px-2 py-1 rounded-lg border shrink-0 transition-colors hover:opacity-80"
+                    style={{ borderColor: 'rgba(168,85,247,0.3)', color: '#a855f7', backgroundColor: 'rgba(168,85,247,0.08)' }}
+                    title="Troll user">
+                    😈
+                  </button>
                 </div>
               </button>
             ))}

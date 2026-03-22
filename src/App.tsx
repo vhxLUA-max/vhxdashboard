@@ -67,12 +67,12 @@ function useLiveCounter() {
   const [count, setCount] = useState<number | null>(null);
   useEffect(() => {
     const fetch = async () => {
-      const { data } = await supabase.from('game_executions').select('total_count:count');
-      setCount((data ?? []).reduce((s: number, e: any) => s + (e.total_count ?? e.count ?? 0), 0));
+      const { data } = await supabase.from('unique_users').select('execution_count');
+      setCount((data ?? []).reduce((s: number, u: any) => s + (u.execution_count ?? 0), 0));
     };
     fetch();
     const ch = supabase.channel('live-total')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'game_executions' }, fetch)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'unique_users' }, fetch)
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, []);
@@ -103,12 +103,14 @@ function useLiveUniqueUsers() {
   const [count, setCount] = useState<number | null>(null);
   useEffect(() => {
     const fetch = async () => {
-      const summary = await import('@/lib/sheets').then(m => m.fetchSheetsSummary());
-      setCount(summary?.unique_users ?? 0);
+      const { data } = await supabase.from('unique_users').select('roblox_user_id');
+      setCount(new Set((data ?? []).map((u: any) => u.roblox_user_id)).size);
     };
     fetch();
-    const interval = setInterval(fetch, 30000);
-    return () => clearInterval(interval);
+    const ch = supabase.channel('live-unique')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'unique_users' }, fetch)
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
   }, []);
   return count;
 }

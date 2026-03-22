@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
-import { fetchSheetsSummary } from '@/lib/sheets';
 import type { DashboardData, DateRange, UseSupabaseDashboardReturn } from '@/types';
 
 const RANGE_MS: Record<DateRange, number> = {
@@ -27,33 +26,36 @@ export function useSupabaseDashboard(dateRange: DateRange): UseSupabaseDashboard
       const today = new Date().toISOString().slice(0, 10);
 
       const [
-        { data: all, error: e1 },
-        sheetsSummary,
+        { data: all,      error: e1 },
+        { data: users },
+        { data: newToday },
       ] = await Promise.all([
         supabase.from('game_executions').select('place_id,total_count:count,daily_count,daily_reset_at,last_executed_at,game_name').order('last_executed_at', { ascending: false }),
-        fetchSheetsSummary(),
+        supabase.from('unique_users').select('roblox_user_id').gte('last_seen', since),
+        supabase.from('unique_users').select('roblox_user_id').gte('first_seen', new Date(Date.now() - 86400000).toISOString()),
       ]);
 
       if (e1) throw new Error(e1.message);
 
       const allExecs: any[] = all ?? [];
 
-      const totalExecutions = sheetsSummary?.total_executions ??
-        (dateRange === '24h'
-          ? allExecs.reduce((s: number, e: any) => s + (e.daily_reset_at?.slice(0, 10) === today ? (e.daily_count ?? 0) : 0), 0)
-          : allExecs.reduce((s: number, e: any) => s + (e.total_count ?? e.count ?? 0), 0));
+      // Total executions — sum unique_users.execution_count for accuracy
+      const { data: execSum } = await supabase.from('unique_users').select('execution_count');
+      const totalExecutions = dateRange === '24h'
+        ? allExecs.reduce((s: number, e: any) => s + (e.daily_reset_at?.slice(0, 10) === today ? (e.daily_count ?? 0) : 0), 0)
+        : (execSum ?? []).reduce((s: number, u: any) => s + (u.execution_count ?? 0), 0);
 
       const filteredExecs = allExecs.filter((e: any) => e.last_executed_at && e.last_executed_at >= since);
 
       setData({
         totalExecutions,
-        uniqueUsers:      sheetsSummary?.unique_users ?? 0,
-        activeGames:      filteredExecs.length,
-        lastExecutedAt:   allExecs[0]?.last_executed_at ?? null,
+        uniqueUsers:    new Set((users ?? []).map((u: any) => u.roblox_user_id)).size,
+        activeGames:    filteredExecs.length,
+        lastExecutedAt: allExecs[0]?.last_executed_at ?? null,
         recentExecutions: filteredExecs,
         allExecutions:    allExecs,
         recentUsers:      [],
-        newUsersToday:    0,
+        newUsersToday:  new Set((newToday ?? []).map((u: any) => u.roblox_user_id)).size,
       });
     } catch (err) {
       if ((err as Error).name !== 'AbortError')

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { fetchSheetUsers } from '@/lib/sheets';
+import { supabase } from '@/lib/supabase';
 import { Sparkles, Zap, Crown, Star, Image, Palette, Trophy, Lock, Check, ChevronRight } from 'lucide-react';
 
 interface LeaderboardEntry {
@@ -80,22 +80,22 @@ export function ProTab({ isPro, isLoggedIn, userExecutions = 0 }: ProTabProps) {
   useEffect(() => {
     (async () => {
       setLoadingLb(true);
-      const sheetUsers = await fetchSheetUsers();
-      const map: Record<string, number> = {};
-      for (const row of sheetUsers) {
-        if (!row.username) continue;
-        map[row.username] = (map[row.username] ?? 0) + (row.execution_count ?? 0);
+      const { data } = await supabase
+        .from('unique_users')
+        .select('username, execution_count')
+        .order('execution_count', { ascending: false });
+      if (data) {
+        const map: Record<string, number> = {};
+        for (const row of data) {
+          if (!row.username) continue;
+          map[row.username] = (map[row.username] ?? 0) + (row.execution_count ?? 0);
+        }
+        const entries = Object.entries(map)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 10)
+          .map(([username, total_executions]) => ({ username, avatar_url: null, total_executions, is_pro: false }));
+        setLeaderboard(entries);
       }
-      const entries = Object.entries(map)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 10)
-        .map(([username, total_executions]) => ({
-          username,
-          avatar_url: null,
-          total_executions,
-          is_pro: false,
-        }));
-      setLeaderboard(entries);
       setLoadingLb(false);
     })();
   }, []);
