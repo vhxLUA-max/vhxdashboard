@@ -95,7 +95,7 @@ end)
     } else {
       setSent(prev => [...prev, `[${gameName}] ${message.trim()}`]);
       setMessage('');
-      toast.success(`Chat message queued for @${username} in ${gameName} 😈`);
+      toast.success(`Chat message sent to @${username} in ${gameName} 😈`);
     }
     setSending(false);
   };
@@ -192,14 +192,14 @@ end)
               Send in Chat
             </button>
             <p className="text-[10px]" style={sm}>
-              💡 Next time @{username} executes in {gameName || 'the selected game'}, this message will be sent from their account in chat.
+              💡 If @{username} is already in-game, the message sends within 5 seconds. If offline, it fires on their next session.
             </p>
           </div>
 
           {/* Sent log */}
           {sent.length > 0 && (
             <div className="space-y-1">
-              <p className="text-[10px] font-medium" style={sm}>QUEUED</p>
+              <p className="text-[10px] font-medium" style={sm}>SENT</p>
               {sent.map((m, i) => (
                 <div key={i} className="text-[10px] px-2.5 py-1.5 rounded-lg"
                   style={{ backgroundColor: 'rgba(168,85,247,0.08)', ...st }}>{m}</div>
