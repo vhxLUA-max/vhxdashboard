@@ -67,8 +67,8 @@ function useLiveCounter() {
   const [count, setCount] = useState<number | null>(null);
   useEffect(() => {
     const fetch = async () => {
-      const { data } = await supabase.from('game_executions').select('count');
-      setCount((data ?? []).reduce((s: number, e: { count: number }) => s + (e.count ?? 0), 0));
+      const { data } = await supabase.from('game_executions').select('total_count:count');
+      setCount((data ?? []).reduce((s: number, e: any) => s + (e.total_count ?? e.count ?? 0), 0));
     };
     fetch();
     const ch = supabase.channel('live-total')
@@ -158,11 +158,11 @@ function useLiveLastExecution() {
 }
 
 function useLiveAllExecutions() {
-  const [execs, setExecs] = useState<import('@/types').GameExecution[]>([]);
+  const [execs, setExecs] = useState<any[]>([]);
   useEffect(() => {
     const fetch = async () => {
-      const { data } = await supabase.from('game_executions').select('place_id,count,last_executed_at,game_name').order('last_executed_at', { ascending: false });
-      if (data) setExecs(data);
+      const { data } = await supabase.from('game_executions').select('place_id,total_count:count,last_executed_at,game_name').order('last_executed_at', { ascending: false });
+      if (data) setExecs(data as any[]);
     };
     fetch();
     const ch = supabase.channel('live-all-execs')

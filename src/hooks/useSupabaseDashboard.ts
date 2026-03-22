@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
-import type { DashboardData, DateRange, UseSupabaseDashboardReturn, GameExecution, UniqueUser } from '@/types';
+import type { DashboardData, DateRange, UseSupabaseDashboardReturn, UniqueUser } from '@/types';
 
 const RANGE_MS: Record<DateRange, number> = {
   '24h': 86400000,
@@ -31,7 +31,7 @@ export function useSupabaseDashboard(dateRange: DateRange): UseSupabaseDashboard
         { data: active,   error: e2 },
         { data: newUsers, error: e3 },
       ] = await Promise.all([
-        supabase.from('game_executions').select('place_id,count,daily_count,daily_reset_at,last_executed_at,game_name').order('last_executed_at', { ascending: false }),
+        supabase.from('game_executions').select('place_id,total_count:count,daily_count,daily_reset_at,last_executed_at,game_name').order('last_executed_at', { ascending: false }),
         supabase.from('unique_users').select('roblox_user_id,user_id').gte('last_seen', since),
         supabase.from('unique_users').select('roblox_user_id').gte('first_seen', since24),
       ]);
@@ -40,7 +40,7 @@ export function useSupabaseDashboard(dateRange: DateRange): UseSupabaseDashboard
       if (e2) throw new Error(e2.message);
       if (e3) throw new Error(e3.message);
 
-      const allExecs: (GameExecution & { daily_count?: number; daily_reset_at?: string })[] = all ?? [];
+      const allExecs: any[] = all ?? [];
       const activeUsers: Pick<UniqueUser, 'roblox_user_id' | 'user_id'>[] = active ?? [];
 
       // Always use game_executions.count as the source of truth
@@ -48,7 +48,7 @@ export function useSupabaseDashboard(dateRange: DateRange): UseSupabaseDashboard
       // For all other ranges: sum total count across all games
       const totalExecutions = dateRange === '24h'
         ? allExecs.reduce((s, e) => s + (e.daily_reset_at?.slice(0, 10) === today ? (e.daily_count ?? 0) : 0), 0)
-        : allExecs.reduce((s, e) => s + (e.count ?? 0), 0);
+        : allExecs.reduce((s, e) => s + ((e as any).total_count ?? e.count ?? 0), 0);
 
       // For date-filtered views (7d/30d/90d): only include rows active in range
       const filteredExecs = dateRange === '24h'

@@ -117,7 +117,7 @@ export function WebhookTab() {
       const placeIds     = [...new Set(users.map(u => u.place_id))];
 
       const { data: executions } = await supabase
-        .from('game_executions').select('place_id,count,game_name').in('place_id', placeIds);
+        .from('game_executions').select('place_id,total_count:count,game_name').in('place_id', placeIds);
 
       const execMap: Record<number, { count: number; game_name: string | null }> = {};
       for (const e of (executions ?? []) as GameExecution[]) {

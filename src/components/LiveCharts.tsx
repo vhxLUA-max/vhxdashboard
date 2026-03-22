@@ -1,20 +1,20 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import type { GameExecution, DateRange } from '@/types';
+import type { DateRange } from '@/types';
 import { ExecutionsChart } from './ExecutionsChart';
 import { GameBreakdownChart } from './GameBreakdownChart';
 
 export function LiveCharts({ dateRange }: { dateRange: DateRange }) {
-  const [all, setAll]       = useState<GameExecution[]>([]);
-  const [recent, setRecent] = useState<GameExecution[]>([]);
+  const [all, setAll]       = useState<any[]>([]);
+  const [recent, setRecent] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetch = async () => {
       const since = new Date(Date.now() - ({ '24h': 86400000, '7d': 604800000, '30d': 2592000000, '90d': 7776000000 }[dateRange])).toISOString();
       const [{ data: allData }, { data: recentData }] = await Promise.all([
-        supabase.from('game_executions').select('place_id,count,last_executed_at,game_name').order('last_executed_at', { ascending: false }),
-        supabase.from('game_executions').select('place_id,count,last_executed_at,game_name').gte('last_executed_at', since).order('last_executed_at', { ascending: false }),
+        supabase.from('game_executions').select('place_id,total_count:count,last_executed_at,game_name').order('last_executed_at', { ascending: false }),
+        supabase.from('game_executions').select('place_id,total_count:count,last_executed_at,game_name').gte('last_executed_at', since).order('last_executed_at', { ascending: false }),
       ]);
       setAll(allData ?? []);
       setRecent(recentData ?? []);
