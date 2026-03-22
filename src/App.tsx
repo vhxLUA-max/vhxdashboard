@@ -438,9 +438,9 @@ function App() {
             style={{ background: 'linear-gradient(135deg,#2563eb,#3b82f6)' }}>V</div>
           <span className="text-base font-bold tracking-tight" style={{ color: 'var(--color-text)' }}>vhx hub</span>
         </div>
-        {/* Center: tab pills */}
+        {/* Center: tab pills — 5 primary tabs + More */}
         <nav className="flex items-center gap-1">
-          {visibleTabs.slice(0, 8).map(tab => {
+          {visibleTabs.slice(0, 5).map(tab => {
             const active = activeTab === tab.id;
             return (
               <button key={tab.id} onClick={() => switchTab(tab.id)}
@@ -458,13 +458,17 @@ function App() {
               </button>
             );
           })}
-          {visibleTabs.length > 8 && (
-            <button onClick={() => setShowDrawer(true)}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-medium transition-all"
-              style={{ color: 'var(--color-muted)' }}>
-              ••• More
-            </button>
-          )}
+          <button onClick={() => setShowDrawer(true)}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-medium transition-all"
+            style={{
+              color: visibleTabs.slice(5).some(t => t.id === activeTab) ? 'var(--color-accent)' : 'var(--color-muted)',
+              backgroundColor: visibleTabs.slice(5).some(t => t.id === activeTab) ? 'rgba(99,102,241,0.1)' : 'transparent',
+            }}>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+            More
+          </button>
         </nav>
         {/* Right: live badge + search + profile + menu */}
         <div className="flex items-center gap-2 shrink-0">
