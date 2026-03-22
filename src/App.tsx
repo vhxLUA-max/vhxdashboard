@@ -10,6 +10,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { LiveRecentActivity } from '@/components/LiveRecentActivity';
 import { LiveCharts } from '@/components/LiveCharts';
 import { ExecutionHeatmap } from '@/components/ExecutionHeatmap';
+import { ExecutionWorldMap } from '@/components/ExecutionWorldMap';
 import { RatingsPanel } from '@/components/RatingsPanel';
 import { ExecutionRateBadge } from '@/components/ExecutionRateBadge';
 import { AnnouncementBanner } from '@/components/AnnouncementBanner';
@@ -840,6 +841,7 @@ function App() {
                       {liveAllExecs.length === 0 && !loading ? <EmptyState /> : <LiveRecentActivity />}
                     </div>
                     <LiveCharts dateRange={dateRange} />
+                    <ExecutionWorldMap />
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                       <div className="rounded-xl border p-4" style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
                         <ExecutionHeatmap executions={liveAllExecs} loading={false} />
