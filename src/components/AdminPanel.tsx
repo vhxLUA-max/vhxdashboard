@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
-
+import { CountryLeaderboard } from '@/components/CountryLeaderboard';
 import { toast } from 'sonner';
 import { UserProfile } from '@/components/UserProfile';
 import { MaintenancePanel } from '@/components/MaintenancePanel';
@@ -1173,6 +1173,8 @@ export function AdminPanel() {
 
       {tab === 'maintenance' && <MaintenancePanel />}
 
+      {/* Country leaderboard — always visible at bottom */}
+      <CountryLeaderboard />
 
     </div>
   );

@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, lazy, Suspense } from 'react';
 import { useSupabaseDashboard } from '@/hooks/useSupabaseDashboard';
 import { supabase } from '@/lib/supabase';
 import type { DateRange } from '@/types';
-import { CountryLeaderboard } from '@/components/CountryLeaderboard';
+import { TermsModal, RefundsModal, LegalModal, ContactModal } from '@/components/FooterModals';
 import { MetricCard } from '@/components/MetricCard';
 import { DateRangeFilter } from '@/components/DateRangeFilter';
 import { EmptyState } from '@/components/EmptyState';
@@ -230,6 +230,7 @@ function App() {
   const [customBadge, setCustomBadge]       = useState<string | null>(null);
   const [customBadgeColor, setCustomBadgeColor] = useState<string>('#3b82f6');
   const [userExecs, setUserExecs]         = useState(0);
+  const [footerModal, setFooterModal] = useState<'terms'|'refunds'|'legal'|'contact'|null>(null);
   const [showLogin, setShowLogin]         = useState(false);
   const [showAccount, setShowAccount]     = useState(false);
   const [showProfile, setShowProfile]     = useState(false);
@@ -340,6 +341,7 @@ function App() {
   }, []);
 
   return (
+    <>
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: 'var(--color-bg, #09090b)', color: 'var(--color-text)' }}>
 
 
@@ -877,8 +879,6 @@ function App() {
                       {liveAllExecs.length === 0 && !loading ? <EmptyState /> : <LiveRecentActivity />}
                     </div>
 
-                    <CountryLeaderboard />
-
                   </div>
                 )}
 
@@ -948,15 +948,14 @@ function App() {
               {/* Links */}
               <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm">
                 {[
-                  { label: 'Pro Plans',  tab: 'pro',     active: true  },
-                  { label: 'Terms',      tab: null,      active: false },
-                  { label: 'Privacy',    tab: 'privacy', active: false },
-                  { label: 'Refunds',    tab: null,      active: false },
-                  { label: 'Legal',      tab: null,      active: false },
-                  { label: 'Contact',    tab: null,      active: false },
+                  { label: 'Pro Plans', action: () => setActiveTab('pro' as any) },
+                  { label: 'Terms',     action: () => setFooterModal('terms') },
+                  { label: 'Privacy',   action: () => setActiveTab('privacy' as any) },
+                  { label: 'Refunds',   action: () => setFooterModal('refunds') },
+                  { label: 'Legal',     action: () => setFooterModal('legal') },
+                  { label: 'Contact',   action: () => setFooterModal('contact') },
                 ].map(link => (
-                  <button key={link.label}
-                    onClick={() => link.tab && setActiveTab(link.tab as any)}
+                  <button key={link.label} onClick={link.action}
                     className="transition-opacity hover:opacity-80"
                     style={{ color: link.label === 'Pro Plans' ? '#f59e0b' : 'var(--color-muted)', fontWeight: link.label === 'Pro Plans' ? 600 : 400 }}>
                     {link.label}
@@ -974,6 +973,13 @@ function App() {
         </div>
       </div>
     </div>
+
+      {/* Footer modals */}
+      {footerModal === 'terms'    && <TermsModal    onClose={() => setFooterModal(null)} />}
+      {footerModal === 'refunds'  && <RefundsModal  onClose={() => setFooterModal(null)} />}
+      {footerModal === 'legal'    && <LegalModal    onClose={() => setFooterModal(null)} />}
+      {footerModal === 'contact'  && <ContactModal  onClose={() => setFooterModal(null)} />}
+    </>
   );
 }
 
