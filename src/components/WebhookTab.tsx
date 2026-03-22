@@ -24,14 +24,6 @@ function formatDuration(first: string, last: string): string {
   return 'Just started';
 }
 
-function timeAgo(iso: string): string {
-  const diff = (Date.now() - new Date(iso).getTime()) / 1000;
-  if (diff < 60)    return `${Math.floor(diff)}s ago`;
-  if (diff < 3600)  return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  return `${Math.floor(diff / 86400)}d ago`;
-}
-
 async function getRobloxAvatarUrl(robloxUserId: number): Promise<string | null> {
   try {
     // Route through our proxy to avoid CORS
@@ -147,7 +139,6 @@ export function WebhookTab() {
       const avatarUrl  = await getRobloxAvatarUrl(robloxUserId);
 
       const profileUrl   = `https://www.roblox.com/users/${robloxUserId}/profile`;
-      const reportedAt   = `<t:${Math.floor(Date.now() / 1000)}:F>`;
       const firstSeenTs  = `<t:${Math.floor(new Date(earliest).getTime() / 1000)}:D>`;
       const lastSeenTs   = `<t:${Math.floor(new Date(latest).getTime() / 1000)}:R>`;
 
@@ -172,6 +163,8 @@ export function WebhookTab() {
         });
 
       const embed = {
+        username: displayName,
+        ...(avatarUrl ? { avatar_url: avatarUrl } : {}),
         embeds: [{
           author: {
             name: `${displayName}  ·  vhxLUA`,
