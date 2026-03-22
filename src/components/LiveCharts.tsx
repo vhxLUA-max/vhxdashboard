@@ -13,11 +13,11 @@ export function LiveCharts({ dateRange }: { dateRange: DateRange }) {
     const fetch = async () => {
       const since = new Date(Date.now() - ({ '24h': 86400000, '7d': 604800000, '30d': 2592000000, '90d': 7776000000 }[dateRange])).toISOString();
       const [{ data: allData }, { data: recentData }] = await Promise.all([
-        supabase.from('game_executions').select('place_id,total_count:count,last_executed_at,game_name').order('last_executed_at', { ascending: false }),
-        supabase.from('game_executions').select('place_id,total_count:count,last_executed_at,game_name').gte('last_executed_at', since).order('last_executed_at', { ascending: false }),
+        supabase.from('game_executions').select('place_id,count,daily_count,last_executed_at,game_name').order('last_executed_at', { ascending: false }),
+        supabase.from('game_executions').select('place_id,count,daily_count,last_executed_at,game_name').gte('last_executed_at', since).order('last_executed_at', { ascending: false }),
       ]);
-      setAll(allData ?? []);
-      setRecent(recentData ?? []);
+      setAll((allData ?? []).map((e: any) => ({ ...e, count: e.count ?? e.daily_count ?? 0 })));
+      setRecent((recentData ?? []).map((e: any) => ({ ...e, count: e.count ?? e.daily_count ?? 0 })));
       setLoading(false);
     };
     fetch();
