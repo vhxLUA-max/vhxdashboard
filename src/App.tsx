@@ -446,7 +446,7 @@ function App() {
 
           {/* Profile */}
           {isLoggedIn && (
-            <div className="px-3 mb-3">
+            <div className="mb-3 overflow-hidden rounded-xl mx-3" style={{ border: '1px solid rgba(255,255,255,0.07)', backgroundColor: 'rgba(255,255,255,0.03)' }}>
               <ProfileView
                 username={adminUsername}
                 avatarUrl={avatarUrl}
@@ -454,7 +454,6 @@ function App() {
                 isPro={isPro}
                 isLoggedIn={isLoggedIn}
                 onEditProfile={() => setShowAccount(true)}
-                compact
               />
             </div>
           )}
