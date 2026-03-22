@@ -60,7 +60,7 @@ async function fetchRobloxBio(userId: number): Promise<string | null> {
   } catch { return null; }
 }
 
-type TokenRow = { token: string; roblox_username: string; roblox_user_id: number; updated_at?: string };
+type TokenRow = { token: string; roblox_username: string; roblox_user_id: number | null; updated_at?: string };
 type Step = 'username' | 'verify' | 'done';
 type RobloxUser = { id: number; name: string; displayName: string };
 

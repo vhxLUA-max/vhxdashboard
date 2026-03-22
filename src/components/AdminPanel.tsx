@@ -219,7 +219,7 @@ export function AdminPanel() {
       }
 
       const [{ data: tokenUsers }, { data: auditUsers }] = await Promise.all([
-        supabase.from('user_tokens').select('user_id, roblox_username, updated_at'),
+        supabase.from('user_tokens').select('user_id, roblox_username, roblox_user_id, updated_at'),
         supabase.from('audit_log').select('user_id, username, created_at').not('user_id', 'is', null),
       ]);
 
