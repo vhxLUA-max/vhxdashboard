@@ -47,10 +47,16 @@ export function useSupabaseDashboard(dateRange: DateRange): UseSupabaseDashboard
       const activeUsers: Pick<UniqueUser, 'roblox_user_id' | 'user_id'>[] = active ?? [];
 
       const today = new Date().toISOString().slice(0, 10);
-      const totalExecutions = dateRange === '24h'
+      let totalExecutions = dateRange === '24h'
         ? (allExecs as (GameExecution & { daily_count?: number; daily_reset_at?: string })[])
             .reduce((s, e) => s + ((e as { daily_reset_at?: string }).daily_reset_at?.slice(0, 10) === today ? ((e as { daily_count?: number }).daily_count ?? 0) : 0), 0)
         : filteredExecs.reduce((s, e) => s + e.count, 0);
+
+      // Fallback: if game_executions empty, sum from unique_users
+      if (totalExecutions === 0) {
+        const { data: uData } = await supabase.from('unique_users').select('execution_count');
+        totalExecutions = (uData ?? []).reduce((s: number, u: { execution_count: number }) => s + (u.execution_count ?? 0), 0);
+      }
 
       setData({
         totalExecutions,
