@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, lazy, Suspense } from 'react';
 import { useSupabaseDashboard } from '@/hooks/useSupabaseDashboard';
 import { supabase } from '@/lib/supabase';
 import type { DateRange } from '@/types';
+import { CountryLeaderboard } from '@/components/CountryLeaderboard';
 import { MetricCard } from '@/components/MetricCard';
 import { DateRangeFilter } from '@/components/DateRangeFilter';
 import { EmptyState } from '@/components/EmptyState';
@@ -857,6 +858,8 @@ function App() {
                       </h3>
                       {liveAllExecs.length === 0 && !loading ? <EmptyState /> : <LiveRecentActivity />}
                     </div>
+
+                    <CountryLeaderboard />
 
                   </div>
                 )}
