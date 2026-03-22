@@ -122,6 +122,11 @@ function timeAgo(iso: string) {
   return `${Math.floor(diff / 86400)}d ago`;
 }
 
+function fmtDate(iso: string) {
+  const d = new Date(iso);
+  return `${d.getMonth()+1}/${String(d.getDate()).padStart(2,'0')}/${d.getFullYear()}`;
+}
+
 const ANNOUNCE_ICONS = { info: Info, warning: AlertTriangle, success: CheckCircle2, error: X };
 const ANNOUNCE_COLORS = { info: '#3b82f6', warning: '#f59e0b', success: '#10b981', error: '#ef4444' };
 
@@ -806,7 +811,7 @@ export function AdminPanel() {
                         <Zap className="w-3 h-3" />{(u.execution_count ?? 0).toLocaleString()} execs
                       </span>
                       <span className="flex items-center gap-1 text-[10px]" style={{ color: 'var(--color-muted)' }}>
-                        <Calendar className="w-3 h-3" />first {timeAgo(u.first_seen)}
+                        <Calendar className="w-3 h-3" />first {fmtDate(u.first_seen)}
                       </span>
                       <span className="flex items-center gap-1 text-[10px]" style={{ color: 'var(--color-muted)' }}>
                         <Clock className="w-3 h-3" />last {timeAgo(u.last_seen)}

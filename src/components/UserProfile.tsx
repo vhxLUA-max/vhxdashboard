@@ -216,7 +216,7 @@ export function UserProfile({ userId, username, onBack, isAdmin }: Props) {
         {[
           { label:'Games Played',  value: games.length,                              icon: Gamepad2, color: '#818cf8' },
           { label:'Total Execs',   value: totalExecs.toLocaleString(),               icon: Star,     color: '#34d399' },
-          { label:'First Seen',    value: firstSeen ? timeAgo(firstSeen) : '—',      icon: Calendar, color: '#fbbf24' },
+          { label:'First Seen',    value: firstSeen ? fmt(firstSeen) : '—',           icon: Calendar, color: '#fbbf24' },
           { label:'Last Seen',     value: lastSeen  ? timeAgo(lastSeen)  : '—',      icon: Clock,    color: '#f87171' },
         ].map(stat => (
           <div key={stat.label} className="rounded-xl border p-4" style={s}>
