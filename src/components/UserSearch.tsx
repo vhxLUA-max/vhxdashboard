@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { supabase } from '@/lib/supabase';
 
-import { Users, Clock, Calendar, Gamepad2, ArrowLeft, ExternalLink, Shield, Activity, Hash, Download, ArrowUpDown, Ban } from 'lucide-react';
+import { Users, Clock, Calendar, Gamepad2, ArrowLeft, ExternalLink, Shield, Activity, Hash, Download, ArrowUpDown, Ban, Key } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 
@@ -455,11 +455,82 @@ export function UserSearch({ isAdmin = false }: { isAdmin?: boolean }) {
     return <UserProfilePanel user={selectedUser} onBack={() => setSelectedUser(null)} />;
   }
 
+  // Non-admins: token-gated lookup — only see their own profile
+  if (!isAdmin) {
+    return (
+      <div className="rounded-xl border p-6 max-w-md mx-auto mt-4" style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-surface)' }}>
+        <h3 className="text-base font-semibold mb-1 flex items-center gap-2" style={{ color: 'var(--color-text)' }}>
+          <Key className="w-4 h-4 text-amber-400" /> My Stats
+        </h3>
+        <p className="text-xs mb-5" style={{ color: 'var(--color-muted)' }}>Enter your token to view your execution history.</p>
+
+        <div className="flex gap-2 mb-4">
+          <div className="relative flex-1">
+            <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: 'var(--color-muted)' }} />
+            <Input
+              autoFocus
+              value={query}
+              onChange={handleChange}
+              placeholder="e.g. FIRE4823"
+              maxLength={12}
+              className="pl-9 font-mono tracking-widest uppercase"
+              style={{ backgroundColor: 'var(--color-surface2)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }}
+            />
+          </div>
+          {query && (
+            <button onClick={() => { setQuery(''); setResults([]); setSearched(false); }}
+              className="px-3 rounded-lg text-sm transition-colors"
+              style={{ backgroundColor: 'var(--color-surface2)', color: 'var(--color-muted)', border: '1px solid var(--color-border)' }}>
+              ✕
+            </button>
+          )}
+        </div>
+
+        {loading && <div className="text-center py-6 text-sm animate-pulse" style={{ color: 'var(--color-muted)' }}>Looking up token...</div>}
+
+        {!loading && searched && results.length === 0 && (
+          <div className="text-center py-8 space-y-1">
+            <p className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>Token not found</p>
+            <p className="text-xs" style={{ color: 'var(--color-muted)' }}>Check the token and try again — get yours in the <span style={{ color: 'var(--color-accent)' }}>Token</span> tab</p>
+          </div>
+        )}
+
+        {!loading && !searched && (
+          <div className="flex flex-col items-center justify-center py-10 gap-3 rounded-xl border border-dashed" style={{ borderColor: 'var(--color-border)' }}>
+            <Key className="w-8 h-8 text-amber-400 opacity-50" />
+            <p className="text-xs text-center" style={{ color: 'var(--color-muted)' }}>
+              Your token keeps your stats private.<br />Only you can look up your own data.
+            </p>
+          </div>
+        )}
+
+        {!loading && results.length > 0 && sortedResults.map(user => (
+          <button key={user.roblox_user_id} onClick={() => setSelectedUser(user)}
+            className="w-full text-left p-4 rounded-xl border transition-all hover:opacity-80"
+            style={{ backgroundColor: 'var(--color-surface2)', borderColor: 'var(--color-border)' }}>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shrink-0"
+                style={{ backgroundColor: 'var(--color-accent)' }}>
+                {user.username[0]?.toUpperCase()}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold truncate" style={{ color: 'var(--color-text)' }}>@{user.username}</p>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--color-muted)' }}>
+                  {user.total_executions} executions · {user.places.length} game{user.places.length !== 1 ? 's' : ''}
+                </p>
+              </div>
+            </div>
+          </button>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div className="bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6">
       <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
         <Users className="w-5 h-5 text-purple-400" />
-        User Lookup
+        User Search
       </h3>
 
       <div className="relative mb-4">
@@ -468,7 +539,7 @@ export function UserSearch({ isAdmin = false }: { isAdmin?: boolean }) {
           autoFocus
           value={query}
           onChange={handleChange}
-          placeholder="Search by username or Roblox ID..."
+          placeholder="Username or Roblox ID…"
           maxLength={40}
           className="pl-9 pr-8 bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white placeholder:text-gray-400 focus:border-blue-500"
         />
