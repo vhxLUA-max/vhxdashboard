@@ -11,9 +11,9 @@ export function LiveRecentActivity() {
     const fetch = async () => {
       const { data } = await supabase
         .from('game_executions')
-        .select('place_id,count,last_executed_at,game_name')
+        .select('place_id,count,daily_count,last_executed_at,game_name')
         .order('last_executed_at', { ascending: false });
-      setExecutions(data ?? []);
+      setExecutions((data ?? []).map((e: any) => ({ ...e, count: e.daily_count ?? e.count ?? 0 })));
       setLoading(false);
     };
     fetch();
