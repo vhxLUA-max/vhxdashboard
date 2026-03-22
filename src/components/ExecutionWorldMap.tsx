@@ -111,14 +111,19 @@ export function ExecutionWorldMap() {
   return (
     <div className="rounded-xl border overflow-hidden"
       style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: 'var(--color-border)' }}>
-        <span className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>🌍 Execution Map</span>
+      {/* Console-style header with 3 dots */}
+      <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: 'var(--color-border)', backgroundColor: 'rgba(0,0,0,0.2)' }}>
+        <div className="flex items-center gap-2">
+          <span className="w-3 h-3 rounded-full bg-red-500 inline-block" />
+          <span className="w-3 h-3 rounded-full bg-yellow-500 inline-block" />
+          <span className="w-3 h-3 rounded-full bg-green-500 inline-block" />
+          <span className="ml-3 text-xs font-mono" style={{ color: 'var(--color-muted)' }}>execution_map.sh</span>
+        </div>
         <div className="flex items-center gap-3 text-[10px]" style={{ color: 'var(--color-muted)' }}>
-          {loading && <span>Resolving locations...</span>}
+          {loading && <span>resolving locations...</span>}
           <span className="flex items-center gap-1">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block" />
-            {dots.length} locations
+            {dots.length} active
           </span>
         </div>
       </div>
