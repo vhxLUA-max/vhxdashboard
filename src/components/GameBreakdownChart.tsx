@@ -30,7 +30,7 @@ export function GameBreakdownChart({ executions, loading = false }: Props) {
   for (const e of executions) {
     const name = e.game_name ?? `Place ${e.place_id}`;
     if (!SUPPORTED_GAMES.includes(name)) continue;
-    grouped[name] = (grouped[name] ?? 0) + e.count;
+    grouped[name] = (grouped[name] ?? 0) + ((e as any).daily_count ?? e.count ?? 0);
   }
 
   const total = Object.values(grouped).reduce((s, v) => s + v, 0);
