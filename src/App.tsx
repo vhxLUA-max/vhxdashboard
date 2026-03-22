@@ -61,97 +61,55 @@ function useLiveTimeAgo(iso: string | null | undefined): string {
 }
 
 
-function useLiveCounter() {
-  const [count, setCount] = useState<number | null>(null);
-  useEffect(() => {
-    const fetch = async () => {
-      const { data } = await supabase.from('unique_users').select('execution_count');
-      setCount((data ?? []).reduce((s: number, u: any) => s + (u.execution_count ?? 0), 0));
-    };
-    fetch();
-    const ch = supabase.channel('live-total')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'unique_users' }, fetch)
-      .subscribe();
-    return () => { supabase.removeChannel(ch); };
-  }, []);
-  return count;
-}
+// Single shared live stats hook — one channel, polls every 5s as fallback
+function useLiveStats() {
+  const [totalExecs,  setTotalExecs]  = useState<number | null>(null);
+  const [uniqueUsers, setUniqueUsers] = useState<number | null>(null);
+  const [newToday,    setNewToday]    = useState<number | null>(null);
+  const [lastIso,     setLastIso]     = useState<string | null>(null);
+  const [allExecs,    setAllExecs]    = useState<any[]>([]);
 
-
-function useLiveUniqueUsers() {
-  const [count, setCount] = useState<number | null>(null);
   useEffect(() => {
-    const fetch = async () => {
-      const { data } = await supabase.from('unique_users').select('roblox_user_id');
-      setCount(new Set((data ?? []).map((u: any) => u.roblox_user_id)).size);
+    const fetchAll = async () => {
+      const today = new Date(); today.setHours(0,0,0,0);
+      const [
+        { data: uu },
+        { data: ge },
+      ] = await Promise.all([
+        supabase.from('unique_users').select('roblox_user_id,execution_count,first_seen,last_seen'),
+        supabase.from('game_executions').select('place_id,daily_count,last_executed_at,game_name').order('last_executed_at', { ascending: false }),
+      ]);
+      if (uu) {
+        const rows = uu as any[];
+        setTotalExecs(rows.reduce((s, u) => s + (u.execution_count ?? 0), 0));
+        setUniqueUsers(new Set(rows.map(u => u.roblox_user_id)).size);
+        setNewToday(new Set(rows.filter(u => u.first_seen >= today.toISOString()).map(u => u.roblox_user_id)).size);
+        const latest = rows.sort((a,b) => new Date(b.last_seen).getTime() - new Date(a.last_seen).getTime())[0];
+        if (latest?.last_seen) setLastIso(latest.last_seen);
+      }
+      if (ge) setAllExecs(ge.map((e: any) => ({ ...e, count: e.daily_count ?? 0 })));
     };
-    fetch();
-    const ch = supabase.channel('live-unique')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'unique_users' }, fetch)
-      .subscribe();
-    return () => { supabase.removeChannel(ch); };
-  }, []);
-  return count;
-}
 
-function useLiveNewUsers() {
-  const [count, setCount] = useState<number | null>(null);
-  useEffect(() => {
-    const fetch = async () => {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const { data } = await supabase
-        .from('unique_users')
-        .select('roblox_user_id')
-        .gte('first_seen', today.toISOString());
-      setCount(new Set((data ?? []).map((u: any) => u.roblox_user_id)).size);
-    };
-    fetch();
-    const ch = supabase.channel('live-new-users')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'unique_users' }, fetch)
-      .subscribe();
-    return () => { supabase.removeChannel(ch); };
-  }, []);
-  return count;
-}
+    fetchAll();
+    const poll = setInterval(fetchAll, 5000);
 
-function useLiveLastExecution() {
-  const [iso, setIso] = useState<string | null>(null);
-  useEffect(() => {
-    const fetch = async () => {
-      const { data } = await supabase
-        .from('unique_users')
-        .select('last_seen')
-        .order('last_seen', { ascending: false })
-        .limit(1);
-      const val = data?.[0]?.last_seen ?? null;
-      if (val) setIso(val);
-    };
-    fetch();
-    const poll = setInterval(fetch, 3000);
-    const ch = supabase.channel('live-last-exec')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'unique_users' }, fetch)
+    const ch = supabase.channel('live-stats-v2')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'unique_users' }, fetchAll)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'game_executions' }, fetchAll)
       .subscribe();
+
     return () => { clearInterval(poll); supabase.removeChannel(ch); };
   }, []);
-  return useLiveTimeAgo(iso);
+
+  return { totalExecs, uniqueUsers, newToday, lastIso, allExecs };
 }
 
-function useLiveAllExecutions() {
-  const [execs, setExecs] = useState<any[]>([]);
-  useEffect(() => {
-    const fetch = async () => {
-      const { data } = await supabase.from('game_executions').select('place_id,daily_count,last_executed_at,game_name').order('last_executed_at', { ascending: false });
-      if (data) setExecs(data as any[]);
-    };
-    fetch();
-    const ch = supabase.channel('live-all-execs')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'game_executions' }, fetch)
-      .subscribe();
-    return () => { supabase.removeChannel(ch); };
-  }, []);
-  return execs;
-}
+// Kept for compatibility — App uses useLiveStats() directly
+function useLiveCounter() { return null; }
+function useLiveUniqueUsers() { return null; }
+function useLiveNewUsers() { return null; }
+function useLiveLastExecution() { return ''; }
+function useLiveAllExecutions() { return []; }
 
 const ADMIN_USERNAMES = ['vhxlua-max'];
 
@@ -206,11 +164,10 @@ function App() {
   const [showProfile, setShowProfile]     = useState(false);
   const { loading, error, refresh }       = useSupabaseDashboard(dateRange);
   const handleRefresh                     = useCallback(() => refresh(), [refresh]);
-  const liveAllExecs                      = useLiveAllExecutions();
-  const liveCount                         = useLiveCounter();
-  const liveUsers                         = useLiveUniqueUsers();
-  const liveNewUsers                      = useLiveNewUsers();
-  const lastExecution                     = useLiveLastExecution();
+  const { totalExecs: liveCount, uniqueUsers: liveUsers2, newToday: liveNewUsers2, lastIso: liveLastIso, allExecs: liveAllExecs } = useLiveStats();
+  const liveUsers                         = liveUsers2;
+  const liveNewUsers                      = liveNewUsers2;
+  const lastExecution                     = useLiveTimeAgo(liveLastIso);
   const visibleTabs = TABS.filter(t => {
     if (t.id === 'admin') return isAdmin;
     return true;
