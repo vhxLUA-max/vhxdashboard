@@ -429,11 +429,90 @@ function App() {
         );
       })()}
 
+      {/* ── Desktop top navbar ───────────────────────────────────────── */}
+      <header className="hidden lg:flex items-center justify-between px-6 h-14 sticky top-0 z-30 shrink-0"
+        style={{ backgroundColor: 'var(--color-bg, #09090b)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+        {/* Left: logo */}
+        <div className="flex items-center gap-3 shrink-0">
+          <div className="w-8 h-8 rounded-xl flex items-center justify-center text-sm font-black text-white"
+            style={{ background: 'linear-gradient(135deg,#2563eb,#3b82f6)' }}>V</div>
+          <span className="text-base font-bold tracking-tight" style={{ color: 'var(--color-text)' }}>vhx hub</span>
+        </div>
+        {/* Center: tab pills */}
+        <nav className="flex items-center gap-1">
+          {visibleTabs.slice(0, 8).map(tab => {
+            const active = activeTab === tab.id;
+            return (
+              <button key={tab.id} onClick={() => switchTab(tab.id)}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-medium transition-all relative"
+                style={{
+                  color: active ? (tab.id === 'admin' ? '#f87171' : 'var(--color-accent)') : 'var(--color-muted)',
+                  backgroundColor: active ? (tab.id === 'admin' ? 'rgba(248,113,113,0.1)' : 'rgba(99,102,241,0.1)') : 'transparent',
+                }}>
+                <tab.icon className="w-4 h-4" />
+                {tab.label}
+                {active && (
+                  <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-4 h-0.5 rounded-full"
+                    style={{ backgroundColor: tab.id === 'admin' ? '#f87171' : 'var(--color-accent)' }} />
+                )}
+              </button>
+            );
+          })}
+          {visibleTabs.length > 8 && (
+            <button onClick={() => setShowDrawer(true)}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-medium transition-all"
+              style={{ color: 'var(--color-muted)' }}>
+              ••• More
+            </button>
+          )}
+        </nav>
+        {/* Right: live badge + search + profile + menu */}
+        <div className="flex items-center gap-2 shrink-0">
+          {liveCount !== null && (
+            <span className="text-[10px] font-semibold px-2.5 py-1 rounded-full"
+              style={{ backgroundColor: 'rgba(16,185,129,0.12)', color: '#10b981' }}>
+              {liveCount.toLocaleString()} execs
+            </span>
+          )}
+          <button onClick={() => setShowSearch(true)}
+            className="w-9 h-9 flex items-center justify-center rounded-full transition-colors hover:opacity-80"
+            style={{ backgroundColor: 'rgba(255,255,255,0.06)', color: 'var(--color-muted)' }}>
+            <Search className="w-4 h-4" />
+          </button>
+          {isLoggedIn ? (
+            <button onClick={() => setShowProfile(true)}
+              className="flex items-center gap-2 px-2 py-1.5 rounded-full transition-colors hover:opacity-80"
+              style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}>
+              {avatarUrl
+                ? <img src={avatarUrl} alt="" className="w-6 h-6 rounded-full object-cover" />
+                : <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white"
+                    style={{ backgroundColor: 'var(--color-accent)' }}>
+                    {adminUsername?.[0]?.toUpperCase() ?? 'U'}
+                  </div>
+              }
+              <span className="text-xs font-medium pr-1" style={{ color: 'var(--color-text)' }}>{adminUsername ?? 'Profile'}</span>
+            </button>
+          ) : (
+            <button onClick={() => setShowLogin(true)}
+              className="px-4 py-1.5 rounded-full text-sm font-semibold text-white transition-opacity hover:opacity-90"
+              style={{ backgroundColor: 'var(--color-accent)' }}>
+              Sign in
+            </button>
+          )}
+          <button onClick={() => setShowDrawer(true)}
+            className="w-9 h-9 flex items-center justify-center rounded-full transition-colors hover:opacity-80"
+            style={{ backgroundColor: 'rgba(255,255,255,0.06)', color: 'var(--color-muted)' }}>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+        </div>
+      </header>
+
       {/* ── Main layout ───────────────────────────────────────────────── */}
       <div className="flex flex-1">
-        {/* Desktop sidebar — mobile drawer style */}
-        <aside className="hidden lg:flex flex-col w-64 shrink-0 sticky top-0 h-screen overflow-y-auto"
-          style={{ backgroundColor: '#111113', borderRight: '1px solid rgba(255,255,255,0.06)' }}>
+        {/* No sidebar on desktop — top nav handles navigation */}
+        <div className="hidden">
 
           {/* Logo */}
           <div className="flex items-center gap-3 px-5 py-5 shrink-0">
@@ -539,7 +618,7 @@ function App() {
               </button>
             )}
           </div>
-        </aside>
+        </div>
 
 
         {showShortcuts && (
@@ -564,11 +643,11 @@ function App() {
 
         {/* ── Mobile drawer (hamburger menu) ────────────────────────────── */}
         {showDrawer && (
-          <div className="lg:hidden fixed inset-0 z-50" onClick={() => setShowDrawer(false)}>
+          <div className="fixed inset-0 z-50" onClick={() => setShowDrawer(false)}>
             {/* Backdrop */}
             <div className="absolute inset-0 bg-black/70" />
-            {/* Sheet slides up from bottom */}
-            <div className="absolute bottom-0 left-0 right-0 rounded-t-2xl overflow-hidden flex flex-col max-h-[88vh]"
+            {/* Sheet — bottom on mobile, right on desktop */}
+            <div className="absolute bottom-0 left-0 right-0 lg:bottom-0 lg:top-0 lg:left-auto lg:right-0 lg:w-80 rounded-t-2xl lg:rounded-none overflow-hidden flex flex-col max-h-[88vh] lg:max-h-full lg:h-full"
               style={{ backgroundColor: '#111113' }}
               onClick={e => e.stopPropagation()}>
 
@@ -698,7 +777,7 @@ function App() {
         )}
 
         <div className="flex-1 min-w-0">
-          <main className="max-w-6xl mx-auto px-3 sm:px-6 py-4 lg:py-8 pb-24 lg:pb-8">
+          <main className="max-w-6xl mx-auto px-4 sm:px-8 py-4 lg:py-8 pb-24 lg:pb-8">
 
             {/* Desktop stats header */}
             {activeTab === 'stats' && (
