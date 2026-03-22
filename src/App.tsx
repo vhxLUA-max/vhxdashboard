@@ -7,7 +7,6 @@ import { DateRangeFilter } from '@/components/DateRangeFilter';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { isConfigured } from '@/lib/supabase';
 import { LiveRecentActivity } from '@/components/LiveRecentActivity';
 import { LiveCharts } from '@/components/LiveCharts';
 import { ExecutionHeatmap } from '@/components/ExecutionHeatmap';
@@ -213,7 +212,6 @@ function App() {
   const [showProfile, setShowProfile]     = useState(false);
   const { loading, error, refresh }       = useSupabaseDashboard(dateRange);
   const handleRefresh                     = useCallback(() => refresh(), [refresh]);
-  const connected                         = isConfigured();
   const liveAllExecs                      = useLiveAllExecutions();
   const liveCount                         = useLiveCounter();
   const live24h                           = useLive24h();
