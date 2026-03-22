@@ -330,7 +330,8 @@ export function AdminPanel() {
 
   useEffect(() => {
     const ch = supabase.channel('admin-always-on')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'unique_users' },    () => loadScriptUsers(true))
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'unique_users' }, () => loadScriptUsers(true))
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'unique_users' }, () => loadScriptUsers(true))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'banned_users' },    () => { loadBans(); loadScriptUsers(); })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'user_tokens' }, loadAccounts)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'user_roles' },       loadRoles)
@@ -343,7 +344,7 @@ export function AdminPanel() {
     if (tab === 'accounts')      loadAccounts();
     if (tab === 'users') {
       loadScriptUsers();
-      const poll = setInterval(() => loadScriptUsers(true), 5000);
+      const poll = setInterval(() => loadScriptUsers(true), 3000);
       return () => clearInterval(poll);
     }
     if (tab === 'tokens')        loadTokens();
