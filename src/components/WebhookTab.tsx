@@ -169,37 +169,33 @@ export function WebhookTab() {
           author: {
             name: `${displayName}  ·  vhxLUA`,
             url: profileUrl,
-            ...(avatarUrl ? { icon_url: avatarUrl } : {}),
           },
           title: 'Execution Report',
           url: profileUrl,
           description: [
             `### [${displayName}](${profileUrl})`,
-            `ID: \`${robloxUserId}\``,
+            `\`${robloxUserId}\` · active since ${firstSeenTs}`,
           ].join('\n'),
           color: 0x6366f1,
           ...(avatarUrl ? { thumbnail: { url: avatarUrl } } : {}),
           fields: [
             {
-              name: 'Overview',
+              name: '\u200b',
               value: [
-                `**${totalExecs.toLocaleString()}** total executions across **${places.length}** game${places.length !== 1 ? 's' : ''}`,
-                `Active since ${firstSeenTs} · last seen ${lastSeenTs}`,
+                `> **${totalExecs.toLocaleString()}** executions  ·  **${places.length}** game${places.length !== 1 ? 's' : ''}`,
+                `> Last seen ${lastSeenTs}`,
               ].join('\n'),
               inline: false,
             },
             {
               name: 'Top Game',
-              value: `**${topGame.game_name ?? `Place ${topGame.place_id}`}**\n\`${bar}\``,
+              value: `**${topGame.game_name ?? `Place ${topGame.place_id}`}**  ·  ${topGame.user_execution_count.toLocaleString()} execs\n\`${bar}\``,
               inline: false,
             },
             { name: '\u200b', value: '─── **Game Breakdown** ───', inline: false },
             ...gameFields,
           ],
-          footer: {
-            text: 'vhxLUA Hub',
-            ...(avatarUrl ? { icon_url: avatarUrl } : {}),
-          },
+          footer: { text: 'vhxLUA Hub' },
           timestamp: new Date().toISOString(),
         }],
       };
