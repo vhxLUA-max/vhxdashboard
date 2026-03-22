@@ -16,6 +16,8 @@ interface ProfileViewProps {
   avatarUrl: string | null;
   isAdmin: boolean;
   isPro?: boolean;
+  customBadge?: string | null;
+  customBadgeColor?: string | null;
   isLoggedIn: boolean;
   onEditProfile: () => void;
   compact?: boolean;
@@ -71,7 +73,7 @@ function usePresence(userId: string | null) {
   return isOnline;
 }
 
-export function ProfileView({ username, avatarUrl, isAdmin, isPro = false, isLoggedIn, onEditProfile, compact = false }: ProfileViewProps) {
+export function ProfileView({ username, avatarUrl, isAdmin, isPro = false, isLoggedIn, onEditProfile, compact = false, customBadge, customBadgeColor = '#3b82f6' }: ProfileViewProps) {
   const [bannerUrl, setBannerUrl] = useState<string | null>(null);
   const [bio, setBio] = useState<string>('');
   // All badge/social data loaded eagerly from user_metadata — works offline
@@ -141,6 +143,7 @@ export function ProfileView({ username, avatarUrl, isAdmin, isPro = false, isLog
               </div>
               <div className="flex items-center gap-2 mt-0.5">
                 {isAdmin && !isFounder && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded" style={{ background: 'rgba(99,102,241,0.12)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.2)', letterSpacing: '0.05em' }}>ADMIN</span>}
+                {customBadge && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded border" style={{ color: customBadgeColor ?? '#3b82f6', borderColor: (customBadgeColor ?? '#3b82f6') + '50', backgroundColor: (customBadgeColor ?? '#3b82f6') + '15' }}>{customBadge.toUpperCase()}</span>}
                 {isOnline
                   ? <span className="text-[10px] flex items-center gap-1" style={{ color: '#10b981' }}><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />Online</span>
                   : <span className="text-[10px]" style={{ color: 'rgba(148,163,184,0.4)' }}>Offline</span>
@@ -213,6 +216,7 @@ export function ProfileView({ username, avatarUrl, isAdmin, isPro = false, isLog
             : <span className="text-[13px] flex items-center gap-1.5" style={{ color: '#64748b' }}><span className="w-1.5 h-1.5 rounded-full bg-slate-500 inline-block" />Offline</span>
           }
           {isAdmin && !isFounder && <span className="text-[10px] font-semibold px-2 py-0.5 rounded" style={{ background: 'rgba(99,102,241,0.1)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.2)', letterSpacing: '0.04em' }}>ADMIN</span>}
+          {customBadge && <span className="text-[10px] font-bold px-2 py-0.5 rounded border" style={{ color: customBadgeColor ?? '#3b82f6', borderColor: (customBadgeColor ?? '#3b82f6') + '50', backgroundColor: (customBadgeColor ?? '#3b82f6') + '15' }}>{customBadge.toUpperCase()}</span>}
         </div>
 
         {bio && <p className="text-[13px] mt-2.5 leading-relaxed" style={{ color: '#94a3b8' }}>{bio}</p>}

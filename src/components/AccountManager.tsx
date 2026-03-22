@@ -69,6 +69,9 @@ export function AccountManager({ onClose, onUsernameChange, onAvatarChange, isPr
   const [savingEmail, setSavingEmail] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
   const [savingBio, setSavingBio]     = useState(false);
+  const [customBadge, setCustomBadge]   = useState('');
+  const [badgeColor, setBadgeColor]     = useState('#3b82f6');
+  const [savingBadge, setSavingBadge]   = useState(false);
   const [socials, setSocials]         = useState<UserSocials>({});
   const [savingSocials, setSavingSocials] = useState(false);
   const [embedTheme, setEmbedTheme]   = useState<'dark' | 'light'>('dark');
@@ -86,6 +89,13 @@ export function AccountManager({ onClose, onUsernameChange, onAvatarChange, isPr
       setAvatarUrl(user.user_metadata?.avatar_url ?? null);
       setBannerUrl(user.user_metadata?.banner_url ?? null);
       setBio(user.user_metadata?.bio ?? '');
+      // Load custom badge from user_roles
+      supabase.from('user_roles').select('custom_badge,custom_badge_color').eq('user_id', user.id).maybeSingle().then(({ data }) => {
+        if (data) {
+          setCustomBadge(data.custom_badge ?? '');
+          setBadgeColor(data.custom_badge_color ?? '#3b82f6');
+        }
+      });
       setSocials(user.user_metadata?.socials ?? {});
       setSubscriptionTier(user.user_metadata?.subscription_tier ?? 'Free');
       // Load actual role from DB for accurate subscription display
@@ -203,6 +213,16 @@ export function AccountManager({ onClose, onUsernameChange, onAvatarChange, isPr
     setSavingBio(false);
     if (error) { toast.error(error.message); return; }
     toast.success('Bio updated!');
+  };
+
+  const handleSaveBadge = async () => {
+    setSavingBadge(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setSavingBadge(false); return; }
+    const { error } = await supabase.from('user_roles').update({ custom_badge: customBadge.trim() || null, custom_badge_color: badgeColor }).eq('user_id', user.id);
+    setSavingBadge(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success('Badge updated!');
   };
 
   const handleSaveSocials = async () => {
@@ -418,6 +438,46 @@ export function AccountManager({ onClose, onUsernameChange, onAvatarChange, isPr
                   Save Bio
                 </Button>
               </div>
+
+              {isPro && (
+                <div className="rounded-xl border p-4 space-y-3" style={s}>
+                  <div>
+                    <h3 className="text-sm font-semibold flex items-center gap-2" style={{ color: 'var(--color-text)' }}>
+                      <span className="text-sm">🏷️</span> Custom Badge
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 rounded" style={{ background: 'linear-gradient(135deg,#f59e0b,#f97316)', color: '#000' }}>✦ PRO</span>
+                    </h3>
+                    <p className="text-xs mt-0.5" style={{ color: 'var(--color-muted)' }}>Set a custom badge that appears on your profile.</p>
+                  </div>
+                  <hr style={{ borderColor: 'var(--color-border)' }} />
+                  <div className="flex gap-2">
+                    <input
+                      value={customBadge}
+                      onChange={e => setCustomBadge(e.target.value.slice(0, 20))}
+                      placeholder="e.g. SCRIPTER, OG, LEGEND"
+                      maxLength={20}
+                      className="flex-1 rounded-lg border px-3 py-2 text-sm outline-none"
+                      style={{ backgroundColor: 'var(--color-surface2)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }}
+                    />
+                    <input type="color" value={badgeColor} onChange={e => setBadgeColor(e.target.value)}
+                      className="w-10 h-10 rounded-lg border cursor-pointer"
+                      style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-surface2)' }} />
+                  </div>
+                  {customBadge && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs" style={{ color: 'var(--color-muted)' }}>Preview:</span>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded border" style={{ color: badgeColor, borderColor: badgeColor + '50', backgroundColor: badgeColor + '15' }}>
+                        {customBadge.toUpperCase()}
+                      </span>
+                    </div>
+                  )}
+                  <Button onClick={handleSaveBadge} disabled={savingBadge}
+                    className="border-0 rounded-lg px-5"
+                    style={{ backgroundColor: 'var(--color-accent)', color: 'var(--color-accent-fg)' }}>
+                    {savingBadge ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                    Save Badge
+                  </Button>
+                </div>
+              )}
 
               <div className="rounded-xl border p-4 space-y-3" style={s}>
                 <div>

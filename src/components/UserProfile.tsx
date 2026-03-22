@@ -33,11 +33,13 @@ const timeAgo = (iso: string) => {
   if (d < 86400*365) return `${Math.floor(d/(86400*30))}mo ago`;
   return `${Math.floor(d/(86400*365))}y ago`;
 };
-const fmt = (iso: string) => new Date(iso).toLocaleDateString([], { month:'short', day:'numeric', year:'numeric' });
+const fmt = (iso: string) => {
+  const d = new Date(iso);
+  return `${d.getMonth()+1}/${String(d.getDate()).padStart(2,'0')}/${d.getFullYear()}`;
+};
 const accountAge = (created: string) => {
-  const years = (Date.now() - new Date(created).getTime()) / (86400*365*1000);
-  if (years >= 1) return `${years.toFixed(1)}y old`;
-  return `${Math.floor(years*12)}mo old`;
+  const days = Math.floor((Date.now() - new Date(created).getTime()) / 86400000);
+  return `${days.toLocaleString()} days old`;
 };
 
 async function robloxProxy(path: string): Promise<unknown> {
