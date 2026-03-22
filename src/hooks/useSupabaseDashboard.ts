@@ -30,7 +30,7 @@ export function useSupabaseDashboard(dateRange: DateRange): UseSupabaseDashboard
         { data: users },
         { data: newToday },
       ] = await Promise.all([
-        supabase.from('game_executions').select('place_id,daily_count,daily_reset_at,last_executed_at,game_name').order('last_executed_at', { ascending: false }),
+        supabase.from('game_executions').select('place_id,total_count:count,daily_count,daily_reset_at,last_executed_at,game_name').order('last_executed_at', { ascending: false }),
         supabase.from('unique_users').select('roblox_user_id').gte('last_seen', since),
         supabase.from('unique_users').select('roblox_user_id').gte('first_seen', new Date(Date.now() - 86400000).toISOString()),
       ]);

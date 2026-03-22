@@ -2,11 +2,13 @@ import { useState, useCallback, useEffect, lazy, Suspense } from 'react';
 import { useSupabaseDashboard } from '@/hooks/useSupabaseDashboard';
 import { supabase } from '@/lib/supabase';
 import type { DateRange } from '@/types';
+import { Header } from '@/components/Header';
 import { MetricCard } from '@/components/MetricCard';
 import { DateRangeFilter } from '@/components/DateRangeFilter';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { isConfigured } from '@/lib/supabase';
 import { LiveRecentActivity } from '@/components/LiveRecentActivity';
 import { LiveCharts } from '@/components/LiveCharts';
 import { ExecutionHeatmap } from '@/components/ExecutionHeatmap';
@@ -61,48 +63,103 @@ function useLiveTimeAgo(iso: string | null | undefined): string {
 }
 
 
-// Single shared live stats hook — one channel, polls every 5s as fallback
-function useLiveStats() {
-  const [totalExecs,  setTotalExecs]  = useState<number | null>(null);
-  const [uniqueUsers, setUniqueUsers] = useState<number | null>(null);
-  const [newToday,    setNewToday]    = useState<number | null>(null);
-  const [lastIso,     setLastIso]     = useState<string | null>(null);
-  const [allExecs,    setAllExecs]    = useState<any[]>([]);
-
+function useLiveCounter() {
+  const [count, setCount] = useState<number | null>(null);
   useEffect(() => {
-    const fetchAll = async () => {
-      const today = new Date(); today.setHours(0,0,0,0);
-      const [
-        { data: uu },
-        { data: ge },
-      ] = await Promise.all([
-        supabase.from('unique_users').select('roblox_user_id,execution_count,first_seen,last_seen'),
-        supabase.from('game_executions').select('place_id,daily_count,last_executed_at,game_name').order('last_executed_at', { ascending: false }),
-      ]);
-      if (uu) {
-        const rows = uu as any[];
-        setTotalExecs(rows.reduce((s, u) => s + (u.execution_count ?? 0), 0));
-        setUniqueUsers(new Set(rows.map(u => u.roblox_user_id)).size);
-        setNewToday(new Set(rows.filter(u => u.first_seen >= today.toISOString()).map(u => u.roblox_user_id)).size);
-        const latest = rows.sort((a,b) => new Date(b.last_seen).getTime() - new Date(a.last_seen).getTime())[0];
-        if (latest?.last_seen) setLastIso(latest.last_seen);
-      }
-      if (ge) setAllExecs(ge.map((e: any) => ({ ...e, count: e.daily_count ?? 0 })));
+    const fetch = async () => {
+      const { data } = await supabase.from('unique_users').select('execution_count');
+      setCount((data ?? []).reduce((s: number, u: any) => s + (u.execution_count ?? 0), 0));
     };
-
-    fetchAll();
-
-    const ch = supabase.channel('live-stats-v2')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'unique_users' }, fetchAll)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'game_executions' }, fetchAll)
+    fetch();
+    const ch = supabase.channel('live-total')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'unique_users' }, fetch)
       .subscribe();
-
     return () => { supabase.removeChannel(ch); };
   }, []);
-
-  return { totalExecs, uniqueUsers, newToday, lastIso, allExecs };
+  return count;
 }
 
+function useLive24h() {
+  const [count, setCount] = useState<number | null>(null);
+  useEffect(() => {
+    const fetch = async () => {
+      const { data } = await supabase.from('game_executions').select('daily_count,daily_reset_at');
+      if (!data) return;
+      const today = new Date().toISOString().slice(0, 10);
+      setCount(data.reduce((s: number, e: { daily_count?: number; daily_reset_at?: string }) =>
+        s + (e.daily_reset_at?.slice(0, 10) === today ? (e.daily_count ?? 0) : 0), 0));
+    };
+    fetch();
+    const poll = setInterval(fetch, 15000);
+    const ch = supabase.channel('live-24h')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'game_executions' }, fetch)
+      .subscribe();
+    return () => { clearInterval(poll); supabase.removeChannel(ch); };
+  }, []);
+  return count;
+}
+
+function useLiveUniqueUsers() {
+  const [count, setCount] = useState<number | null>(null);
+  useEffect(() => {
+    const fetch = async () => {
+      const { data } = await supabase.from('unique_users').select('roblox_user_id');
+      setCount(new Set((data ?? []).map((u: any) => u.roblox_user_id)).size);
+    };
+    fetch();
+    const ch = supabase.channel('live-unique')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'unique_users' }, fetch)
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, []);
+  return count;
+}
+
+function useLiveNewUsers() {
+  const [count, setCount] = useState<number | null>(null);
+  useEffect(() => {
+    setCount(0); // New users tracked in Google Sheets
+  }, []);
+  return count;
+}
+
+function useLiveLastExecution() {
+  const [iso, setIso] = useState<string | null>(null);
+  useEffect(() => {
+    const fetch = async () => {
+      const { data } = await supabase
+        .from('game_executions')
+        .select('last_executed_at')
+        .order('last_executed_at', { ascending: false })
+        .limit(1);
+      const val = data?.[0]?.last_executed_at ?? null;
+      if (val) setIso(val);
+    };
+    fetch();
+    const poll = setInterval(fetch, 5000);
+    const ch = supabase.channel('live-last-exec')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'game_executions' }, fetch)
+      .subscribe();
+    return () => { clearInterval(poll); supabase.removeChannel(ch); };
+  }, []);
+  return useLiveTimeAgo(iso);
+}
+
+function useLiveAllExecutions() {
+  const [execs, setExecs] = useState<any[]>([]);
+  useEffect(() => {
+    const fetch = async () => {
+      const { data } = await supabase.from('game_executions').select('place_id,total_count:count,last_executed_at,game_name').order('last_executed_at', { ascending: false });
+      if (data) setExecs(data as any[]);
+    };
+    fetch();
+    const ch = supabase.channel('live-all-execs')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'game_executions' }, fetch)
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, []);
+  return execs;
+}
 
 const ADMIN_USERNAMES = ['vhxlua-max'];
 
@@ -157,10 +214,13 @@ function App() {
   const [showProfile, setShowProfile]     = useState(false);
   const { loading, error, refresh }       = useSupabaseDashboard(dateRange);
   const handleRefresh                     = useCallback(() => refresh(), [refresh]);
-  const { totalExecs: liveCount, uniqueUsers: liveUsers2, newToday: liveNewUsers2, lastIso: liveLastIso, allExecs: liveAllExecs } = useLiveStats();
-  const liveUsers                         = liveUsers2;
-  const liveNewUsers                      = liveNewUsers2;
-  const lastExecution                     = useLiveTimeAgo(liveLastIso);
+  const connected                         = isConfigured();
+  const liveAllExecs                      = useLiveAllExecutions();
+  const liveCount                         = useLiveCounter();
+  const live24h                           = useLive24h();
+  const liveUsers                         = useLiveUniqueUsers();
+  const liveNewUsers                      = useLiveNewUsers();
+  const lastExecution                     = useLiveLastExecution();
   const visibleTabs = TABS.filter(t => {
     if (t.id === 'admin') return isAdmin;
     return true;
@@ -252,6 +312,17 @@ function App() {
   return (
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: 'var(--color-bg, #09090b)', color: 'var(--color-text)' }}>
 
+      {/* ── Desktop header (hidden on mobile) ────────────────────────── */}
+      <div className="hidden lg:block">
+        <Header
+          isConnected={connected}
+          username={adminUsername}
+          avatarUrl={avatarUrl}
+          onLoginClick={() => setShowLogin(true)}
+          onLogout={async () => { await logout(); setAdminUsername(null); setAvatarUrl(null); setIsAdmin(false); toast.success('Signed out'); }}
+          onAccountClick={() => setShowAccount(true)}
+        />
+      </div>
 
       {/* ── Mobile header — Rscripts style ───────────────────────────── */}
       <header className="lg:hidden flex items-center justify-between px-5 h-14 sticky top-0 z-30"
@@ -372,201 +443,30 @@ function App() {
         );
       })()}
 
-      {/* ── Desktop top navbar ───────────────────────────────────────── */}
-      <header className="hidden lg:flex items-center justify-between px-6 h-14 sticky top-0 z-30 shrink-0"
-        style={{ backgroundColor: 'var(--color-bg, #09090b)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-        {/* Left: logo */}
-        <div className="flex items-center gap-3 shrink-0">
-          <div className="w-8 h-8 rounded-xl flex items-center justify-center text-sm font-black text-white"
-            style={{ background: 'linear-gradient(135deg,#2563eb,#3b82f6)' }}>V</div>
-          <span className="text-base font-bold tracking-tight" style={{ color: 'var(--color-text)' }}>vhx hub</span>
-        </div>
-        {/* Center: tab pills — 5 primary tabs + More */}
-        <nav className="flex items-center gap-1">
-          {visibleTabs.slice(0, 5).map(tab => {
-            const active = activeTab === tab.id;
-            return (
-              <button key={tab.id} onClick={() => switchTab(tab.id)}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-medium transition-all relative"
-                style={{
-                  color: active ? (tab.id === 'admin' ? '#f87171' : 'var(--color-accent)') : 'var(--color-muted)',
-                  backgroundColor: active ? (tab.id === 'admin' ? 'rgba(248,113,113,0.1)' : 'rgba(99,102,241,0.1)') : 'transparent',
-                }}>
-                <tab.icon className="w-4 h-4" />
-                {tab.label}
-                {active && (
-                  <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-4 h-0.5 rounded-full"
-                    style={{ backgroundColor: tab.id === 'admin' ? '#f87171' : 'var(--color-accent)' }} />
-                )}
-              </button>
-            );
-          })}
-          <button onClick={() => setShowDrawer(true)}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-medium transition-all"
-            style={{
-              color: visibleTabs.slice(5).some(t => t.id === activeTab) ? 'var(--color-accent)' : 'var(--color-muted)',
-              backgroundColor: visibleTabs.slice(5).some(t => t.id === activeTab) ? 'rgba(99,102,241,0.1)' : 'transparent',
-            }}>
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-            More
-          </button>
-        </nav>
-        {/* Right: live badge + search + profile + menu */}
-        <div className="flex items-center gap-2 shrink-0">
-          {liveCount !== null && (
-            <span className="text-[10px] font-semibold px-2.5 py-1 rounded-full"
-              style={{ backgroundColor: 'rgba(16,185,129,0.12)', color: '#10b981' }}>
-              {liveCount.toLocaleString()} execs
-            </span>
-          )}
-          <button onClick={() => setShowSearch(true)}
-            className="w-9 h-9 flex items-center justify-center rounded-full transition-colors hover:opacity-80"
-            style={{ backgroundColor: 'rgba(255,255,255,0.06)', color: 'var(--color-muted)' }}>
-            <Search className="w-4 h-4" />
-          </button>
-          {isLoggedIn ? (
-            <button onClick={() => setShowProfile(true)}
-              className="flex items-center gap-2 px-2 py-1.5 rounded-full transition-colors hover:opacity-80"
-              style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}>
-              {avatarUrl
-                ? <img src={avatarUrl} alt="" className="w-6 h-6 rounded-full object-cover" />
-                : <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white"
-                    style={{ backgroundColor: 'var(--color-accent)' }}>
-                    {adminUsername?.[0]?.toUpperCase() ?? 'U'}
-                  </div>
-              }
-              <span className="text-xs font-medium pr-1" style={{ color: 'var(--color-text)' }}>{adminUsername ?? 'Profile'}</span>
-            </button>
-          ) : (
-            <button onClick={() => setShowLogin(true)}
-              className="px-4 py-1.5 rounded-full text-sm font-semibold text-white transition-opacity hover:opacity-90"
-              style={{ backgroundColor: 'var(--color-accent)' }}>
-              Sign in
-            </button>
-          )}
-          <button onClick={() => setShowDrawer(true)}
-            className="w-9 h-9 flex items-center justify-center rounded-full transition-colors hover:opacity-80"
-            style={{ backgroundColor: 'rgba(255,255,255,0.06)', color: 'var(--color-muted)' }}>
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          </button>
-        </div>
-      </header>
-
       {/* ── Main layout ───────────────────────────────────────────────── */}
       <div className="flex flex-1">
-        {/* No sidebar on desktop — top nav handles navigation */}
-        <div className="hidden">
-
-          {/* Logo */}
-          <div className="flex items-center gap-3 px-5 py-5 shrink-0">
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center text-sm font-black text-white shrink-0"
-              style={{ background: 'linear-gradient(135deg,#2563eb,#3b82f6)' }}>V</div>
-            <span className="text-base font-bold tracking-tight" style={{ color: 'var(--color-text)' }}>vhx hub</span>
-          </div>
-
-          {/* Profile */}
-          {isLoggedIn && (
-            <div className="mb-3 overflow-hidden rounded-xl mx-3" style={{ border: '1px solid rgba(255,255,255,0.07)', backgroundColor: 'rgba(255,255,255,0.03)' }}>
-              <ProfileView
-                username={adminUsername}
-                avatarUrl={avatarUrl}
-                isAdmin={isAdmin}
-                isPro={isPro}
-                isLoggedIn={isLoggedIn}
-                onEditProfile={() => setShowAccount(true)}
-              />
-            </div>
-          )}
-
-          {!isLoggedIn && (
-            <div className="mx-3 mb-3 rounded-xl p-4 text-center" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
-              <p className="text-xs font-semibold mb-1" style={{ color: 'var(--color-text)' }}>Welcome to vhx hub</p>
-              <p className="text-[11px] mb-3" style={{ color: 'var(--color-muted)' }}>Sign in to unlock all features</p>
-              <button onClick={() => setShowLogin(true)}
-                className="w-full py-2 rounded-xl text-xs font-semibold text-white"
-                style={{ backgroundColor: 'var(--color-accent)' }}>
-                Log in / Sign up
-              </button>
-            </div>
-          )}
-
-          {liveCount !== null && (
-            <div className="mx-3 mb-3 flex items-center gap-2 px-3 py-2 rounded-lg"
-              style={{ backgroundColor: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.15)' }}>
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-              <span className="text-xs font-medium text-emerald-400">{liveCount.toLocaleString()} total executions</span>
-            </div>
-          )}
-
-          <p className="text-[10px] font-semibold tracking-widest mb-1 px-5" style={{ color: 'var(--color-muted)' }}>NAVIGATE</p>
-          <div className="mx-3 rounded-xl overflow-hidden mb-4" style={{ backgroundColor: 'rgba(255,255,255,0.04)' }}>
-            {visibleTabs.map((tab, i) => (
-              <button key={tab.id} onClick={() => switchTab(tab.id)}
-                className="w-full flex items-center gap-3 px-4 py-3.5 transition-colors text-left"
-                style={{
-                  backgroundColor: activeTab === tab.id ? 'rgba(99,102,241,0.12)' : 'transparent',
-                  color: activeTab === tab.id
-                    ? tab.id === 'admin' ? '#f87171' : 'var(--color-accent)'
-                    : 'var(--color-text)',
-                  borderBottom: i < visibleTabs.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none',
-                }}>
-                <tab.icon className="w-4 h-4 shrink-0"
-                  style={{ color: activeTab === tab.id ? (tab.id === 'admin' ? '#f87171' : 'var(--color-accent)') : 'var(--color-muted)' }} />
-                <span className="text-sm font-medium flex-1">{tab.label}</span>
-                <span className="text-[9px] font-mono px-1.5 py-0.5 rounded"
-                  style={{ backgroundColor: 'rgba(255,255,255,0.06)', color: 'var(--color-muted)' }}>{i + 1}</span>
-                {activeTab === tab.id && (
-                  <span className="w-1.5 h-1.5 rounded-full shrink-0"
-                    style={{ backgroundColor: tab.id === 'admin' ? '#f87171' : 'var(--color-accent)' }} />
-                )}
-              </button>
-            ))}
-          </div>
-
-          <p className="text-[10px] font-semibold tracking-widest mb-1 px-5" style={{ color: 'var(--color-muted)' }}>COMMUNITY</p>
-          <div className="mx-3 rounded-xl overflow-hidden mb-4" style={{ backgroundColor: 'rgba(255,255,255,0.04)' }}>
-            {[
-              { label: 'Discord', url: 'https://discord.gg/usEnYvqnaJ',                   color: '#5865F2' },
-              { label: 'YouTube', url: 'https://youtube.com/@vhxlua?si=0j9rYLl0qPf3gu1Y', color: '#FF0000' },
-              { label: 'TikTok',  url: 'https://www.tiktok.com/@vhxlua_?lang=en',         color: '#ff0050' },
-              { label: 'GitHub',  url: 'https://github.com/vhxLUA-max',                    color: '#e6edf3' },
-            ].map((item, i, arr) => (
-              <a key={item.label} href={item.url} target="_blank" rel="noopener noreferrer"
-                className="flex items-center gap-3 px-4 py-3 transition-opacity hover:opacity-80"
-                style={{ color: 'var(--color-text)', borderBottom: i < arr.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none', textDecoration: 'none' }}>
-                <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
-                <span className="text-sm font-medium flex-1">{item.label}</span>
-                <svg className="w-3.5 h-3.5 shrink-0" style={{ color: 'var(--color-muted)' }} fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                </svg>
-              </a>
-            ))}
-          </div>
-
-          <div className="mt-auto px-3 pb-5 flex flex-col gap-2">
-            <button onClick={() => setShowShortcuts(true)}
-              className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-opacity hover:opacity-80"
-              style={{ backgroundColor: 'rgba(255,255,255,0.04)', color: 'var(--color-muted)' }}>
-              <span className="px-1.5 py-0.5 rounded border text-[10px] font-mono" style={{ borderColor: 'rgba(255,255,255,0.15)' }}>?</span>
-              Keyboard shortcuts
+        {/* Desktop sidebar */}
+        <aside className="hidden lg:flex flex-col gap-1 w-20 shrink-0 border-r border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 px-2 py-6 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto">
+          {visibleTabs.map((tab, i) => (
+            <button key={tab.id} onClick={() => switchTab(tab.id)} title={`${tab.label} (${i + 1})`}
+              className={`relative flex flex-col items-center gap-1.5 px-2 py-3 rounded-xl text-[10px] font-medium transition-all duration-200 ${
+                activeTab === tab.id
+                  ? tab.id === 'admin' ? 'bg-rose-500/10 text-rose-400 shadow-sm border border-rose-500/30'
+                    : 'bg-white dark:bg-gray-800 text-indigo-500 dark:text-indigo-400 shadow-sm border border-gray-200 dark:border-gray-700'
+                  : tab.id === 'admin' ? 'text-rose-500/60 hover:text-rose-400 hover:bg-rose-500/5'
+                  : 'text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-white dark:hover:bg-gray-800/60'
+              }`}>
+              <tab.icon className="w-5 h-5 flex-shrink-0" />
+              {tab.label}
+              <span className="absolute top-1.5 right-1.5 text-[8px] text-gray-600 font-mono">{i + 1}</span>
             </button>
-            {isLoggedIn && (
-              <button onClick={async () => { await logout(); setAdminUsername(null); setAvatarUrl(null); setIsAdmin(false); setIsLoggedIn(false); toast.success('Signed out'); }}
-                className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-opacity hover:opacity-80"
-                style={{ backgroundColor: 'rgba(239,68,68,0.06)', color: '#ef4444' }}>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                </svg>
-                Log Out
-              </button>
-            )}
-          </div>
-        </div>
-
+          ))}
+          <button onClick={() => setShowShortcuts(true)} title="Keyboard shortcuts (?)"
+            className="mt-auto flex flex-col items-center gap-1 px-2 py-2 rounded-xl text-[9px] font-mono text-gray-600 hover:text-gray-400 transition-colors">
+            <span className="px-1.5 py-0.5 rounded border border-gray-700 text-[10px]">?</span>
+            keys
+          </button>
+        </aside>
 
         {showShortcuts && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setShowShortcuts(false)}>
@@ -590,11 +490,11 @@ function App() {
 
         {/* ── Mobile drawer (hamburger menu) ────────────────────────────── */}
         {showDrawer && (
-          <div className="fixed inset-0 z-50" onClick={() => setShowDrawer(false)}>
+          <div className="lg:hidden fixed inset-0 z-50" onClick={() => setShowDrawer(false)}>
             {/* Backdrop */}
             <div className="absolute inset-0 bg-black/70" />
-            {/* Sheet — bottom on mobile, right on desktop */}
-            <div className="absolute bottom-0 left-0 right-0 lg:bottom-0 lg:top-0 lg:left-auto lg:right-0 lg:w-80 rounded-t-2xl lg:rounded-none overflow-hidden flex flex-col max-h-[88vh] lg:max-h-full lg:h-full"
+            {/* Sheet slides up from bottom */}
+            <div className="absolute bottom-0 left-0 right-0 rounded-t-2xl overflow-hidden flex flex-col max-h-[88vh]"
               style={{ backgroundColor: '#111113' }}
               onClick={e => e.stopPropagation()}>
 
@@ -724,7 +624,7 @@ function App() {
         )}
 
         <div className="flex-1 min-w-0">
-          <main className="max-w-6xl mx-auto px-4 sm:px-8 py-4 lg:py-8 pb-24 lg:pb-8">
+          <main className="max-w-6xl mx-auto px-3 sm:px-6 py-4 lg:py-6 pb-24 lg:pb-8">
 
             {/* Desktop stats header */}
             {activeTab === 'stats' && (
@@ -775,7 +675,7 @@ function App() {
                 {activeTab === 'stats' && (
                   <div className="space-y-6">
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                      <MetricCard title="Executions" value={liveCount?.toLocaleString() ?? '-'} subtitle="All time" icon={Activity} loading={false} />
+                      <MetricCard title="Executions" value={(dateRange === '24h' ? live24h : liveCount)?.toLocaleString() ?? '-'} subtitle={dateRange === '24h' ? 'Today' : `Last ${dateRange}`} icon={Activity} loading={false} />
                       <MetricCard title="Users"      value={liveUsers?.toLocaleString() ?? '-'}    subtitle="Active 24h"    icon={Users}   loading={false} />
                       <MetricCard title="New Today"  value={liveNewUsers?.toLocaleString() ?? '-'} subtitle="First seen"    icon={Users}   loading={false} />
                       <MetricCard title="Last Exec"  value={lastExecution}                         subtitle="Most recent"   icon={Clock}   loading={false} />

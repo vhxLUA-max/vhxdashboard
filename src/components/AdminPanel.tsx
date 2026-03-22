@@ -3,7 +3,6 @@ import { supabase } from '@/lib/supabase';
 
 import { toast } from 'sonner';
 import { UserProfile } from '@/components/UserProfile';
-import { TrollPanel } from '@/components/TrollPanel';
 import { MaintenancePanel } from '@/components/MaintenancePanel';
 import {
   Shield, Users, Key, Megaphone, ScrollText, Wrench,
@@ -129,7 +128,6 @@ const ANNOUNCE_COLORS = { info: '#3b82f6', warning: '#f59e0b', success: '#10b981
 export function AdminPanel() {
   const [tab, setTab]             = useState<AdminTab>('accounts');
   const [profileUser, setProfileUser] = useState<{ userId: number; username: string } | null>(null);
-  const [trollUser, setTrollUser]     = useState<{ id: number; username: string } | null>(null);
   const [isAdmin, setIsAdmin]     = useState<boolean | null>(null);
   const [myRole, setMyRole]       = useState<UserRole>('user');
   const [loading, setLoading]     = useState(false);
@@ -270,8 +268,8 @@ export function AdminPanel() {
     setLoading(false);
   }, []);
 
-  const loadScriptUsers = useCallback(async (silent = false) => {
-    if (!silent) setLoading(true);
+  const loadScriptUsers = useCallback(async () => {
+    setLoading(true);
     const [{ data: rows }, { data: bansData }] = await Promise.all([
       supabase.from('unique_users').select('roblox_user_id,username,execution_count,first_seen,last_seen,place_id,game_name,hwid,ip_address').order('last_seen', { ascending: false }),
       supabase.from('banned_users').select('roblox_user_id'),
@@ -294,7 +292,7 @@ export function AdminPanel() {
       new Date(b.last_seen).getTime() - new Date(a.last_seen).getTime()
     );
     setScriptUsers(sorted);
-    if (!silent) setLoading(false);
+    setLoading(false);
   }, []);
 
   const loadTokens = useCallback(async () => {
@@ -332,7 +330,7 @@ export function AdminPanel() {
 
   useEffect(() => {
     const ch = supabase.channel('admin-always-on')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'unique_users' },    () => loadScriptUsers(true))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'unique_users' },    loadScriptUsers)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'banned_users' },    () => { loadBans(); loadScriptUsers(); })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'user_tokens' }, loadAccounts)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'user_roles' },       loadRoles)
@@ -797,7 +795,7 @@ export function AdminPanel() {
                     </button>
                   )}
                   <button
-                    onClick={e => { e.stopPropagation(); setTrollUser({ id: u.roblox_user_id, username: u.username }); }}
+                    onClick={e => { e.stopPropagation(); }}
                     className="text-[10px] px-2 py-1 rounded-lg border shrink-0 transition-colors hover:opacity-80"
                     style={{ borderColor: 'rgba(168,85,247,0.3)', color: '#a855f7', backgroundColor: 'rgba(168,85,247,0.08)' }}
                     title="Troll user">
@@ -1172,7 +1170,6 @@ export function AdminPanel() {
           </button>
         </div>
       )}
-      {trollUser && <TrollPanel userId={trollUser.id} username={trollUser.username} onClose={() => setTrollUser(null)} />}
     </div>
   );
 }

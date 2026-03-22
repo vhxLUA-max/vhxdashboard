@@ -13,11 +13,8 @@ export function ExecutionHeatmap({ executions, loading = false }: Props) {
   const grid = useMemo(() => {
     const counts: number[][] = Array.from({ length: 7 }, () => new Array(24).fill(0));
     for (const e of executions) {
-      if (!e.last_executed_at) continue;
       const d = new Date(e.last_executed_at);
-      if (isNaN(d.getTime())) continue;
-      const val = e.daily_count ?? e.count ?? 0;
-      if (val > 0) counts[d.getDay()][d.getHours()] += val;
+      counts[d.getDay()][d.getHours()] += e.count;
     }
     return counts;
   }, [executions]);
