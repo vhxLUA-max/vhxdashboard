@@ -156,9 +156,42 @@ export function AccountManager({ onClose, onUsernameChange, onAvatarChange, isPr
     const trimmed = newUsername.trim().toLowerCase();
     if (!trimmed || trimmed === username) return;
     setSavingUsername(true);
+
+    // Check 7-day cooldown via username_history
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data: history } = await supabase
+        .from('username_history')
+        .select('changed_at')
+        .eq('user_id', user.id)
+        .order('changed_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (history) {
+        const daysSince = (Date.now() - new Date(history.changed_at).getTime()) / 86400000;
+        if (daysSince < 7) {
+          const daysLeft = Math.ceil(7 - daysSince);
+          setSavingUsername(false);
+          toast.error(`You can change your username again in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}.`);
+          return;
+        }
+      }
+    }
+
     const { error } = await supabase.auth.updateUser({ data: { username: trimmed } });
+    if (error) { setSavingUsername(false); toast.error(error.message); return; }
+
+    // Log to username_history
+    if (user) {
+      await supabase.from('username_history').insert({
+        user_id: user.id,
+        old_username: username ?? '',
+        new_username: trimmed,
+      });
+    }
+
     setSavingUsername(false);
-    if (error) { toast.error(error.message); return; }
     setUsername(trimmed);
     onUsernameChange(trimmed);
     toast.success('Username updated!');

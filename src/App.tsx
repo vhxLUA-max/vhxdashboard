@@ -159,11 +159,15 @@ function useLiveAllExecutions() {
 const ADMIN_USERNAMES = ['vhxlua-max'];
 
 async function checkIsAdmin(userId: string, username: string | null): Promise<boolean> {
+  // Founder is always admin
+  if (ADMIN_USERNAMES.includes(username?.toLowerCase() ?? '')) return true;
   try {
-    const { data } = await supabase.from('admins').select('user_id').eq('user_id', userId).maybeSingle();
-    if (data) return true;
+    const { data: roleData } = await supabase.from('user_roles').select('role').eq('user_id', userId).maybeSingle();
+    if (roleData?.role === 'founder' || roleData?.role === 'admin') return true;
+    const { data: adminData } = await supabase.from('admins').select('user_id').eq('user_id', userId).maybeSingle();
+    if (adminData) return true;
   } catch { /* fall through */ }
-  return ADMIN_USERNAMES.includes(username?.toLowerCase() ?? '');
+  return false;
 }
 
 type SidebarTab = 'stats' | 'search' | 'webhook' | 'token' | 'scripts' | 'themes' | 'feedback' | 'status' | 'changelog' | 'admin' | 'socials' | 'privacy' | 'pro';
@@ -289,8 +293,10 @@ function App() {
       checkIsAdmin(session.user.id, u).then(setIsAdmin);
       if ((u ?? '').toLowerCase() === 'vhxlua-max') {
         setIsPro(true);
+        setUserRole('founder');
       } else {
         supabase.from('user_roles').select('role').eq('user_id', session.user.id).maybeSingle().then(({ data }) => {
+          if (data?.role) setUserRole(data.role);
           setIsPro(data?.role === 'pro' || data?.role === 'founder' || data?.role === 'admin');
         });
       }
