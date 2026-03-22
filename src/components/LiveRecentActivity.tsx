@@ -13,7 +13,7 @@ export function LiveRecentActivity() {
         .from('game_executions')
         .select('place_id,daily_count,last_executed_at,game_name')
         .order('last_executed_at', { ascending: false });
-      setExecutions(data ?? []);
+      setExecutions((data ?? []).map((e: any) => ({ ...e, count: e.daily_count ?? 0 })));
       setLoading(false);
     };
     fetch();
