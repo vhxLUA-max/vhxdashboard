@@ -422,13 +422,23 @@ export function UserSearch({ isAdmin = false }: { isAdmin?: boolean }) {
       if (row.first_seen < grouped[uid].earliest_seen) grouped[uid].earliest_seen = row.first_seen;
       if (row.last_seen > grouped[uid].latest_seen) grouped[uid].latest_seen = row.last_seen;
       grouped[uid].total_executions += row.execution_count ?? 0;
-      grouped[uid].places.push({
-        place_id: row.place_id,
-        game_name: row.game_name,
-        first_seen: row.first_seen,
-        last_seen: row.last_seen,
-        user_execution_count: row.execution_count ?? 0,
-      });
+
+      // Group by game_name to avoid duplicates from multiple place IDs per game
+      const gameName = row.game_name || `Place ${row.place_id}`;
+      const existing = grouped[uid].places.find(p => p.game_name === gameName);
+      if (existing) {
+        existing.user_execution_count += row.execution_count ?? 0;
+        if (row.last_seen > existing.last_seen) existing.last_seen = row.last_seen;
+        if (row.first_seen < existing.first_seen) existing.first_seen = row.first_seen;
+      } else {
+        grouped[uid].places.push({
+          place_id: row.place_id,
+          game_name: gameName,
+          first_seen: row.first_seen,
+          last_seen: row.last_seen,
+          user_execution_count: row.execution_count ?? 0,
+        });
+      }
     }
 
     setResults(Object.values(grouped));
