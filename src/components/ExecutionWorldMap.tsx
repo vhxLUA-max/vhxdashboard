@@ -24,23 +24,11 @@ function timeAgo(iso: string) {
   return `${Math.floor(s / 3600)}h ago`;
 }
 
-async function batchGeoResolve(ips: string[]): Promise<Record<string, { lat: number; lng: number }>> {
-  const result: Record<string, { lat: number; lng: number }> = {};
-  const ipv4 = [...new Set(ips.filter(ip => !ip.includes(':')))];
-  if (!ipv4.length) return result;
+// Trigger server-side geo resolution of any unresolved IPs
+async function triggerGeoResolve() {
   try {
-    const res = await fetch('https://ip-api.com/batch?fields=status,query,lat,lon', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(ipv4.slice(0, 100).map(q => ({ query: q }))),
-    });
-    if (!res.ok) return result;
-    const data = await res.json();
-    for (const d of data) {
-      if (d.status === 'success') result[d.query] = { lat: d.lat, lng: d.lon };
-    }
+    await fetch('/api/geo-resolve', { method: 'POST' });
   } catch { /* silent */ }
-  return result;
 }
 
 export function ExecutionWorldMap() {
@@ -49,50 +37,45 @@ export function ExecutionWorldMap() {
   const [loading, setLoading] = useState(true);
   const containerRef          = useRef<HTMLDivElement>(null);
 
-  const load = useCallback(async (markFresh = false) => {
+  // Just reads already-resolved lat/lng from Supabase
+  const loadDots = useCallback(async (markFresh = false) => {
     const { data } = await supabase
       .from('unique_users')
-      .select('ip_address,username,game_name,last_seen,lat,lng')
-      .not('ip_address', 'is', null)
-      .neq('ip_address', '')
+      .select('username,game_name,last_seen,lat,lng')
+      .not('lat', 'is', null)
+      .not('lng', 'is', null)
       .order('last_seen', { ascending: false })
       .limit(50);
 
     if (!data) { setLoading(false); return; }
 
     const freshCutoff = new Date(Date.now() - 15000).toISOString();
-    const resolved: Dot[] = [];
-    const needsGeo: typeof data = [];
-
-    for (const row of data) {
-      if (row.lat != null && row.lng != null) {
-        resolved.push({ lat: row.lat, lng: row.lng, username: row.username, game_name: row.game_name ?? '', last_seen: row.last_seen, fresh: markFresh && row.last_seen > freshCutoff });
-      } else {
-        needsGeo.push(row);
-      }
-    }
-
-    if (needsGeo.length > 0) {
-      const geoMap = await batchGeoResolve(needsGeo.map(r => r.ip_address as string));
-      for (const [ip, geo] of Object.entries(geoMap)) {
-        await supabase.from('unique_users').update({ lat: geo.lat, lng: geo.lng }).eq('ip_address', ip);
-        for (const row of needsGeo.filter(r => r.ip_address === ip)) {
-          resolved.push({ lat: geo.lat, lng: geo.lng, username: row.username, game_name: row.game_name ?? '', last_seen: row.last_seen, fresh: markFresh && row.last_seen > freshCutoff });
-        }
-      }
-    }
-
-    setDots(resolved);
+    setDots(data.map(row => ({
+      lat: row.lat as number,
+      lng: row.lng as number,
+      username: row.username,
+      game_name: row.game_name ?? '',
+      last_seen: row.last_seen,
+      fresh: markFresh && row.last_seen > freshCutoff,
+    })));
     setLoading(false);
   }, []);
 
   useEffect(() => {
-    load();
-    const ch = supabase.channel('worldmap-v3')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'unique_users' }, () => load(true))
+    // 1. Trigger server-side IP resolution (fires and forgets)
+    triggerGeoResolve().then(() => loadDots());
+
+    // 2. Realtime: when unique_users changes, reload dots
+    const ch = supabase.channel('worldmap-v4')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'unique_users' }, async () => {
+        // New execution — resolve any new IPs then reload
+        await triggerGeoResolve();
+        loadDots(true);
+      })
       .subscribe();
+
     return () => { supabase.removeChannel(ch); };
-  }, [load]);
+  }, [loadDots]);
 
   const showDot = useCallback((dot: Dot, svgX: number, svgY: number) => {
     setTooltip({ dot, x: (svgX / W) * 100, y: (svgY / H) * 100 });
@@ -109,10 +92,12 @@ export function ExecutionWorldMap() {
           <span className="w-3 h-3 rounded-full bg-red-500" />
           <span className="w-3 h-3 rounded-full bg-yellow-400" />
           <span className="w-3 h-3 rounded-full bg-green-500" />
-          <span className="ml-3 text-[11px] font-mono" style={{ color: 'var(--color-muted)' }}>execution_map.sh</span>
+          <span className="ml-3 text-[11px] font-mono" style={{ color: 'var(--color-muted)' }}>
+            execution_map.sh
+          </span>
         </div>
         <div className="flex items-center gap-3 text-[10px]" style={{ color: 'var(--color-muted)' }}>
-          {loading && <span className="animate-pulse">resolving...</span>}
+          {loading && <span className="animate-pulse">loading...</span>}
           <span className="flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
             {dots.length} locations
@@ -120,23 +105,27 @@ export function ExecutionWorldMap() {
         </div>
       </div>
 
-      {/* Map — relative container so tooltip stays inside */}
+      {/* Map */}
       <div ref={containerRef} className="relative w-full select-none"
         style={{ paddingBottom: '42.85%', backgroundColor: '#060d1f' }}
         onMouseLeave={() => setTooltip(null)}>
 
         <svg viewBox={`0 0 ${W} ${H}`} className="absolute inset-0 w-full h-full"
           preserveAspectRatio="xMidYMid meet" style={{ display: 'block' }}>
+
           <rect width={W} height={H} fill="#060d1f" />
 
-          {/* Grid lines */}
+          {/* Grid */}
           {[-60,-30,0,30,60].map(lat => {
             const y = ((90-lat)/180)*H;
-            return <line key={lat} x1={0} y1={y} x2={W} y2={y} stroke={lat===0?'rgba(99,102,241,0.2)':'rgba(255,255,255,0.04)'} strokeWidth={lat===0?1.5:1} />;
+            return <line key={lat} x1={0} y1={y} x2={W} y2={y}
+              stroke={lat===0 ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.04)'}
+              strokeWidth={lat===0 ? 1.5 : 1} />;
           })}
           {[-120,-60,0,60,120].map(lng => {
             const x = ((lng+180)/360)*W;
-            return <line key={lng} x1={x} y1={0} x2={x} y2={H} stroke="rgba(255,255,255,0.04)" strokeWidth={1} />;
+            return <line key={lng} x1={x} y1={0} x2={x} y2={H}
+              stroke="rgba(255,255,255,0.04)" strokeWidth={1} />;
           })}
 
           {/* Countries */}
@@ -156,7 +145,7 @@ export function ExecutionWorldMap() {
                 {dot.fresh && (
                   <circle cx={x} cy={y} fill="none" stroke={color} strokeWidth="2" opacity="0.5">
                     <animate attributeName="r" values="6;24" dur="1.5s" repeatCount="indefinite" />
-                    <animate attributeName="opacity" values="0.6;0" dur="1.5s" repeatCount="indefinite" />
+                    <animate attributeName="opacity" values="0.7;0" dur="1.5s" repeatCount="indefinite" />
                   </circle>
                 )}
                 <circle cx={x} cy={y} r="10" fill={color} opacity="0.15" />
@@ -167,7 +156,7 @@ export function ExecutionWorldMap() {
           })}
         </svg>
 
-        {/* Tooltip — percent-positioned inside container, clamped to edges */}
+        {/* Tooltip — percent-positioned, clamped */}
         {tooltip && (
           <div className="absolute z-10 pointer-events-none px-3 py-2 rounded-lg text-xs shadow-2xl"
             style={{
