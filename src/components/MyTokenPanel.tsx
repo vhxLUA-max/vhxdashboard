@@ -45,8 +45,15 @@ async function lookupRobloxUser(username: string): Promise<{ id: number; name: s
 
 async function fetchRobloxBio(userId: number): Promise<string | null> {
   try {
-    const json = await robloxProxy(`/v1/users/${userId}`) as { description?: string } | null;
-    return json?.description ?? '';
+    const res = await fetch('/api/roblox', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: `/v1/users/${userId}` }),
+    });
+    if (!res.ok) return null;
+    const json = await res.json() as { description?: string; errors?: unknown } | null;
+    if (!json || (json as any).errors) return null;
+    return json.description ?? '';
   } catch { return null; }
 }
 

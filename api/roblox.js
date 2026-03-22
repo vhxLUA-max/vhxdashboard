@@ -38,13 +38,19 @@ export default async function handler(req, res) {
   }
 
   try {
+    const headers = { 'Accept': 'application/json' };
+    if (body) headers['Content-Type'] = 'application/json';
+
     const robloxRes = await fetch(`${domain}${path}`, {
       method,
-      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      headers,
       body: body ? JSON.stringify(body) : undefined,
     });
-    const data = await robloxRes.json();
-    res.status(200).json(data);
+
+    const text = await robloxRes.text();
+    let data;
+    try { data = JSON.parse(text); } catch { data = { raw: text }; }
+    res.status(robloxRes.status).json(data);
   } catch (err) {
     res.status(500).json({ error: String(err) });
   }
