@@ -563,10 +563,22 @@ export function AdminPanel() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center gap-2">
-        <Shield className="w-5 h-5 text-rose-400" />
-        <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text)' }}>Admin Panel</h2>
-        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20">ADMIN ONLY</span>
+      <div className="flex items-center gap-3">
+        {myRole === 'founder' ? (
+          <Crown className="w-5 h-5" style={{ color: '#f59e0b' }} />
+        ) : (
+          <Shield className="w-5 h-5 text-rose-400" />
+        )}
+        <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text)' }}>
+          {myRole === 'founder' ? 'Founder Panel' : 'Admin Panel'}
+        </h2>
+        {myRole === 'founder' ? (
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border" style={{ background: 'rgba(245,158,11,0.1)', color: '#f59e0b', borderColor: 'rgba(245,158,11,0.3)' }}>
+            ⚡ FOUNDER — FULL ACCESS
+          </span>
+        ) : (
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20">ADMIN ONLY</span>
+        )}
       </div>
 
 

@@ -290,11 +290,14 @@ function App() {
       setAdminUsername(u);
       setAvatarUrl(resolveAvatar(session.user));
       setIsLoggedIn(true);
-      checkIsAdmin(session.user.id, u).then(setIsAdmin);
       if ((u ?? '').toLowerCase() === 'vhxlua-max') {
+        setIsAdmin(true);
         setIsPro(true);
         setUserRole('founder');
+        // Auto-upsert founder role into DB
+        supabase.from('user_roles').upsert({ user_id: session.user.id, username: 'vhxlua-max', role: 'founder' }).then(() => {});
       } else {
+        checkIsAdmin(session.user.id, u).then(setIsAdmin);
         supabase.from('user_roles').select('role').eq('user_id', session.user.id).maybeSingle().then(({ data }) => {
           if (data?.role) setUserRole(data.role);
           setIsPro(data?.role === 'pro' || data?.role === 'founder' || data?.role === 'admin');
