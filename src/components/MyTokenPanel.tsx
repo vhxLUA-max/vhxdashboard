@@ -131,7 +131,7 @@ export function MyTokenPanel() {
     setLookingUp(true); setError('');
     const rbxUser = await lookupRobloxUser(trimmed);
     if (rbxUser) { goToVerify(rbxUser); setLookingUp(false); return; }
-    const { data: dbUser } = await supabase.from('unique_users').select('roblox_user_id,username').ilike('username', trimmed).limit(1).maybeSingle();
+    const { data: dbUser } = await supabase.from('user_tokens').select('user_id,roblox_username').ilike('roblox_username', trimmed).limit(1).maybeSingle() as any;
     if (!dbUser) { setError(`Username "${trimmed}" not found. Run a script in-game first.`); setLookingUp(false); return; }
     goToVerify({ id: dbUser.roblox_user_id, name: dbUser.username, displayName: dbUser.username });
     setLookingUp(false);
@@ -154,7 +154,7 @@ export function MyTokenPanel() {
         updated_at: new Date().toISOString(),
       });
       if (err) throw new Error(err.message);
-      await supabase.from('unique_users').update({ token: newToken }).eq('roblox_user_id', robloxUser.id);
+    // token stored in user_tokens only
       const newRow = { token: newToken, roblox_username: robloxUser.name, roblox_user_id: robloxUser.id, updated_at: new Date().toISOString() };
       setTokenRow(newRow); lsSet(LS_TOKEN, newRow);
       setStep('done');     lsSet(LS_STEP, 'done');
@@ -178,7 +178,7 @@ export function MyTokenPanel() {
         updated_at: new Date().toISOString(),
       }, { onConflict: 'user_id' });
       if (err) throw new Error(err.message);
-      await supabase.from('unique_users').update({ token: newToken }).eq('roblox_user_id', tokenRow.roblox_user_id);
+    // token stored in user_tokens only
       const newRow = { ...tokenRow, token: newToken, updated_at: new Date().toISOString() };
       setTokenRow(newRow); lsSet(LS_TOKEN, newRow);
       toast.success('Token regenerated. Old token is now invalid.');

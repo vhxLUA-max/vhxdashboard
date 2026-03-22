@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { supabase } from '@/lib/supabase';
-import type { UniqueUser, GameExecution } from '@/types';
+import { fetchSheetUsers } from '@/lib/sheets';
 import { Users, Clock, Calendar, Gamepad2, ArrowLeft, ExternalLink, Shield, Activity, Hash, Download, ArrowUpDown, Ban } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
@@ -310,14 +310,11 @@ export function UserSearch({ isAdmin = false }: { isAdmin?: boolean }) {
   const exportCSV = async (allUsers = false) => {
     let exportData = results;
     if (allUsers) {
-      const { data } = await supabase
-        .from('unique_users')
-        .select('roblox_user_id, username, game_name, place_id, execution_count, first_seen, last_seen, fingerprint, hwid')
-        .order('execution_count', { ascending: false });
-      if (!data?.length) return toast.error('No users found');
+      const data = await fetchSheetUsers();
+      if (!data.length) return toast.error('No users found');
       const rows = [
-        ['Username', 'Roblox ID', 'Game', 'Executions', 'First Seen', 'Last Seen', 'Fingerprint', 'HWID'],
-        ...data.map((u: any) => [u.username, u.roblox_user_id, u.game_name ?? u.place_id, u.execution_count, u.first_seen, u.last_seen, u.fingerprint ?? '', u.hwid ?? '']),
+        ['Username', 'Roblox ID', 'Game', 'Executions', 'First Seen', 'Last Seen', 'Fingerprint', 'HWID', 'IP'],
+        ...data.map((u: any) => [u.username, u.roblox_user_id, u.game_name, u.execution_count, u.first_seen, u.last_seen, u.fingerprint, u.hwid, u.ip_address]),
       ];
       const csv  = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n');
       const blob = new Blob([csv], { type: 'text/csv' });
@@ -368,47 +365,26 @@ export function UserSearch({ isAdmin = false }: { isAdmin?: boolean }) {
     setSearched(true);
     setSelectedUser(null);
 
-    const { data: tokenRow, error: tokenErr } = await supabase
-      .from('user_tokens')
-      .select('roblox_user_id')
-      .eq('token', trimmed.toUpperCase())
-      .maybeSingle();
+    // Search from Google Sheets by username or roblox ID
+    const allUsers = await fetchSheetUsers();
+    const matched = allUsers.filter(u =>
+      u.username.toLowerCase().includes(trimmed.toLowerCase()) ||
+      String(u.roblox_user_id).includes(trimmed)
+    );
 
-    if (tokenErr || !tokenRow) {
+    if (matched.length === 0) {
       setResults([]);
       setLoading(false);
       return;
     }
 
-    const { data: rows, error: searchErr } = await supabase
-      .from('unique_users')
-      .select('user_id, roblox_user_id, place_id, username, first_seen, last_seen, execution_count')
-      .eq('roblox_user_id', tokenRow.roblox_user_id)
-      .limit(50);
-
-    if (searchErr || !rows || rows.length === 0) {
-      setResults([]);
-      setLoading(false);
-      return;
-    }
-
-    const placeIds = [...new Set((rows as UniqueUser[]).map(u => u.place_id))];
-    const { data: executions } = await supabase
-      .from('game_executions')
-      .select('place_id, count, game_name')
-      .in('place_id', placeIds);
-
-    const execMap: Record<number, { count: number; game_name: string | null }> = {};
-    for (const e of (executions ?? []) as GameExecution[]) {
-      execMap[e.place_id] = { count: e.count, game_name: e.game_name };
-    }
-
-    const grouped: Record<number, UserResult> = {};
-    for (const row of rows as UniqueUser[]) {
-      const uid = row.roblox_user_id ?? row.user_id;
+    // Group by roblox_user_id
+    const grouped: Record<string, UserResult> = {};
+    for (const row of matched) {
+      const uid = String(row.roblox_user_id);
       if (!grouped[uid]) {
         grouped[uid] = {
-          roblox_user_id: uid,
+          roblox_user_id: Number(row.roblox_user_id),
           username: row.username,
           places: [],
           earliest_seen: row.first_seen,
@@ -416,12 +392,12 @@ export function UserSearch({ isAdmin = false }: { isAdmin?: boolean }) {
           total_executions: 0,
         };
       }
-      if (new Date(row.first_seen) < new Date(grouped[uid].earliest_seen)) grouped[uid].earliest_seen = row.first_seen;
-      if (new Date(row.last_seen) > new Date(grouped[uid].latest_seen)) grouped[uid].latest_seen = row.last_seen;
+      if (row.first_seen < grouped[uid].earliest_seen) grouped[uid].earliest_seen = row.first_seen;
+      if (row.last_seen > grouped[uid].latest_seen) grouped[uid].latest_seen = row.last_seen;
       grouped[uid].total_executions += row.execution_count ?? 0;
       grouped[uid].places.push({
-        place_id: row.place_id,
-        game_name: execMap[row.place_id]?.game_name ?? null,
+        place_id: 0,
+        game_name: row.game_name,
         first_seen: row.first_seen,
         last_seen: row.last_seen,
         user_execution_count: row.execution_count ?? 0,
@@ -465,9 +441,9 @@ export function UserSearch({ isAdmin = false }: { isAdmin?: boolean }) {
           autoFocus
           value={query}
           onChange={handleChange}
-          placeholder="Enter token (e.g. VOID3847)..."
-          maxLength={10}
-          className="pl-9 pr-8 bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white placeholder:text-gray-400 focus:border-purple-500 font-mono tracking-widest uppercase"
+          placeholder="Search by username or Roblox ID..."
+          maxLength={40}
+          className="pl-9 pr-8 bg-white dark:bg-gray-950 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white placeholder:text-gray-400 focus:border-blue-500"
         />
         {query && (
           <button onClick={() => { setQuery(''); setResults([]); setSearched(false); }} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-200 transition-colors">

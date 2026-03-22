@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { fetchSheetUsers } from '@/lib/sheets';
 import { toast } from 'sonner';
 import { UserProfile } from '@/components/UserProfile';
 import { MaintenancePanel } from '@/components/MaintenancePanel';
@@ -268,23 +269,32 @@ export function AdminPanel() {
 
   const loadScriptUsers = useCallback(async () => {
     setLoading(true);
-    const [{ data: rows }, { data: bansData }] = await Promise.all([
-      supabase.from('unique_users').select('roblox_user_id,username,execution_count,first_seen,last_seen,token,place_id'),
+    const [sheetUsers, { data: bansData }] = await Promise.all([
+      fetchSheetUsers(),
       supabase.from('banned_users').select('roblox_user_id'),
     ]);
     const bannedSet = new Set((bansData ?? []).map((b: { roblox_user_id: number }) => b.roblox_user_id));
 
-    const agg: Record<number, ScriptUser> = {};
-    for (const r of (rows ?? [])) {
+    // Aggregate by roblox_user_id (multiple rows per user = multiple games)
+    const agg: Record<string, ScriptUser> = {};
+    for (const r of sheetUsers) {
       const id = r.roblox_user_id;
       if (!id) continue;
       if (!agg[id]) {
-        agg[id] = { ...r, execution_count: 0, banned: bannedSet.has(id) };
+        agg[id] = {
+          roblox_user_id: Number(id),
+          username:       r.username,
+          execution_count: 0,
+          first_seen:     r.first_seen,
+          last_seen:      r.last_seen,
+          token:          null,
+          place_id:       0,
+          banned:         bannedSet.has(Number(id)),
+        };
       }
       agg[id].execution_count += r.execution_count ?? 0;
       if (r.last_seen > agg[id].last_seen) agg[id].last_seen = r.last_seen;
       if (r.first_seen < agg[id].first_seen) agg[id].first_seen = r.first_seen;
-      if (!agg[id].token && r.token) agg[id].token = r.token;
     }
 
     const sorted = Object.values(agg).sort((a, b) =>
@@ -353,7 +363,6 @@ export function AdminPanel() {
     const newTok = generateToken();
     const { error } = await supabase.from('user_tokens').update({ token: newTok, updated_at: new Date().toISOString() }).eq('user_id', row.user_id);
     if (error) { toast.error('Failed to reset token'); return; }
-    await supabase.from('unique_users').update({ token: newTok }).eq('roblox_user_id', row.roblox_user_id);
     await logAction('reset_token', { roblox_username: row.roblox_username, old_token: row.token, new_token: newTok });
     toast.success(`Token reset for @${row.roblox_username}`);
     loadTokens();
@@ -364,7 +373,6 @@ export function AdminPanel() {
     if (!val) return;
     const { error } = await supabase.from('user_tokens').update({ token: val, updated_at: new Date().toISOString() }).eq('user_id', row.user_id);
     if (error) { toast.error('Failed to save token'); return; }
-    await supabase.from('unique_users').update({ token: val }).eq('roblox_user_id', row.roblox_user_id);
     await logAction('assign_token', { roblox_username: row.roblox_username, new_token: val });
     toast.success(`Token updated for @${row.roblox_username}`);
     setEditingToken(null);

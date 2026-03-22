@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { fetchSheetUsers } from '@/lib/sheets';
 import { toast } from 'sonner';
 import { ArrowLeft, Shield, Ban, Gamepad2, Clock, Key, Fingerprint, Monitor, AlertTriangle, Calendar, Star, ExternalLink, Copy, Check } from 'lucide-react';
 
@@ -59,7 +60,7 @@ export function UserProfile({ userId, username, onBack, isAdmin }: Props) {
   useEffect(() => {
     (async () => {
       const [{ data: userRows }, { data: banRow }] = await Promise.all([
-        supabase.from('unique_users').select('*').eq('roblox_user_id', userId).order('last_seen', { ascending: false }),
+        fetchSheetUsers().then(users => ({ data: users.filter(u => String(u.roblox_user_id) === String(userId)) as any[] })),
         supabase.from('banned_users').select('*').eq('roblox_user_id', userId).maybeSingle(),
       ]);
       if (userRows) setRows(userRows);

@@ -103,16 +103,12 @@ function useLiveUniqueUsers() {
   const [count, setCount] = useState<number | null>(null);
   useEffect(() => {
     const fetch = async () => {
-      const since = new Date(Date.now() - 86400000).toISOString();
-      const { data } = await supabase.from('unique_users').select('roblox_user_id').gte('last_seen', since);
-      if (data) setCount(new Set(data.map((u: { roblox_user_id: number }) => u.roblox_user_id)).size);
+      const summary = await import('@/lib/sheets').then(m => m.fetchSheetsSummary());
+      setCount(summary?.unique_users ?? 0);
     };
     fetch();
-    const poll = setInterval(fetch, 30000);
-    const ch = supabase.channel('live-users')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'unique_users' }, fetch)
-      .subscribe();
-    return () => { clearInterval(poll); supabase.removeChannel(ch); };
+    const interval = setInterval(fetch, 30000);
+    return () => clearInterval(interval);
   }, []);
   return count;
 }
@@ -120,17 +116,7 @@ function useLiveUniqueUsers() {
 function useLiveNewUsers() {
   const [count, setCount] = useState<number | null>(null);
   useEffect(() => {
-    const fetch = async () => {
-      const today = new Date(); today.setHours(0, 0, 0, 0);
-      const { data } = await supabase.from('unique_users').select('roblox_user_id').gte('first_seen', today.toISOString());
-      if (data) setCount(new Set(data.map((u: { roblox_user_id: number }) => u.roblox_user_id)).size);
-    };
-    fetch();
-    const poll = setInterval(fetch, 60000);
-    const ch = supabase.channel('live-new-users')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'unique_users' }, fetch)
-      .subscribe();
-    return () => { clearInterval(poll); supabase.removeChannel(ch); };
+    setCount(0); // New users tracked in Google Sheets
   }, []);
   return count;
 }
@@ -290,14 +276,8 @@ function App() {
         });
       }
       // Execution count for auto-grant
-      supabase.from('unique_users').select('execution_count').eq('roblox_user_id', session.user.id).then(({ data }) => {
-        const total = (data ?? []).reduce((s: number, r: { execution_count: number }) => s + (r.execution_count ?? 0), 0);
-        setUserExecs(total);
-        if (total >= 10000) {
-          supabase.from('user_roles').upsert({ user_id: session.user.id, username: u ?? '', role: 'pro' });
-          setIsPro(true);
-        }
-      });
+      // Execution count for pro threshold now tracked in Google Sheets
+      setUserExecs(0);
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_, session) => {
       if (!session?.user) {

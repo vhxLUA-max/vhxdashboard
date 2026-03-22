@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
-import type { DashboardData, DateRange, UseSupabaseDashboardReturn, UniqueUser } from '@/types';
+import { fetchSheetsSummary } from '@/lib/sheets';
+import type { DashboardData, DateRange, UseSupabaseDashboardReturn } from '@/types';
 
 const RANGE_MS: Record<DateRange, number> = {
   '24h': 86400000,
@@ -22,48 +23,37 @@ export function useSupabaseDashboard(dateRange: DateRange): UseSupabaseDashboard
     setError(null);
 
     try {
-      const since   = new Date(Date.now() - RANGE_MS[dateRange]).toISOString();
-      const since24 = new Date(Date.now() - 86400000).toISOString();
-      const today   = new Date().toISOString().slice(0, 10);
+      const since = new Date(Date.now() - RANGE_MS[dateRange]).toISOString();
+      const today = new Date().toISOString().slice(0, 10);
 
       const [
-        { data: all,      error: e1 },
-        { data: active,   error: e2 },
-        { data: newUsers, error: e3 },
+        { data: all, error: e1 },
+        sheetsSummary,
       ] = await Promise.all([
         supabase.from('game_executions').select('place_id,total_count:count,daily_count,daily_reset_at,last_executed_at,game_name').order('last_executed_at', { ascending: false }),
-        supabase.from('unique_users').select('roblox_user_id,user_id').gte('last_seen', since),
-        supabase.from('unique_users').select('roblox_user_id').gte('first_seen', since24),
+        fetchSheetsSummary(),
       ]);
 
       if (e1) throw new Error(e1.message);
-      if (e2) throw new Error(e2.message);
-      if (e3) throw new Error(e3.message);
 
       const allExecs: any[] = all ?? [];
-      const activeUsers: Pick<UniqueUser, 'roblox_user_id' | 'user_id'>[] = active ?? [];
 
-      // Always use game_executions.count as the source of truth
-      // For 24h: sum daily_count where daily_reset_at is today
-      // For all other ranges: sum total count across all games
-      const totalExecutions = dateRange === '24h'
-        ? allExecs.reduce((s, e) => s + (e.daily_reset_at?.slice(0, 10) === today ? (e.daily_count ?? 0) : 0), 0)
-        : allExecs.reduce((s, e) => s + ((e as any).total_count ?? e.count ?? 0), 0);
+      const totalExecutions = sheetsSummary?.total_executions ??
+        (dateRange === '24h'
+          ? allExecs.reduce((s: number, e: any) => s + (e.daily_reset_at?.slice(0, 10) === today ? (e.daily_count ?? 0) : 0), 0)
+          : allExecs.reduce((s: number, e: any) => s + (e.total_count ?? e.count ?? 0), 0));
 
-      // For date-filtered views (7d/30d/90d): only include rows active in range
-      const filteredExecs = dateRange === '24h'
-        ? allExecs.filter(e => e.last_executed_at && e.last_executed_at >= since)
-        : allExecs.filter(e => e.last_executed_at && e.last_executed_at >= since);
+      const filteredExecs = allExecs.filter((e: any) => e.last_executed_at && e.last_executed_at >= since);
 
       setData({
         totalExecutions,
-        uniqueUsers:      new Set(activeUsers.map(u => u.roblox_user_id ?? u.user_id)).size,
-        activeGames:      allExecs.filter(e => e.last_executed_at && e.last_executed_at >= since).length,
+        uniqueUsers:      sheetsSummary?.unique_users ?? 0,
+        activeGames:      filteredExecs.length,
         lastExecutedAt:   allExecs[0]?.last_executed_at ?? null,
         recentExecutions: filteredExecs,
         allExecutions:    allExecs,
         recentUsers:      [],
-        newUsersToday:    new Set((newUsers ?? []).map((u: { roblox_user_id: number }) => u.roblox_user_id)).size,
+        newUsersToday:    0,
       });
     } catch (err) {
       if ((err as Error).name !== 'AbortError')
