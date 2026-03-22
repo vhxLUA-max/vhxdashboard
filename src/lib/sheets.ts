@@ -1,16 +1,5 @@
-import { supabase } from './supabase';
-
-// Fetches the Apps Script webhook ID from Supabase config
-// then constructs the URL at runtime — never hardcoded
-async function getWebhookUrl(): Promise<string | null> {
-  const { data } = await supabase
-    .from('config')
-    .select('value')
-    .eq('key', 'sheets_webhook')
-    .maybeSingle();
-  if (!data?.value) return null;
-  return `https://script.google.com/macros/s/${data.value}/exec`;
-}
+// All Sheets requests go through /api/sheets (Vercel proxy)
+// The actual Sheets URL never leaves the server
 
 export interface SheetUser {
   roblox_user_id: string;
@@ -30,12 +19,9 @@ export interface SheetsSummary {
   last_updated: string;
 }
 
-// GET all users from Sheets via Apps Script
 export async function fetchSheetUsers(): Promise<SheetUser[]> {
   try {
-    const url = await getWebhookUrl();
-    if (!url) return [];
-    const res = await fetch(`${url}?action=getUsers`);
+    const res = await fetch('/api/sheets?action=getUsers');
     if (!res.ok) return [];
     const data = await res.json();
     return data.users ?? [];
@@ -44,12 +30,9 @@ export async function fetchSheetUsers(): Promise<SheetUser[]> {
   }
 }
 
-// GET summary (total executions, unique users) from Sheets
 export async function fetchSheetsSummary(): Promise<SheetsSummary | null> {
   try {
-    const url = await getWebhookUrl();
-    if (!url) return null;
-    const res = await fetch(`${url}?action=getSummary`);
+    const res = await fetch('/api/sheets?action=getSummary');
     if (!res.ok) return null;
     return await res.json();
   } catch {
