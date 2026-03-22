@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Copy, Check, Loader2, Gamepad2, Users, ThumbsUp, Star, ExternalLink, ArrowLeft, Play, Wrench, Timer } from 'lucide-react';
+import { Copy, Check, Loader2, Gamepad2, Users, ThumbsUp, ThumbsDown, Star, ExternalLink, ArrowLeft, Play, Wrench, Timer, Bell, Heart } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 
@@ -27,24 +27,20 @@ function ScriptCountdown({ endTs }: { endTs: string | null }) {
   if (!endTs || secs < 0) return null;
   const h = Math.floor(secs/3600), m = Math.floor((secs%3600)/60), s = secs%60;
   return (
-    <div className="flex items-center gap-1 justify-center">
-      <Timer className="w-2.5 h-2.5 text-amber-400 shrink-0" />
-      <span className="text-[9px] font-mono font-bold text-amber-400">
-        {String(h).padStart(2,'0')}:{String(m).padStart(2,'0')}:{String(s).padStart(2,'0')}
-      </span>
-    </div>
+    <span className="text-[9px] font-mono font-bold text-amber-400">
+      {String(h).padStart(2,'0')}:{String(m).padStart(2,'0')}:{String(s).padStart(2,'0')}
+    </span>
   );
 }
 
 const LOADER = `loadstring(game:HttpGet("https://raw.githubusercontent.com/vhxLUA-max/vhxframeworks/refs/heads/main/mainloader"))()`;
-const UNC_LOADER = `loadstring(game:HttpGet("https://raw.githubusercontent.com/vhxLUA-max/vhxframeworks/refs/heads/main/mainloader"))()`;
 
 const GAMES = [
-  { placeId: 18172550962,     loader: LOADER     },
-  { placeId: 138013005633222, loader: LOADER     },
-  { placeId: 119987266683883, loader: LOADER     },
-  { placeId: 136801880565837, loader: LOADER     },
-  { placeId: 123974602339071, loader: UNC_LOADER },
+  { placeId: 18172550962,     loader: LOADER },
+  { placeId: 138013005633222, loader: LOADER },
+  { placeId: 119987266683883, loader: LOADER },
+  { placeId: 136801880565837, loader: LOADER },
+  { placeId: 123974602339071, loader: LOADER },
 ];
 
 type GameInfo = {
@@ -58,13 +54,16 @@ type GameInfo = {
   favoriteCount: number;
   likeCount: number;
   dislikeCount: number;
+  created: string;
+  updated: string;
+  genre: string;
 };
 
-async function robloxProxy(path: string): Promise<unknown> {
+async function robloxProxy(path: string, method = 'GET', body?: object): Promise<unknown> {
   const res = await fetch('/api/roblox', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ path }),
+    body: JSON.stringify({ path, method, body }),
   });
   if (!res.ok) return null;
   return res.json();
@@ -77,12 +76,12 @@ async function fetchGameInfo(placeId: number): Promise<GameInfo | null> {
     const uid = uni.universeId;
 
     const [details, thumb, votes] = await Promise.all([
-      robloxProxy(`/v1/games?universeIds=${uid}`) as Promise<{ data?: { name?: string; description?: string; playing?: number; visits?: number; maxPlayers?: number; favoritedCount?: number }[] } | null>,
-      robloxProxy(`/v1/games/icons?universeIds=${uid}&returnPolicy=PlaceHolder&size=512x512&format=Png&isCircular=false`) as Promise<{ data?: { imageUrl?: string }[] } | null>,
-      robloxProxy(`/v1/games/votes?universeIds=${uid}`) as Promise<{ data?: { upVotes?: number; downVotes?: number }[] } | null>,
-    ]);
+      robloxProxy(`/v1/games?universeIds=${uid}`),
+      robloxProxy(`/v1/games/icons?universeIds=${uid}&returnPolicy=PlaceHolder&size=768x432&format=Png&isCircular=false`),
+      robloxProxy(`/v1/games/votes?universeIds=${uid}`),
+    ]) as any[];
 
-    const d = (details as { data?: { name?: string; description?: string; playing?: number; visits?: number; maxPlayers?: number; favoritedCount?: number }[] })?.data?.[0];
+    const d = details?.data?.[0];
     if (!d) return null;
 
     return {
@@ -93,9 +92,12 @@ async function fetchGameInfo(placeId: number): Promise<GameInfo | null> {
       visits: d.visits ?? 0,
       maxPlayers: d.maxPlayers ?? 0,
       favoriteCount: d.favoritedCount ?? 0,
-      thumbUrl: (thumb as { data?: { imageUrl?: string }[] })?.data?.[0]?.imageUrl ?? null,
-      likeCount: (votes as { data?: { upVotes?: number }[] })?.data?.[0]?.upVotes ?? 0,
-      dislikeCount: (votes as { data?: { downVotes?: number }[] })?.data?.[0]?.downVotes ?? 0,
+      thumbUrl: thumb?.data?.[0]?.imageUrl ?? null,
+      likeCount: votes?.data?.[0]?.upVotes ?? 0,
+      dislikeCount: votes?.data?.[0]?.downVotes ?? 0,
+      created: d.created ? new Date(d.created).toLocaleDateString() : '',
+      updated: d.updated ? new Date(d.updated).toLocaleDateString() : '',
+      genre: d.genre ?? '',
     };
   } catch {
     return null;
@@ -110,97 +112,112 @@ function formatNum(n: number): string {
 
 function GameDetailPanel({ info, placeId, loader, onBack }: { info: GameInfo; placeId: number; loader: string; onBack: () => void }) {
   const [copied, setCopied] = useState(false);
-  const likePercent = info.likeCount + info.dislikeCount > 0
-    ? Math.round((info.likeCount / (info.likeCount + info.dislikeCount)) * 100)
-    : null;
+  const total = info.likeCount + info.dislikeCount;
+  const likePercent = total > 0 ? Math.round((info.likeCount / total) * 100) : null;
 
   const copy = () => {
     navigator.clipboard.writeText(loader);
     setCopied(true);
-    toast.success(`${info.name} script copied!`);
+    toast.success(`Script copied!`);
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const infoRows = [
+    { label: 'Server Size',  value: info.maxPlayers.toString() },
+    { label: 'Genre',        value: info.genre || '—' },
+    { label: 'Created',      value: info.created || '—' },
+    { label: 'Updated',      value: info.updated || '—' },
+  ];
+
   return (
-    <div className="space-y-5">
-      <button onClick={onBack} className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white transition-colors">
+    <div className="space-y-0" style={{ color: 'var(--color-text)' }}>
+      {/* Back */}
+      <button onClick={onBack} className="flex items-center gap-1.5 text-xs mb-4 hover:opacity-80 transition-opacity" style={{ color: 'var(--color-muted)' }}>
         <ArrowLeft className="w-3.5 h-3.5" /> Back to scripts
       </button>
 
-      <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
-        <div className="flex flex-col sm:flex-row gap-0">
-          <div className="sm:w-48 shrink-0 bg-gray-800">
-            {info.thumbUrl ? (
-              <img src={info.thumbUrl} alt={info.name} className="w-full sm:h-full aspect-square object-contain" />
-            ) : (
-              <div className="w-full aspect-square flex items-center justify-center">
-                <Gamepad2 className="w-12 h-12 text-gray-600" />
-              </div>
-            )}
+      {/* Banner thumbnail */}
+      <div className="w-full rounded-2xl overflow-hidden bg-gray-800 aspect-video mb-4">
+        {info.thumbUrl
+          ? <img src={info.thumbUrl} alt={info.name} className="w-full h-full object-cover" />
+          : <div className="w-full h-full flex items-center justify-center"><Gamepad2 className="w-16 h-16 text-gray-600" /></div>
+        }
+      </div>
+
+      {/* Title + creator */}
+      <div className="mb-3">
+        <h2 className="text-xl font-bold" style={{ color: 'var(--color-text)' }}>{info.name}</h2>
+        <p className="text-sm mt-0.5" style={{ color: 'var(--color-muted)' }}>By vhxLUA</p>
+      </div>
+
+      {/* Action row — Roblox style */}
+      <div className="flex items-center gap-2 mb-5 flex-wrap">
+        {/* Play button */}
+        <a href={`https://www.roblox.com/games/${placeId}`} target="_blank" rel="noopener noreferrer"
+          className="flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-bold text-white transition-opacity hover:opacity-90"
+          style={{ backgroundColor: 'var(--color-accent)' }}>
+          <Play className="w-4 h-4 fill-white" /> Play
+        </a>
+        {/* Copy script */}
+        <button onClick={copy}
+          className="flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold transition-all"
+          style={{
+            backgroundColor: copied ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.08)',
+            color: copied ? '#10b981' : 'var(--color-text)',
+            border: `1px solid ${copied ? 'rgba(16,185,129,0.3)' : 'rgba(255,255,255,0.1)'}`,
+          }}>
+          {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+          {copied ? 'Copied!' : 'Copy Script'}
+        </button>
+        {/* Like % */}
+        {likePercent !== null && (
+          <div className="flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm"
+            style={{ backgroundColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', color: 'var(--color-muted)' }}>
+            <ThumbsUp className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="font-semibold text-emerald-400">{likePercent}%</span>
           </div>
+        )}
+        {/* Active players */}
+        <div className="flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm"
+          style={{ backgroundColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', color: 'var(--color-muted)' }}>
+          <Users className="w-3.5 h-3.5" />
+          <span>{formatNum(info.playing)} active</span>
+        </div>
+        {/* Favorites */}
+        <div className="flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm"
+          style={{ backgroundColor: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', color: 'var(--color-muted)' }}>
+          <Heart className="w-3.5 h-3.5" />
+          <span>{formatNum(info.favoriteCount)}</span>
+        </div>
+      </div>
 
-          <div className="flex-1 p-5 space-y-4 min-w-0">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <h2 className="text-base font-bold text-gray-900 dark:text-white truncate">{info.name}</h2>
-                {likePercent !== null && (
-                  <div className="flex items-center gap-1.5 mt-1">
-                    <ThumbsUp className="w-3 h-3 text-emerald-400 shrink-0" />
-                    <span className="text-xs text-emerald-400 font-medium">{likePercent}%</span>
-                    <span className="text-xs text-gray-500">{formatNum(info.likeCount + info.dislikeCount)} votes</span>
-                  </div>
-                )}
-              </div>
-              <a
-                href={`https://www.roblox.com/games/${placeId}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="shrink-0 flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
-              >
-                <ExternalLink className="w-3 h-3" />
-              </a>
-            </div>
+      {/* Description */}
+      {info.description && (
+        <div className="mb-5">
+          <h3 className="text-sm font-semibold mb-2" style={{ color: 'var(--color-text)' }}>Description</h3>
+          <p className="text-sm leading-relaxed whitespace-pre-line" style={{ color: 'var(--color-muted)' }}>
+            {info.description}
+          </p>
+        </div>
+      )}
 
-            <div className="grid grid-cols-3 gap-2">
-              {[
-                { icon: Users,    label: 'Playing',   value: formatNum(info.playing)          },
-                { icon: Star,     label: 'Visits',     value: formatNum(info.visits)            },
-                { icon: ThumbsUp, label: 'Favorites',  value: formatNum(info.favoriteCount)     },
-              ].map(stat => (
-                <div key={stat.label} className="bg-gray-100 dark:bg-gray-800 rounded-lg p-2.5 text-center">
-                  <stat.icon className="w-3.5 h-3.5 text-indigo-400 mx-auto mb-1" />
-                  <p className="text-xs font-bold text-gray-900 dark:text-white">{stat.value}</p>
-                  <p className="text-[10px] text-gray-500">{stat.label}</p>
-                </div>
-              ))}
-            </div>
-
-            {info.description ? (
-              <p className="text-xs text-gray-500 leading-relaxed line-clamp-3">{info.description}</p>
-            ) : null}
-
-            <div className="flex gap-2 pt-1">
-              <button
-                onClick={copy}
-                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-semibold transition-all border ${
-                  copied
-                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
-                    : 'bg-indigo-600 hover:bg-blue-600 border-indigo-600 text-white'
-                }`}
-              >
-                {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                {copied ? 'Copied!' : 'Copy Script'}
-              </button>
-              <a
-                href={`https://www.roblox.com/games/${placeId}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:border-emerald-500/40 hover:text-emerald-400 transition-all"
-              >
-                <Play className="w-3.5 h-3.5" /> Play
-              </a>
-            </div>
+      {/* Info rows — Roblox style */}
+      <div className="rounded-xl overflow-hidden" style={{ border: '1px solid var(--color-border)' }}>
+        {infoRows.map((row, i) => (
+          <div key={row.label}
+            className="flex items-center justify-between px-4 py-3.5 text-sm"
+            style={{
+              borderBottom: i < infoRows.length - 1 ? '1px solid var(--color-border)' : 'none',
+              backgroundColor: 'var(--color-surface)',
+            }}>
+            <span style={{ color: 'var(--color-muted)' }}>{row.label}</span>
+            <span className="font-semibold" style={{ color: 'var(--color-text)' }}>{row.value}</span>
           </div>
+        ))}
+        <div className="flex items-center justify-between px-4 py-3.5 text-sm"
+          style={{ backgroundColor: 'var(--color-surface)' }}>
+          <span style={{ color: 'var(--color-muted)' }}>Visits</span>
+          <span className="font-semibold" style={{ color: 'var(--color-text)' }}>{formatNum(info.visits)}</span>
         </div>
       </div>
     </div>
@@ -237,11 +254,8 @@ export function ScriptsTab() {
     loadMaintenance();
 
     const ch = supabase.channel('scripts-maintenance')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'game_status' }, () => {
-        loadMaintenance();
-      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'game_status' }, loadMaintenance)
       .subscribe();
-
     return () => { supabase.removeChannel(ch); };
   }, []);
 
@@ -250,24 +264,27 @@ export function ScriptsTab() {
     if (card?.info) {
       return <GameDetailPanel info={card.info} placeId={selected.placeId} loader={selected.loader} onBack={() => setSelected(null)} />;
     }
+    if (card?.loading) {
+      return (
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-6 h-6 animate-spin" style={{ color: 'var(--color-muted)' }} />
+        </div>
+      );
+    }
   }
 
   return (
     <div className="space-y-5">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Scripts</h2>
-          <p className="text-sm text-gray-500 mt-0.5">Click a game to view info and copy the script</p>
+          <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text)' }}>Scripts</h2>
+          <p className="text-sm mt-0.5" style={{ color: 'var(--color-muted)' }}>Click a game to copy the script</p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
-          <a href="https://rscripts.net/@vhxLUA_" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:text-indigo-400 hover:border-indigo-500/40 transition-all">
+          <a href="https://rscripts.net/@vhxLUA_" target="_blank" rel="noopener noreferrer"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-all hover:opacity-80"
+            style={{ backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-border)', color: 'var(--color-muted)' }}>
             <ExternalLink className="w-3 h-3" /> rscripts
-          </a>
-          <a href="https://youtube.com/@vhxlua?si=0j9rYLl0qPf3gu1Y" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:text-red-400 hover:border-red-500/40 transition-all">
-            <ExternalLink className="w-3 h-3" /> YouTube
-          </a>
-          <a href="https://www.tiktok.com/@vhxlua_?lang=en" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:text-pink-400 hover:border-pink-500/40 transition-all">
-            <ExternalLink className="w-3 h-3" /> TikTok
           </a>
         </div>
       </div>
@@ -282,46 +299,61 @@ export function ScriptsTab() {
           const inMaintenance = mStatus?.on ?? false;
 
           return (
-            <button
-              key={game.placeId}
-              onClick={() => setSelected(game)}
-              disabled={loading}
-              className="group text-left bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden hover:border-indigo-500/40 hover:shadow-lg hover:shadow-indigo-500/5 transition-all disabled:opacity-60 disabled:cursor-wait"
-              style={inMaintenance ? { borderColor: '#f59e0b60' } : {}}
-            >
-              <div className="aspect-square bg-gray-200 dark:bg-gray-800 relative">
+            <button key={game.placeId} onClick={() => setSelected(game)} disabled={loading}
+              className="group text-left rounded-2xl overflow-hidden transition-all disabled:opacity-60 disabled:cursor-wait hover:scale-[1.02] active:scale-[0.98]"
+              style={{
+                backgroundColor: 'var(--color-surface)',
+                border: `1px solid ${inMaintenance ? '#f59e0b40' : 'var(--color-border)'}`,
+              }}>
+              {/* Thumbnail */}
+              <div className="aspect-video bg-gray-800 relative overflow-hidden">
                 {loading ? (
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
+                    <Loader2 className="w-5 h-5 animate-spin" style={{ color: 'var(--color-muted)' }} />
                   </div>
                 ) : info?.thumbUrl ? (
-                  <img src={info.thumbUrl} alt={info.name} className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300" style={{ filter: inMaintenance ? 'brightness(0.4)' : 'none' }} />
+                  <img src={info.thumbUrl} alt={info.name}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    style={{ filter: inMaintenance ? 'brightness(0.35)' : 'none' }} />
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center">
                     <Gamepad2 className="w-10 h-10 text-gray-600" />
                   </div>
                 )}
                 {inMaintenance && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 px-2">
-                    <div className="w-8 h-8 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center">
-                      <Wrench className="w-4 h-4 text-amber-400" />
-                    </div>
-                    <span className="text-[10px] font-bold text-amber-400 text-center leading-tight">MAINTENANCE</span>
-                    {mStatus?.msg && (
-                      <span className="text-[9px] text-amber-300/70 text-center leading-tight line-clamp-2">{mStatus.msg}</span>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 px-3">
+                    <Wrench className="w-5 h-5 text-amber-400" />
+                    <span className="text-[10px] font-bold text-amber-400">MAINTENANCE</span>
+                    {mStatus?.endTs && (
+                      <div className="flex items-center gap-1">
+                        <Timer className="w-2.5 h-2.5 text-amber-400" />
+                        <ScriptCountdown endTs={mStatus.endTs} />
+                      </div>
                     )}
-                    <ScriptCountdown endTs={mStatus?.endTs ?? null} />
                   </div>
                 )}
               </div>
-              <div className="p-2.5">
-                <p className="text-xs font-semibold text-gray-900 dark:text-white truncate">
+              {/* Info */}
+              <div className="p-3">
+                <p className="text-sm font-semibold truncate" style={{ color: 'var(--color-text)' }}>
                   {loading ? <span className="block h-3 w-20 bg-gray-700 rounded animate-pulse" /> : (info?.name ?? 'Unknown')}
                 </p>
+                <p className="text-[11px] mt-0.5 truncate" style={{ color: inMaintenance ? '#f59e0b' : 'var(--color-muted)' }}>
+                  {loading ? '' : inMaintenance ? '🔧 Under maintenance' : `${formatNum(info?.playing ?? 0)} playing`}
+                </p>
                 {!loading && info && (
-                  <p className="text-[10px] mt-0.5" style={{ color: inMaintenance ? '#f59e0b' : 'rgb(107 114 128)' }}>
-                    {inMaintenance ? '🔧 Under maintenance' : `${formatNum(info.playing)} playing`}
-                  </p>
+                  <div className="flex items-center gap-2 mt-2">
+                    {info.likeCount + info.dislikeCount > 0 && (
+                      <span className="text-[10px] flex items-center gap-1 text-emerald-400">
+                        <ThumbsUp className="w-2.5 h-2.5" />
+                        {Math.round(info.likeCount / (info.likeCount + info.dislikeCount) * 100)}%
+                      </span>
+                    )}
+                    <span className="text-[10px] flex items-center gap-1" style={{ color: 'var(--color-muted)' }}>
+                      <Users className="w-2.5 h-2.5" />
+                      {formatNum(info.visits)}
+                    </span>
+                  </div>
                 )}
               </div>
             </button>

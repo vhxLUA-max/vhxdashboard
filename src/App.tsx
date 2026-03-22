@@ -69,10 +69,11 @@ function useLiveCounter() {
       setCount((data ?? []).reduce((s: number, u: any) => s + (u.execution_count ?? 0), 0));
     };
     fetch();
+    const poll = setInterval(fetch, 10000);
     const ch = supabase.channel('live-total')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'unique_users' }, fetch)
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    return () => { clearInterval(poll); supabase.removeChannel(ch); };
   }, []);
   return count;
 }
@@ -105,10 +106,11 @@ function useLiveUniqueUsers() {
       setCount(new Set((data ?? []).map((u: any) => u.roblox_user_id)).size);
     };
     fetch();
+    const poll = setInterval(fetch, 10000);
     const ch = supabase.channel('live-unique')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'unique_users' }, fetch)
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    return () => { clearInterval(poll); supabase.removeChannel(ch); };
   }, []);
   return count;
 }
@@ -164,10 +166,11 @@ function useLiveAllExecutions() {
       if (data) setExecs(data as any[]);
     };
     fetch();
+    const poll = setInterval(fetch, 10000);
     const ch = supabase.channel('live-all-execs')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'game_executions' }, fetch)
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    return () => { clearInterval(poll); supabase.removeChannel(ch); };
   }, []);
   return execs;
 }
