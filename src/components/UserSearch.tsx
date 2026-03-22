@@ -365,11 +365,40 @@ export function UserSearch({ isAdmin = false }: { isAdmin?: boolean }) {
     setSearched(true);
     setSelectedUser(null);
 
-    const { data: rows } = await supabase
+    let targetRobloxId: number | null = null;
+
+    // Non-admins must use a token — resolve it to a roblox_user_id
+    if (!isAdmin) {
+      const { data: tokenRow } = await supabase
+        .from('user_tokens')
+        .select('roblox_user_id, roblox_username')
+        .eq('token', trimmed.toUpperCase())
+        .maybeSingle();
+
+      if (!tokenRow || !tokenRow.roblox_user_id) {
+        setResults([]);
+        setLoading(false);
+        return;
+      }
+      targetRobloxId = tokenRow.roblox_user_id;
+    }
+
+    // Build the query — non-admins only see their own profile, no sensitive fields
+    let query = supabase
       .from('unique_users')
       .select('roblox_user_id,username,place_id,game_name,execution_count,first_seen,last_seen')
-      .or(`username.ilike.%${trimmed}%,roblox_user_id.eq.${isNaN(Number(trimmed)) ? 0 : trimmed}`)
-      .limit(100);
+      .order('last_seen', { ascending: false })
+      .limit(isAdmin ? 100 : 50);
+
+    if (targetRobloxId !== null) {
+      // Token lookup — show only that user's data
+      query = query.eq('roblox_user_id', targetRobloxId);
+    } else {
+      // Admin search by username or ID
+      query = query.or(`username.ilike.%${trimmed}%,roblox_user_id.eq.${isNaN(Number(trimmed)) ? 0 : trimmed}`);
+    }
+
+    const { data: rows } = await query;
 
     if (!rows || rows.length === 0) {
       setResults([]);
@@ -404,7 +433,7 @@ export function UserSearch({ isAdmin = false }: { isAdmin?: boolean }) {
 
     setResults(Object.values(grouped));
     setLoading(false);
-  }, []);
+  }, [isAdmin]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
@@ -454,15 +483,15 @@ export function UserSearch({ isAdmin = false }: { isAdmin?: boolean }) {
 
       {!loading && searched && results.length === 0 && (
         <div className="text-center py-8 space-y-1">
-          <p className="text-sm text-gray-400">No user found for token "{query}"</p>
-          <p className="text-xs text-gray-600">Make sure the token is correct — get yours in the Token tab</p>
+          <p className="text-sm text-gray-400">{isAdmin ? `No results for "${query}"` : "Token not found"}</p>
+          <p className="text-xs text-gray-600">{isAdmin ? "Try a different username or ID" : "Make sure the token is correct — get yours in the Token tab"}</p>
         </div>
       )}
 
       {!loading && !searched && !query && (
         <div className="text-center py-8 space-y-1">
-          <p className="text-xs text-gray-500">Enter your token above to look up execution stats</p>
-          <p className="text-xs text-gray-600">Don't have a token? Go to the <span className="text-indigo-400">Token</span> tab to verify your Roblox account</p>
+          <p className="text-xs text-gray-500">{isAdmin ? "Search for any user by username or Roblox ID" : "Enter your token to view your execution stats"}</p>
+          <p className="text-xs text-gray-600">{isAdmin ? "" : <>Don't have a token? Get one in the <span className="text-indigo-400">Token</span> tab</>}</p>
         </div>
       )}
 
