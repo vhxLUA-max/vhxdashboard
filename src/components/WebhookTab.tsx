@@ -146,44 +146,67 @@ export function WebhookTab() {
       const topGame    = places.reduce((a, b) => a.user_execution_count > b.user_execution_count ? a : b);
       const avatarUrl  = await getRobloxAvatarUrl(robloxUserId);
 
+      const profileUrl   = `https://www.roblox.com/users/${robloxUserId}/profile`;
+      const reportedAt   = `<t:${Math.floor(Date.now() / 1000)}:F>`;
+      const firstSeenTs  = `<t:${Math.floor(new Date(earliest).getTime() / 1000)}:D>`;
+      const lastSeenTs   = `<t:${Math.floor(new Date(latest).getTime() / 1000)}:R>`;
+
+      // Build a visual bar for top game dominance
+      const barFill = Math.round((topGame.user_execution_count / totalExecs) * 10);
+      const bar = '█'.repeat(barFill) + '░'.repeat(10 - barFill) + ` ${Math.round((topGame.user_execution_count / totalExecs) * 100)}%`;
+
       const gameFields = places
         .sort((a, b) => b.user_execution_count - a.user_execution_count)
-        .map(p => ({
-          name: p.game_name ?? `Place ${p.place_id}`,
-          value: [
-            `> **${p.user_execution_count.toLocaleString()}** executions`,
-            `> Active for ${formatDuration(p.first_seen, p.last_seen)}`,
-            `> Last played ${timeAgo(p.last_seen)}`,
-          ].join('\n'),
-          inline: true,
-        }));
-
-      const firstSeenFmt = new Date(earliest).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-      const profileUrl   = `https://www.roblox.com/users/${robloxUserId}/profile`;
+        .slice(0, 6)
+        .map(p => {
+          const pct = totalExecs > 0 ? Math.round((p.user_execution_count / totalExecs) * 100) : 0;
+          const lastTs = `<t:${Math.floor(new Date(p.last_seen).getTime() / 1000)}:R>`;
+          return {
+            name: `${p.game_name ?? `Place ${p.place_id}`}`,
+            value: [
+              `\`${p.user_execution_count.toLocaleString().padStart(5)} execs\` · ${pct}% of total`,
+              `${formatDuration(p.first_seen, p.last_seen)} active · last ${lastTs}`,
+            ].join('\n'),
+            inline: false,
+          };
+        });
 
       const embed = {
         embeds: [{
           author: {
-            name: displayName,
+            name: `${displayName}  ·  vhxLUA`,
             url: profileUrl,
             ...(avatarUrl ? { icon_url: avatarUrl } : {}),
           },
           title: 'Execution Report',
           url: profileUrl,
+          description: [
+            `### [${displayName}](${profileUrl})`,
+            `ID: \`${robloxUserId}\``,
+          ].join('\n'),
           color: 0x6366f1,
           ...(avatarUrl ? { thumbnail: { url: avatarUrl } } : {}),
           fields: [
-            { name: 'Roblox ID',        value: `\`${robloxUserId}\``,                                     inline: true  },
-            { name: 'Total Executions', value: `**${totalExecs.toLocaleString()}**`,                       inline: true  },
-            { name: 'Games Played',     value: `**${places.length}**`,                                    inline: true  },
-            { name: 'Most Played',      value: `**${topGame.game_name ?? `Place ${topGame.place_id}`}** — ${topGame.user_execution_count.toLocaleString()} execs`, inline: false },
-            { name: 'Time Active',      value: `${formatDuration(earliest, latest)}`,                     inline: true  },
-            { name: 'First Seen',       value: firstSeenFmt,                                              inline: true  },
-            { name: 'Last Seen',        value: timeAgo(latest),                                           inline: true  },
-            { name: '​',           value: '**— Game Breakdown —**',                                  inline: false },
+            {
+              name: 'Overview',
+              value: [
+                `**${totalExecs.toLocaleString()}** total executions across **${places.length}** game${places.length !== 1 ? 's' : ''}`,
+                `Active since ${firstSeenTs} · last seen ${lastSeenTs}`,
+              ].join('\n'),
+              inline: false,
+            },
+            {
+              name: 'Top Game',
+              value: `**${topGame.game_name ?? `Place ${topGame.place_id}`}**\n\`${bar}\``,
+              inline: false,
+            },
+            { name: '\u200b', value: '─── **Game Breakdown** ───', inline: false },
             ...gameFields,
           ],
-          footer: { text: 'vhxLUA Hub · ' + new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) },
+          footer: {
+            text: 'vhxLUA Hub',
+            ...(avatarUrl ? { icon_url: avatarUrl } : {}),
+          },
           timestamp: new Date().toISOString(),
         }],
       };
