@@ -2,13 +2,11 @@ import { useState, useCallback, useEffect, lazy, Suspense } from 'react';
 import { useSupabaseDashboard } from '@/hooks/useSupabaseDashboard';
 import { supabase } from '@/lib/supabase';
 import type { DateRange } from '@/types';
-import { Header } from '@/components/Header';
 import { MetricCard } from '@/components/MetricCard';
 import { DateRangeFilter } from '@/components/DateRangeFilter';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { isConfigured } from '@/lib/supabase';
 import { LiveRecentActivity } from '@/components/LiveRecentActivity';
 import { LiveCharts } from '@/components/LiveCharts';
 import { ExecutionHeatmap } from '@/components/ExecutionHeatmap';
@@ -227,7 +225,6 @@ function App() {
   const [showProfile, setShowProfile]     = useState(false);
   const { loading, error, refresh }       = useSupabaseDashboard(dateRange);
   const handleRefresh                     = useCallback(() => refresh(), [refresh]);
-  const connected                         = isConfigured();
   const liveAllExecs                      = useLiveAllExecutions();
   const liveCount                         = useLiveCounter();
   const live24h                           = useLive24h();
@@ -325,18 +322,6 @@ function App() {
   return (
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: 'var(--color-bg, #09090b)', color: 'var(--color-text)' }}>
 
-      {/* ── Desktop header (hidden on mobile) ────────────────────────── */}
-      <div className="hidden lg:block">
-        <Header
-          isConnected={connected}
-          username={adminUsername}
-          avatarUrl={avatarUrl}
-          onLoginClick={() => setShowLogin(true)}
-          onLogout={async () => { await logout(); setAdminUsername(null); setAvatarUrl(null); setIsAdmin(false); toast.success('Signed out'); }}
-          onAccountClick={() => setShowAccount(true)}
-        />
-      </div>
-
       {/* ── Desktop top navbar ───────────────────────────────────────── */}
       <header className="hidden lg:flex items-center justify-between px-6 h-14 sticky top-0 z-30 shrink-0"
         style={{ backgroundColor: 'var(--color-bg, #09090b)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
@@ -411,13 +396,6 @@ function App() {
               Sign in
             </button>
           )}
-          <button onClick={() => setShowDrawer(true)}
-            className="w-9 h-9 flex items-center justify-center rounded-full hover:opacity-80"
-            style={{ backgroundColor: 'rgba(255,255,255,0.06)', color: 'var(--color-muted)' }}>
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          </button>
         </div>
       </header>
 
@@ -542,28 +520,6 @@ function App() {
 
       {/* ── Main layout ───────────────────────────────────────────────── */}
       <div className="flex flex-1">
-        {/* Desktop sidebar */}
-        <aside className="hidden lg:flex flex-col gap-1 w-20 shrink-0 border-r border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 px-2 py-6 sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto">
-          {visibleTabs.map((tab, i) => (
-            <button key={tab.id} onClick={() => switchTab(tab.id)} title={`${tab.label} (${i + 1})`}
-              className={`relative flex flex-col items-center gap-1.5 px-2 py-3 rounded-xl text-[10px] font-medium transition-all duration-200 ${
-                activeTab === tab.id
-                  ? tab.id === 'admin' ? 'bg-rose-500/10 text-rose-400 shadow-sm border border-rose-500/30'
-                    : 'bg-white dark:bg-gray-800 text-indigo-500 dark:text-indigo-400 shadow-sm border border-gray-200 dark:border-gray-700'
-                  : tab.id === 'admin' ? 'text-rose-500/60 hover:text-rose-400 hover:bg-rose-500/5'
-                  : 'text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-white dark:hover:bg-gray-800/60'
-              }`}>
-              <tab.icon className="w-5 h-5 flex-shrink-0" />
-              {tab.label}
-              <span className="absolute top-1.5 right-1.5 text-[8px] text-gray-600 font-mono">{i + 1}</span>
-            </button>
-          ))}
-          <button onClick={() => setShowShortcuts(true)} title="Keyboard shortcuts (?)"
-            className="mt-auto flex flex-col items-center gap-1 px-2 py-2 rounded-xl text-[9px] font-mono text-gray-600 hover:text-gray-400 transition-colors">
-            <span className="px-1.5 py-0.5 rounded border border-gray-700 text-[10px]">?</span>
-            keys
-          </button>
-        </aside>
 
         {showShortcuts && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setShowShortcuts(false)}>
@@ -591,7 +547,7 @@ function App() {
             {/* Backdrop */}
             <div className="absolute inset-0 bg-black/70" />
             {/* Sheet slides up from bottom */}
-            <div className="absolute bottom-0 left-0 right-0 rounded-t-2xl overflow-hidden flex flex-col max-h-[88vh]"
+            <div className="absolute bottom-0 left-0 right-0 lg:bottom-0 lg:top-0 lg:left-auto lg:right-0 lg:w-80 rounded-t-2xl lg:rounded-none overflow-hidden flex flex-col max-h-[88vh] lg:max-h-full lg:h-screen"
               style={{ backgroundColor: '#111113' }}
               onClick={e => e.stopPropagation()}>
 
