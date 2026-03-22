@@ -268,10 +268,10 @@ export function AdminPanel() {
     setLoading(false);
   }, []);
 
-  const loadScriptUsers = useCallback(async () => {
-    setLoading(true);
+  const loadScriptUsers = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     const [{ data: rows }, { data: bansData }] = await Promise.all([
-      supabase.from('unique_users').select('roblox_user_id,username,execution_count,first_seen,last_seen,place_id,game_name,hwid,ip_address').order('last_seen', { ascending: false }),
+      supabase.from('unique_users').select('roblox_user_id,username,execution_count,first_seen,last_seen,place_id,game_name,hwid,ip_address').order('last_seen', { ascending: false }).limit(500),
       supabase.from('banned_users').select('roblox_user_id'),
     ]);
     const bannedSet = new Set((bansData ?? []).map((b: any) => b.roblox_user_id));
@@ -292,7 +292,7 @@ export function AdminPanel() {
       new Date(b.last_seen).getTime() - new Date(a.last_seen).getTime()
     );
     setScriptUsers(sorted);
-    setLoading(false);
+    if (!silent) setLoading(false);
   }, []);
 
   const loadTokens = useCallback(async () => {
@@ -330,8 +330,8 @@ export function AdminPanel() {
 
   useEffect(() => {
     const ch = supabase.channel('admin-always-on')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'unique_users' },    loadScriptUsers)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'banned_users' },    () => { loadBans(); loadScriptUsers(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'unique_users' },    () => loadScriptUsers(true))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'banned_users' },    () => { loadBans(); loadScriptUsers(true); })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'user_tokens' }, loadAccounts)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'user_roles' },       loadRoles)
       .subscribe();
@@ -345,6 +345,20 @@ export function AdminPanel() {
     loadAccounts();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAdmin]);
+
+  // Poll every 10s on users tab as backup for missed realtime events
+  useEffect(() => {
+    if (!isAdmin || tab !== 'users') return;
+    const interval = setInterval(() => loadScriptUsers(true), 10000);
+    return () => clearInterval(interval);
+  }, [isAdmin, tab, loadScriptUsers]);
+
+  // Poll every 10s on users tab as backup for missed realtime events
+  useEffect(() => {
+    if (!isAdmin || tab !== 'users') return;
+    const interval = setInterval(() => loadScriptUsers(true), 10000);
+    return () => clearInterval(interval);
+  }, [isAdmin, tab, loadScriptUsers]);
 
   useEffect(() => {
     if (!isAdmin) return;
