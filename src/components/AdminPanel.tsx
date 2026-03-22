@@ -1172,7 +1172,7 @@ export function AdminPanel() {
           </button>
         </div>
       )}
-    </div>
       {trollUser && <TrollPanel userId={trollUser.id} username={trollUser.username} onClose={() => setTrollUser(null)} />}
+    </div>
   );
 }

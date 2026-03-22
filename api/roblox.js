@@ -22,6 +22,8 @@ export default async function handler(req, res) {
     domain = 'https://thumbnails.roblox.com';
   } else if (path.startsWith('/v1/presence') || path.includes('/presence')) {
     domain = 'https://presence.roblox.com';
+  } else if (path.startsWith('/v1/messages') || path.includes('/messages')) {
+    domain = 'https://privatemessages.roblox.com';
   } else if (
     path.startsWith('/v1/users') ||
     path.startsWith('/v1/usernames')

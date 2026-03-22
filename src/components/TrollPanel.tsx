@@ -145,8 +145,9 @@ export function TrollPanel({ userId, username, onClose }: TrollPanelProps) {
               className="w-full py-2 rounded-xl text-xs font-medium flex items-center justify-center gap-2 transition-all disabled:opacity-40"
               style={{ backgroundColor: 'rgba(168,85,247,0.15)', color: '#a855f7', border: '1px solid rgba(168,85,247,0.3)' }}>
               {sending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-              Send Message
+              Send to Inbox
             </button>
+            <p className="text-[10px]" style={{ color: 'var(--color-muted)' }}>💡 Sends a Roblox private message to their inbox using the API.</p>
           </div>
 
           {/* Sent log */}
