@@ -160,7 +160,7 @@ function useLiveAllExecutions() {
   const [execs, setExecs] = useState<any[]>([]);
   useEffect(() => {
     const fetch = async () => {
-      const { data } = await supabase.from('game_executions').select('place_id,total_count:count,last_executed_at,game_name').order('last_executed_at', { ascending: false });
+      const { data } = await supabase.from('game_executions').select('place_id,daily_count,last_executed_at,game_name').order('last_executed_at', { ascending: false });
       if (data) setExecs(data as any[]);
     };
     fetch();

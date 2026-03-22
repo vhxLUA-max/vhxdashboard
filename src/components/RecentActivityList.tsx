@@ -7,7 +7,7 @@ interface RecentActivityListProps {
   loading?: boolean;
 }
 
-const SUPPORTED_GAMES = ['Pixel Blade', 'Loot Hero', 'Flick'];
+const SUPPORTED_GAMES = ['Pixel Blade', 'Loot Hero', 'Survive Lava', 'Flick', 'UNC Tester'];
 
 function formatRelativeTime(dateString: string): string {
   const diff = (Date.now() - new Date(dateString).getTime()) / 1000;
@@ -43,7 +43,7 @@ export function RecentActivityList({ executions, loading = false }: RecentActivi
     if (!grouped[name]) {
       grouped[name] = { count: 0, last_executed_at: e.last_executed_at };
     }
-    grouped[name].count += e.count;
+    grouped[name].count += e.daily_count ?? e.count ?? 0;
     if (new Date(e.last_executed_at) > new Date(grouped[name].last_executed_at)) {
       grouped[name].last_executed_at = e.last_executed_at;
     }
