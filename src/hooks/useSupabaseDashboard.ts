@@ -58,8 +58,11 @@ export function useSupabaseDashboard(dateRange: DateRange): UseSupabaseDashboard
         newUsersToday:  new Set((newToday ?? []).map((u: any) => u.roblox_user_id)).size,
       });
     } catch (err) {
-      if ((err as Error).name !== 'AbortError')
-        setError(err instanceof Error ? err : new Error('Unknown error'));
+      const e = err as Error;
+      // Ignore AbortError and lock errors — these are browser-level race conditions, not real failures
+      if (e.name !== 'AbortError' && !e.message?.includes('Lock broken') && !e.message?.includes('steal')) {
+        setError(e instanceof Error ? e : new Error('Unknown error'));
+      }
     } finally {
       setLoading(false);
     }
