@@ -440,7 +440,7 @@ function App() {
         </div>
         {/* Center: tab pills */}
         <nav className="flex items-center gap-1">
-          {visibleTabs.slice(0, 8).map(tab => {
+          {visibleTabs.slice(0, 5).map(tab => {
             const active = activeTab === tab.id;
             return (
               <button key={tab.id} onClick={() => switchTab(tab.id)}
@@ -458,7 +458,7 @@ function App() {
               </button>
             );
           })}
-          {visibleTabs.length > 8 && (
+          {visibleTabs.length > 5 && (
             <button onClick={() => setShowDrawer(true)}
               className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-medium transition-all"
               style={{ color: 'var(--color-muted)' }}>

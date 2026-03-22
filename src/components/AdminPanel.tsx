@@ -1137,38 +1137,7 @@ export function AdminPanel() {
 
       {/* Danger Zone — founder only */}
       {myRole === 'founder' && tab !== 'maintenance' && tab !== 'audit' && tab !== 'roles' && (
-        <div className="mt-6 rounded-xl border border-red-500/20 p-4 space-y-3" style={{ backgroundColor: 'rgba(239,68,68,0.03)' }}>
-          <h3 className="text-sm font-semibold flex items-center gap-2 text-red-400">
-            <AlertTriangle className="w-4 h-4" /> Danger Zone
-          </h3>
-          <p className="text-xs" style={{ color: 'var(--color-muted)' }}>
-            Wipe all user data from the database except execution counts. This permanently removes bans, fingerprints, HWIDs, IP data, VPN flags, and tokens. Execution counts are preserved.
-          </p>
-          <button
-            onClick={async () => {
-              const confirmed = window.confirm('⚠️ This will permanently delete ALL user data except execution counts.\n\nAre you absolutely sure? This cannot be undone.');
-              if (!confirmed) return;
-              const confirmed2 = window.confirm('Final confirmation: wipe banned_users, fingerprint_bans, hwid_bans, ip_bans, vpn_flags tables?');
-              if (!confirmed2) return;
-              try {
-                await Promise.all([
-                  supabase.from('banned_users').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
-                  supabase.from('fingerprint_bans').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
-                  supabase.from('hwid_bans').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
-                  supabase.from('ip_bans').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
-                  supabase.from('vpn_flags').delete().neq('id', '00000000-0000-0000-0000-000000000000'),
-                ]);
-                await logAction('db_wipe', { note: 'Wiped bans, fingerprints, hwids, IPs, VPN flags. Execution counts preserved.' });
-                toast.success('Database wiped. Execution counts preserved.');
-              } catch (err) {
-                toast.error('Wipe failed: ' + String(err));
-              }
-            }}
-            className="px-4 py-2 rounded-lg text-xs font-semibold transition-all hover:opacity-90"
-            style={{ backgroundColor: 'rgba(239,68,68,0.1)', color: '#f87171', border: '1px solid rgba(239,68,68,0.3)' }}>
-            🗑️ Wipe Database (keep execution counts)
-          </button>
-        </div>
+
       )}
     </div>
   );
