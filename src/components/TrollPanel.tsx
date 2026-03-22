@@ -87,7 +87,7 @@ end)
 
     const { error } = await supabase
       .from('game_status')
-      .update({ execute_script: script })
+      .update({ execute_script: script, execute_target: username })
       .eq('game_name', gameName);
 
     if (error) {
