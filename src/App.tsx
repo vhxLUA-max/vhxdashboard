@@ -77,6 +77,25 @@ function useLiveCounter() {
   return count;
 }
 
+function useLive24h() {
+  const [count, setCount] = useState<number | null>(null);
+  useEffect(() => {
+    const fetch = async () => {
+      const { data } = await supabase.from('game_executions').select('daily_count,daily_reset_at');
+      if (!data) return;
+      const today = new Date().toISOString().slice(0, 10);
+      setCount(data.reduce((s: number, e: { daily_count?: number; daily_reset_at?: string }) =>
+        s + (e.daily_reset_at?.slice(0, 10) === today ? (e.daily_count ?? 0) : 0), 0));
+    };
+    fetch();
+    const poll = setInterval(fetch, 15000);
+    const ch = supabase.channel('live-24h')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'game_executions' }, fetch)
+      .subscribe();
+    return () => { clearInterval(poll); supabase.removeChannel(ch); };
+  }, []);
+  return count;
+}
 
 function useLiveUniqueUsers() {
   const [count, setCount] = useState<number | null>(null);
@@ -97,20 +116,7 @@ function useLiveUniqueUsers() {
 function useLiveNewUsers() {
   const [count, setCount] = useState<number | null>(null);
   useEffect(() => {
-    const fetch = async () => {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const { data } = await supabase
-        .from('unique_users')
-        .select('roblox_user_id')
-        .gte('first_seen', today.toISOString());
-      setCount(new Set((data ?? []).map((u: any) => u.roblox_user_id)).size);
-    };
-    fetch();
-    const ch = supabase.channel('live-new-users')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'unique_users' }, fetch)
-      .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    setCount(0); // New users tracked in Google Sheets
   }, []);
   return count;
 }
@@ -120,17 +126,17 @@ function useLiveLastExecution() {
   useEffect(() => {
     const fetch = async () => {
       const { data } = await supabase
-        .from('unique_users')
-        .select('last_seen')
-        .order('last_seen', { ascending: false })
+        .from('game_executions')
+        .select('last_executed_at')
+        .order('last_executed_at', { ascending: false })
         .limit(1);
-      const val = data?.[0]?.last_seen ?? null;
+      const val = data?.[0]?.last_executed_at ?? null;
       if (val) setIso(val);
     };
     fetch();
-    const poll = setInterval(fetch, 3000);
+    const poll = setInterval(fetch, 5000);
     const ch = supabase.channel('live-last-exec')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'unique_users' }, fetch)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'game_executions' }, fetch)
       .subscribe();
     return () => { clearInterval(poll); supabase.removeChannel(ch); };
   }, []);
@@ -141,7 +147,7 @@ function useLiveAllExecutions() {
   const [execs, setExecs] = useState<any[]>([]);
   useEffect(() => {
     const fetch = async () => {
-      const { data } = await supabase.from('game_executions').select('place_id,daily_count,last_executed_at,game_name').order('last_executed_at', { ascending: false });
+      const { data } = await supabase.from('game_executions').select('place_id,total_count:count,last_executed_at,game_name').order('last_executed_at', { ascending: false });
       if (data) setExecs(data as any[]);
     };
     fetch();
@@ -208,6 +214,7 @@ function App() {
   const handleRefresh                     = useCallback(() => refresh(), [refresh]);
   const liveAllExecs                      = useLiveAllExecutions();
   const liveCount                         = useLiveCounter();
+  const live24h                           = useLive24h();
   const liveUsers                         = useLiveUniqueUsers();
   const liveNewUsers                      = useLiveNewUsers();
   const lastExecution                     = useLiveLastExecution();
@@ -431,9 +438,9 @@ function App() {
             style={{ background: 'linear-gradient(135deg,#2563eb,#3b82f6)' }}>V</div>
           <span className="text-base font-bold tracking-tight" style={{ color: 'var(--color-text)' }}>vhx hub</span>
         </div>
-        {/* Center: tab pills — 5 primary tabs + More */}
+        {/* Center: tab pills */}
         <nav className="flex items-center gap-1">
-          {visibleTabs.slice(0, 5).map(tab => {
+          {visibleTabs.slice(0, 8).map(tab => {
             const active = activeTab === tab.id;
             return (
               <button key={tab.id} onClick={() => switchTab(tab.id)}
@@ -451,17 +458,13 @@ function App() {
               </button>
             );
           })}
-          <button onClick={() => setShowDrawer(true)}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-medium transition-all"
-            style={{
-              color: visibleTabs.slice(5).some(t => t.id === activeTab) ? 'var(--color-accent)' : 'var(--color-muted)',
-              backgroundColor: visibleTabs.slice(5).some(t => t.id === activeTab) ? 'rgba(99,102,241,0.1)' : 'transparent',
-            }}>
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-            More
-          </button>
+          {visibleTabs.length > 8 && (
+            <button onClick={() => setShowDrawer(true)}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-medium transition-all"
+              style={{ color: 'var(--color-muted)' }}>
+              ••• More
+            </button>
+          )}
         </nav>
         {/* Right: live badge + search + profile + menu */}
         <div className="flex items-center gap-2 shrink-0">
@@ -825,7 +828,7 @@ function App() {
                 {activeTab === 'stats' && (
                   <div className="space-y-6">
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                      <MetricCard title="Executions" value={liveCount?.toLocaleString() ?? '-'} subtitle="All time" icon={Activity} loading={false} />
+                      <MetricCard title="Executions" value={(dateRange === '24h' ? live24h : liveCount)?.toLocaleString() ?? '-'} subtitle={dateRange === '24h' ? 'Today' : `Last ${dateRange}`} icon={Activity} loading={false} />
                       <MetricCard title="Users"      value={liveUsers?.toLocaleString() ?? '-'}    subtitle="Active 24h"    icon={Users}   loading={false} />
                       <MetricCard title="New Today"  value={liveNewUsers?.toLocaleString() ?? '-'} subtitle="First seen"    icon={Users}   loading={false} />
                       <MetricCard title="Last Exec"  value={lastExecution}                         subtitle="Most recent"   icon={Clock}   loading={false} />
