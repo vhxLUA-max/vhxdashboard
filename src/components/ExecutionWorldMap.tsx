@@ -129,7 +129,7 @@ export function ExecutionWorldMap() {
       </div>
 
       {/* Map */}
-      <div className="relative w-full" style={{ paddingBottom: '43%', backgroundColor: '#0a0e1a' }}>
+      <div className="relative w-full" style={{ paddingBottom: '50%', backgroundColor: '#0a0e1a' }}>
         <svg
           viewBox={`0 0 ${W} ${H}`}
           className="absolute inset-0 w-full h-full"
@@ -167,8 +167,8 @@ export function ExecutionWorldMap() {
                     <animate attributeName="opacity" values="0.9;0" dur="1.5s" repeatCount="indefinite" />
                   </circle>
                 )}
-                <circle cx={x} cy={y} r="5" fill={dot.fresh ? '#10b981' : '#3b82f6'} opacity="0.9" />
-                <circle cx={x} cy={y} r="2.5" fill="white" opacity="0.95" />
+                <circle cx={x} cy={y} r="7" fill={dot.fresh ? '#10b981' : '#3b82f6'} opacity="0.85" />
+                <circle cx={x} cy={y} r="3.5" fill="white" opacity="0.95" />
               </g>
             );
           })}
