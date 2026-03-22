@@ -118,7 +118,20 @@ function useLiveUniqueUsers() {
 function useLiveNewUsers() {
   const [count, setCount] = useState<number | null>(null);
   useEffect(() => {
-    setCount(0); // New users tracked in Google Sheets
+    const fetch = async () => {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const { data } = await supabase
+        .from('unique_users')
+        .select('roblox_user_id')
+        .gte('first_seen', today.toISOString());
+      setCount(new Set((data ?? []).map((u: any) => u.roblox_user_id)).size);
+    };
+    fetch();
+    const ch = supabase.channel('live-new-users')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'unique_users' }, fetch)
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
   }, []);
   return count;
 }
