@@ -21,11 +21,10 @@ export function LiveCharts({ dateRange }: { dateRange: DateRange }) {
       setLoading(false);
     };
     fetch();
-    const poll = setInterval(fetch, 5000);
     const ch = supabase.channel('live-charts')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'game_executions' }, fetch)
       .subscribe();
-    return () => { clearInterval(poll); supabase.removeChannel(ch); };
+    return () => { supabase.removeChannel(ch); };
   }, [dateRange]);
 
   return (

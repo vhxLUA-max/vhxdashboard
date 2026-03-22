@@ -91,14 +91,13 @@ function useLiveStats() {
     };
 
     fetchAll();
-    const poll = setInterval(fetchAll, 5000);
 
     const ch = supabase.channel('live-stats-v2')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'unique_users' }, fetchAll)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'game_executions' }, fetchAll)
       .subscribe();
 
-    return () => { clearInterval(poll); supabase.removeChannel(ch); };
+    return () => { supabase.removeChannel(ch); };
   }, []);
 
   return { totalExecs, uniqueUsers, newToday, lastIso, allExecs };

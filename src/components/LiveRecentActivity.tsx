@@ -17,11 +17,10 @@ export function LiveRecentActivity() {
       setLoading(false);
     };
     fetch();
-    const poll = setInterval(fetch, 5000);
     const ch = supabase.channel('live-recent')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'game_executions' }, fetch)
       .subscribe();
-    return () => { clearInterval(poll); supabase.removeChannel(ch); };
+    return () => { supabase.removeChannel(ch); };
   }, []);
 
   return <RecentActivityList executions={executions} loading={loading} />;
