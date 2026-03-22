@@ -227,7 +227,6 @@ function App() {
   const handleRefresh                     = useCallback(() => refresh(), [refresh]);
   const liveAllExecs                      = useLiveAllExecutions();
   const liveCount                         = useLiveCounter();
-  const live24h                           = useLive24h();
   const liveUsers                         = useLiveUniqueUsers();
   const liveNewUsers                      = useLiveNewUsers();
   const lastExecution                     = useLiveLastExecution();

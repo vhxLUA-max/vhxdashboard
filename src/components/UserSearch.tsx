@@ -59,9 +59,6 @@ function QuickBanButton({ userId, username, isAdmin }: { userId: number; usernam
           </div>
         </div>
       )}
-      {trollUser && (
-        <TrollPanel userId={trollUser.id} username={trollUser.username} onClose={() => setTrollUser(null)} />
-      )}
     </div>
   );
 }
