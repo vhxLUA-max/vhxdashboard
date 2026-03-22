@@ -11,6 +11,7 @@ export default async function handler(req, res) {
 
   let domain;
   if (customDomain) {
+    // Explicit domain override — skip all routing
     domain = customDomain;
   } else if (
     path.startsWith('/v1/users/avatar') ||

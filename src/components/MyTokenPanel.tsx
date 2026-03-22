@@ -45,15 +45,18 @@ async function lookupRobloxUser(username: string): Promise<{ id: number; name: s
 
 async function fetchRobloxBio(userId: number): Promise<string | null> {
   try {
+    // users.roblox.com/v1/users/{id} — returns { description: "..." }
     const res = await fetch('/api/roblox', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ path: `/v1/users/${userId}` }),
+      body: JSON.stringify({ path: `/v1/users/${userId}`, domain: 'https://users.roblox.com' }),
     });
     if (!res.ok) return null;
-    const json = await res.json() as { description?: string; errors?: unknown } | null;
-    if (!json || (json as any).errors) return null;
-    return json.description ?? '';
+    const json = await res.json() as any;
+    // API returns errors array when something goes wrong
+    if (!json || Array.isArray(json.errors) || json.error) return null;
+    const bio = json.description ?? json.Description ?? '';
+    return typeof bio === 'string' ? bio : '';
   } catch { return null; }
 }
 
