@@ -121,7 +121,7 @@ export function WebhookTab() {
 
       const execMap: Record<number, { count: number; game_name: string | null }> = {};
       for (const e of (executions ?? []) as GameExecution[]) {
-        execMap[e.place_id] = { count: e.count, game_name: e.game_name };
+        execMap[e.place_id] = { count: (e.count ?? e.daily_count ?? 0), game_name: e.game_name };
       }
 
       const places: PlaceEntry[] = users.map(u => ({
