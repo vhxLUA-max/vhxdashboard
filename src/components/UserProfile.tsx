@@ -2,13 +2,14 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 
 import { toast } from 'sonner';
-import { ArrowLeft, Shield, Ban, Gamepad2, Clock, Key, Fingerprint, Monitor, AlertTriangle, Calendar, Star, ExternalLink, Copy, Check } from 'lucide-react';
+import { ArrowLeft, Shield, Ban, Gamepad2, Clock, Key, Fingerprint, Monitor, AlertTriangle, Calendar, Star, ExternalLink, Copy, Check, Globe, MapPin } from 'lucide-react';
 
 interface UserRow {
   roblox_user_id: number; username: string; game_name: string;
   place_id: number; execution_count: number;
   first_seen: string; last_seen: string;
   token: string; fingerprint: string; hwid: string; ip_address?: string;
+  country?: string; country_code?: string; region?: string; city?: string; lat?: number; lng?: number;
 }
 interface BanRow { id: string; reason: string; created_at: string; unban_at: string | null; }
 interface RobloxInfo {
@@ -102,10 +103,15 @@ export function UserProfile({ userId, username, onBack, isAdmin }: Props) {
   const totalExecs = games.reduce((s, [, g]) => s + g.count, 0);
   const firstSeen  = rows.length ? rows.reduce((a,b) => new Date(a.first_seen)<new Date(b.first_seen)?a:b).first_seen : null;
   const lastSeen   = rows.length ? rows.reduce((a,b) => new Date(a.last_seen)>new Date(b.last_seen)?a:b).last_seen : null;
-  const token = rows[0]?.token ?? null;
-  const fp    = rows[0]?.fingerprint ?? null;
-  const hwid  = rows[0]?.hwid ?? null;
-  const ip    = rows[0]?.ip_address ?? null;
+  const token   = rows[0]?.token ?? null;
+  const fp      = rows[0]?.fingerprint ?? null;
+  const hwid    = rows[0]?.hwid ?? null;
+  const ip      = rows[0]?.ip_address ?? null;
+  const country = rows[0]?.country ?? null;
+  const region  = rows[0]?.region ?? null;
+  const city    = rows[0]?.city ?? null;
+  const lat     = rows[0]?.lat ?? null;
+  const lng     = rows[0]?.lng ?? null;
 
   const doBan = async () => {
     if (!banReason.trim()) return toast.error('Enter a reason');
@@ -248,6 +254,44 @@ export function UserProfile({ userId, username, onBack, isAdmin }: Props) {
           })}
         </div>
       </div>
+
+      {/* Geo info */}
+      {isAdmin && (country || city || ip) && (
+        <div className="rounded-xl border p-5 space-y-3" style={s}>
+          <h3 className="text-sm font-semibold flex items-center gap-2" style={{ color: 'var(--color-text)' }}>
+            <Globe className="w-4 h-4 text-blue-400" /> Location Info
+          </h3>
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { label: 'Country',   value: country,                         icon: '🌍' },
+              { label: 'Region',    value: region,                          icon: '📍' },
+              { label: 'City',      value: city,                            icon: '🏙️' },
+              { label: 'IP Address',value: ip,                              icon: '🔌' },
+              { label: 'Coords',    value: lat && lng ? `${lat.toFixed(2)}, ${lng.toFixed(2)}` : null, icon: '📡' },
+            ].filter(i => i.value).map(item => (
+              <div key={item.label} className="flex items-center gap-2 p-2.5 rounded-lg" style={s2}>
+                <span className="text-sm">{item.icon}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px]" style={{ color: 'var(--color-muted)' }}>{item.label}</p>
+                  <p className="text-xs font-mono truncate" style={{ color: 'var(--color-text)' }}>{item.value}</p>
+                </div>
+                {item.value && (
+                  <button onClick={() => copyVal(item.value!, item.label)} className="shrink-0 p-1 rounded" style={{ color: 'var(--color-muted)' }}>
+                    {copied === item.label ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+          {lat && lng && (
+            <a href={`https://www.google.com/maps?q=${lat},${lng}`} target="_blank" rel="noreferrer"
+              className="flex items-center gap-1.5 text-xs hover:opacity-80 transition-opacity mt-1"
+              style={{ color: 'var(--color-accent)' }}>
+              <MapPin className="w-3.5 h-3.5" /> View on Google Maps
+            </a>
+          )}
+        </div>
+      )}
 
       {/* Security info */}
       {isAdmin && (
