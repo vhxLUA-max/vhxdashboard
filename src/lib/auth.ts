@@ -36,9 +36,21 @@ export async function login(usernameOrEmail: string, password: string): Promise<
 }
 
 export async function checkUsernameAvailable(username: string): Promise<boolean> {
-  const email = toEmail(username);
-  const { error } = await supabase.auth.signInWithPassword({ email, password: '___invalid___' });
-  return error?.message?.includes('Invalid') ?? true;
+  // Query user_roles table for existing username — avoids Supabase auth enumeration protection
+  const { data } = await supabase
+    .from('user_roles')
+    .select('username')
+    .eq('username', username.trim().toLowerCase())
+    .maybeSingle();
+  if (data) return false; // found in user_roles = taken
+  // Also check admins metadata via a safe signup probe
+  const { error } = await supabase.auth.signUp({
+    email: toEmail(username),
+    password: Math.random().toString(36) + Math.random().toString(36),
+    options: { data: { username: username.trim().toLowerCase() } },
+  });
+  if (error?.message?.toLowerCase().includes('already registered')) return false;
+  return true;
 }
 
 export async function forgotPassword(email: string): Promise<{ success: boolean; error?: string }> {
@@ -58,7 +70,7 @@ export async function updatePassword(newPassword: string): Promise<{ success: bo
 export async function loginWithGoogle(): Promise<{ success: boolean; error?: string }> {
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
-    options: { redirectTo: window.location.origin },
+    options: { redirectTo: 'https://vhxdashboard.vercel.app' },
   });
   if (error) return { success: false, error: error.message };
   return { success: true };
@@ -68,7 +80,7 @@ export async function loginWithDiscord(): Promise<{ success: boolean; error?: st
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'discord',
     options: {
-      redirectTo: window.location.origin,
+      redirectTo: 'https://vhxdashboard.vercel.app',
       scopes: 'identify email',
     },
   });
