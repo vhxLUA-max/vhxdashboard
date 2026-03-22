@@ -63,11 +63,9 @@ export function ExecutionWorldMap() {
       }
     }
 
-    setDots(prev => {
-      const next = [...resolved];
-      if (fresh) next.forEach(d => { if (d.last_seen > new Date(Date.now() - 10000).toISOString()) d.fresh = true; });
-      return next;
-    });
+    const next = [...resolved];
+    if (fresh) next.forEach(d => { if (d.last_seen > new Date(Date.now() - 10000).toISOString()) d.fresh = true; });
+    setDots(next);
     setLoading(false);
 
     // Resolve unknown IPs in background (rate-limited to avoid ip-api limits)
