@@ -169,8 +169,14 @@ export function AdminPanel() {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) return;
       const username = user.user_metadata?.username ?? '';
-      if (username.toLowerCase() === 'vhxlua-max') {
+      const isFounderAccount = username.toLowerCase() === 'vhxlua-max';
+      if (isFounderAccount) {
         setMyRole('founder');
+        // Upsert founder role into DB so it persists
+        supabase.from('user_roles').upsert({
+          user_id: user.id, username: username.toLowerCase(), role: 'founder'
+        }).then(() => {});
+        return; // don't let DB query overwrite founder
       }
       supabase.from('user_roles').select('role').eq('user_id', user.id).maybeSingle()
         .then(({ data }) => {

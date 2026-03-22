@@ -130,7 +130,8 @@ export function ProfileView({ username, avatarUrl, isAdmin, isPro = false, isLog
               <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="text-sm font-semibold truncate" style={{ color: '#f1f5f9', letterSpacing: '-0.01em' }}>{username ?? 'User'}</span>
                 {isVerified && <VerifiedIcon />}
-                {isPro && !isVerified && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded" style={{ background: 'linear-gradient(135deg,#f59e0b,#f97316)', color: '#000' }}>✦ PRO</span>}
+                {isFounder && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded" style={{ background: 'rgba(245,158,11,0.15)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.3)' }}>⚡ FOUNDER</span>}
+                {isPro && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded" style={{ background: 'linear-gradient(135deg,#f59e0b,#f97316)', color: '#000' }}>✦ PRO</span>}
                 {activeSocials.slice(0, 3).map(s => (
                   <a key={s.key} href={socials[s.key]} target="_blank" rel="noopener noreferrer"
                     className="w-5 h-5 rounded-full flex items-center justify-center" style={{ backgroundColor: s.bg, color: s.color }}>
@@ -139,7 +140,6 @@ export function ProfileView({ username, avatarUrl, isAdmin, isPro = false, isLog
                 ))}
               </div>
               <div className="flex items-center gap-2 mt-0.5">
-                {isFounder && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded" style={{ background: 'rgba(245,158,11,0.12)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.2)', letterSpacing: '0.05em' }}>FOUNDER</span>}
                 {isAdmin && !isFounder && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded" style={{ background: 'rgba(99,102,241,0.12)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.2)', letterSpacing: '0.05em' }}>ADMIN</span>}
                 {isOnline
                   ? <span className="text-[10px] flex items-center gap-1" style={{ color: '#10b981' }}><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />Online</span>
@@ -190,9 +190,8 @@ export function ProfileView({ username, avatarUrl, isAdmin, isPro = false, isLog
         <div className="flex items-center gap-2 flex-wrap mb-1">
           <h2 className="text-xl font-bold" style={{ color: '#f1f5f9', letterSpacing: '-0.02em' }}>{username ?? 'User'}</h2>
           {isVerified && <VerifiedIcon />}
-          {isPro && !isVerified && (
-            <span className="flex items-center gap-0.5 text-[10px] font-bold px-2 py-0.5 rounded" style={{ background: 'linear-gradient(135deg,#f59e0b,#f97316)', color: '#000', letterSpacing: '0.03em' }}>✦ PRO</span>
-          )}
+          {isFounder && <span className="flex items-center gap-0.5 text-[10px] font-bold px-2 py-0.5 rounded" style={{ background: 'rgba(245,158,11,0.12)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.3)', letterSpacing: '0.06em' }}>⚡ FOUNDER</span>}
+          {isPro && <span className="flex items-center gap-0.5 text-[10px] font-bold px-2 py-0.5 rounded" style={{ background: 'linear-gradient(135deg,#f59e0b,#f97316)', color: '#000', letterSpacing: '0.03em' }}>✦ PRO</span>}
           {activeSocials.map(s => (
             <a key={s.key} href={socials[s.key]} target="_blank" rel="noopener noreferrer"
               className="flex items-center justify-center w-6 h-6 rounded-full transition-opacity hover:opacity-80"
@@ -213,7 +212,6 @@ export function ProfileView({ username, avatarUrl, isAdmin, isPro = false, isLog
             ? <span className="text-[13px] flex items-center gap-1.5" style={{ color: '#10b981' }}><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />Online now</span>
             : <span className="text-[13px] flex items-center gap-1.5" style={{ color: '#64748b' }}><span className="w-1.5 h-1.5 rounded-full bg-slate-500 inline-block" />Offline</span>
           }
-          {isFounder && <span className="text-[10px] font-semibold px-2 py-0.5 rounded" style={{ background: 'rgba(245,158,11,0.1)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.2)', letterSpacing: '0.04em' }}>FOUNDER</span>}
           {isAdmin && !isFounder && <span className="text-[10px] font-semibold px-2 py-0.5 rounded" style={{ background: 'rgba(99,102,241,0.1)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.2)', letterSpacing: '0.04em' }}>ADMIN</span>}
         </div>
 

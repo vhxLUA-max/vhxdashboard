@@ -281,10 +281,14 @@ function App() {
       setAvatarUrl(resolveAvatar(session.user));
       setIsLoggedIn(true);
       checkIsAdmin(session.user.id, u).then(setIsAdmin);
-      // Pro check
-      supabase.from('user_roles').select('role').eq('user_id', session.user.id).maybeSingle().then(({ data }) => {
-        setIsPro(data?.role === 'pro' || data?.role === 'founder' || data?.role === 'admin');
-      });
+      // Pro check — founder always gets Pro
+      if ((u ?? '').toLowerCase() === 'vhxlua-max') {
+        setIsPro(true);
+      } else {
+        supabase.from('user_roles').select('role').eq('user_id', session.user.id).maybeSingle().then(({ data }) => {
+          setIsPro(data?.role === 'pro' || data?.role === 'founder' || data?.role === 'admin');
+        });
+      }
       // Execution count for auto-grant
       supabase.from('unique_users').select('execution_count').eq('roblox_user_id', session.user.id).then(({ data }) => {
         const total = (data ?? []).reduce((s: number, r: { execution_count: number }) => s + (r.execution_count ?? 0), 0);
@@ -305,9 +309,13 @@ function App() {
       setAvatarUrl(resolveAvatar(session.user));
       setIsLoggedIn(true);
       checkIsAdmin(session.user.id, u).then(setIsAdmin);
-      supabase.from('user_roles').select('role').eq('user_id', session.user.id).maybeSingle().then(({ data }) => {
-        setIsPro(data?.role === 'pro' || data?.role === 'founder' || data?.role === 'admin');
-      });
+      if ((u ?? '').toLowerCase() === 'vhxlua-max') {
+        setIsPro(true);
+      } else {
+        supabase.from('user_roles').select('role').eq('user_id', session.user.id).maybeSingle().then(({ data }) => {
+          setIsPro(data?.role === 'pro' || data?.role === 'founder' || data?.role === 'admin');
+        });
+      }
     });
     if (new URLSearchParams(window.location.search).get('reset') === 'true')
       window.history.replaceState({}, '', window.location.pathname);
