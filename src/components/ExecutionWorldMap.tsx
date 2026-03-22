@@ -276,7 +276,7 @@ export function ExecutionWorldMap() {
             {/* Countries — highlighted if they have users */}
             <g dangerouslySetInnerHTML={{ __html: WORLD_SVG_PATHS.replace(
               /class="([^"]+)"/g,
-              (match, cls) => {
+              (_match, cls) => {
                 const code = cls.trim().toUpperCase();
                 const hasUsers = !!dotsByCountry[code];
                 return `class="${cls}" fill="${hasUsers ? '#1e3a5f' : '#1a2a42'}" stroke="${hasUsers ? '#3b82f6' : '#243858'}" stroke-width="1" style="cursor:${hasUsers ? 'pointer' : 'default'}" data-code="${code}"`;
