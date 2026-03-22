@@ -120,17 +120,17 @@ function useLiveLastExecution() {
   useEffect(() => {
     const fetch = async () => {
       const { data } = await supabase
-        .from('game_executions')
-        .select('last_executed_at')
-        .order('last_executed_at', { ascending: false })
+        .from('unique_users')
+        .select('last_seen')
+        .order('last_seen', { ascending: false })
         .limit(1);
-      const val = data?.[0]?.last_executed_at ?? null;
+      const val = data?.[0]?.last_seen ?? null;
       if (val) setIso(val);
     };
     fetch();
-    const poll = setInterval(fetch, 5000);
+    const poll = setInterval(fetch, 3000);
     const ch = supabase.channel('live-last-exec')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'game_executions' }, fetch)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'unique_users' }, fetch)
       .subscribe();
     return () => { clearInterval(poll); supabase.removeChannel(ch); };
   }, []);
