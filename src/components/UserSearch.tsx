@@ -291,7 +291,7 @@ export function UserSearch({ isAdmin = false }: { isAdmin?: boolean }) {
   const [loading, setLoading]       = useState(false);
   const [searched, setSearched]     = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserResult | null>(null);
-  const [sortBy, setSortBy]         = useState<'executions' | 'recent'>('executions');
+  const [sortBy, setSortBy]         = useState<'executions' | 'recent'>('recent');
   const [filterGame, setFilterGame] = useState('');
   const [filterMinExecs, setFilterMinExecs] = useState('');
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -369,6 +369,7 @@ export function UserSearch({ isAdmin = false }: { isAdmin?: boolean }) {
       .from('unique_users')
       .select('roblox_user_id,username,place_id,game_name,execution_count,first_seen,last_seen')
       .or(`username.ilike.%${trimmed}%,roblox_user_id.eq.${isNaN(Number(trimmed)) ? 0 : trimmed}`)
+      .order('last_seen', { ascending: false })
       .limit(100);
 
     if (!rows || rows.length === 0) {

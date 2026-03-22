@@ -324,6 +324,90 @@ function App() {
         />
       </div>
 
+      {/* ── Desktop top navbar ───────────────────────────────────────── */}
+      <header className="hidden lg:flex items-center justify-between px-6 h-14 sticky top-0 z-30 shrink-0"
+        style={{ backgroundColor: 'var(--color-bg, #09090b)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+        {/* Left: logo */}
+        <div className="flex items-center gap-3 shrink-0">
+          <div className="w-8 h-8 rounded-xl flex items-center justify-center text-sm font-black text-white"
+            style={{ background: 'linear-gradient(135deg,#2563eb,#3b82f6)' }}>V</div>
+          <span className="text-base font-bold tracking-tight" style={{ color: 'var(--color-text)' }}>vhx hub</span>
+        </div>
+        {/* Center: 5 tab pills + More */}
+        <nav className="flex items-center gap-1">
+          {visibleTabs.slice(0, 5).map(tab => {
+            const active = activeTab === tab.id;
+            return (
+              <button key={tab.id} onClick={() => switchTab(tab.id)}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-medium transition-all relative"
+                style={{
+                  color: active ? (tab.id === 'admin' ? '#f87171' : 'var(--color-accent)') : 'var(--color-muted)',
+                  backgroundColor: active ? (tab.id === 'admin' ? 'rgba(248,113,113,0.1)' : 'rgba(99,102,241,0.1)') : 'transparent',
+                }}>
+                <tab.icon className="w-4 h-4" />
+                {tab.label}
+                {active && (
+                  <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-4 h-0.5 rounded-full"
+                    style={{ backgroundColor: tab.id === 'admin' ? '#f87171' : 'var(--color-accent)' }} />
+                )}
+              </button>
+            );
+          })}
+          <button onClick={() => setShowDrawer(true)}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-medium transition-all"
+            style={{
+              color: visibleTabs.slice(5).some(t => t.id === activeTab) ? 'var(--color-accent)' : 'var(--color-muted)',
+              backgroundColor: visibleTabs.slice(5).some(t => t.id === activeTab) ? 'rgba(99,102,241,0.1)' : 'transparent',
+            }}>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+            More
+          </button>
+        </nav>
+        {/* Right: live count + search + avatar + menu */}
+        <div className="flex items-center gap-2 shrink-0">
+          {liveCount !== null && (
+            <span className="text-[10px] font-semibold px-2.5 py-1 rounded-full"
+              style={{ backgroundColor: 'rgba(16,185,129,0.12)', color: '#10b981' }}>
+              {liveCount.toLocaleString()} execs
+            </span>
+          )}
+          <button onClick={() => setShowSearch(true)}
+            className="w-9 h-9 flex items-center justify-center rounded-full hover:opacity-80"
+            style={{ backgroundColor: 'rgba(255,255,255,0.06)', color: 'var(--color-muted)' }}>
+            <Search className="w-4 h-4" />
+          </button>
+          {isLoggedIn ? (
+            <button onClick={() => setShowProfile(true)}
+              className="flex items-center gap-2 px-2 py-1.5 rounded-full hover:opacity-80"
+              style={{ backgroundColor: 'rgba(255,255,255,0.06)' }}>
+              {avatarUrl
+                ? <img src={avatarUrl} alt="" className="w-6 h-6 rounded-full object-cover" />
+                : <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white"
+                    style={{ backgroundColor: 'var(--color-accent)' }}>
+                    {adminUsername?.[0]?.toUpperCase() ?? 'U'}
+                  </div>
+              }
+              <span className="text-xs font-medium pr-1" style={{ color: 'var(--color-text)' }}>{adminUsername ?? 'Profile'}</span>
+            </button>
+          ) : (
+            <button onClick={() => setShowLogin(true)}
+              className="px-4 py-1.5 rounded-full text-sm font-semibold text-white hover:opacity-90"
+              style={{ backgroundColor: 'var(--color-accent)' }}>
+              Sign in
+            </button>
+          )}
+          <button onClick={() => setShowDrawer(true)}
+            className="w-9 h-9 flex items-center justify-center rounded-full hover:opacity-80"
+            style={{ backgroundColor: 'rgba(255,255,255,0.06)', color: 'var(--color-muted)' }}>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+        </div>
+      </header>
+
       {/* ── Mobile header — Rscripts style ───────────────────────────── */}
       <header className="lg:hidden flex items-center justify-between px-5 h-14 sticky top-0 z-30"
         style={{ backgroundColor: 'var(--color-bg, #09090b)' }}>
@@ -490,7 +574,7 @@ function App() {
 
         {/* ── Mobile drawer (hamburger menu) ────────────────────────────── */}
         {showDrawer && (
-          <div className="lg:hidden fixed inset-0 z-50" onClick={() => setShowDrawer(false)}>
+          <div className="fixed inset-0 z-50" onClick={() => setShowDrawer(false)}>
             {/* Backdrop */}
             <div className="absolute inset-0 bg-black/70" />
             {/* Sheet slides up from bottom */}
