@@ -1135,10 +1135,7 @@ export function AdminPanel() {
 
       {tab === 'maintenance' && <MaintenancePanel />}
 
-      {/* Danger Zone — founder only */}
-      {myRole === 'founder' && tab !== 'maintenance' && tab !== 'audit' && tab !== 'roles' && (
 
-      )}
     </div>
   );
 }
