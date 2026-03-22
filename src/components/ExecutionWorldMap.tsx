@@ -147,7 +147,7 @@ export function ExecutionWorldMap() {
             return (
               <g key={i}
                 style={{ cursor: 'pointer' }}
-                onMouseEnter={e => {
+                onMouseEnter={() => {
                   const svg = svgRef.current;
                   if (!svg) return;
                   const rect = svg.getBoundingClientRect();
