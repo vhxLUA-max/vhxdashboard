@@ -838,7 +838,6 @@ export function AdminPanel() {
                     className="text-[10px] px-2 py-1 rounded-lg border shrink-0 transition-colors hover:opacity-80"
                     style={{ borderColor: 'rgba(168,85,247,0.3)', color: '#a855f7', backgroundColor: 'rgba(168,85,247,0.08)' }}
                     title="Troll user">
-                    😈
                   </button>
                 </div>
               </button>
