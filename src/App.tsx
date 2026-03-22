@@ -104,12 +104,6 @@ function useLiveStats() {
   return { totalExecs, uniqueUsers, newToday, lastIso, allExecs };
 }
 
-// Kept for compatibility — App uses useLiveStats() directly
-function useLiveCounter() { return null; }
-function useLiveUniqueUsers() { return null; }
-function useLiveNewUsers() { return null; }
-function useLiveLastExecution() { return ''; }
-function useLiveAllExecutions() { return []; }
 
 const ADMIN_USERNAMES = ['vhxlua-max'];
 
