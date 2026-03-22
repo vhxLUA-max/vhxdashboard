@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Copy, Check, Loader2, Gamepad2, Users, ThumbsUp, ThumbsDown, Star, ExternalLink, ArrowLeft, Play, Wrench, Timer, Bell, Heart } from 'lucide-react';
+import { Copy, Check, Loader2, Gamepad2, Users, ThumbsUp, ExternalLink, ArrowLeft, Play, Wrench, Timer, Heart } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 
