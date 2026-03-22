@@ -270,8 +270,8 @@ export function AdminPanel() {
     setLoading(false);
   }, []);
 
-  const loadScriptUsers = useCallback(async () => {
-    setLoading(true);
+  const loadScriptUsers = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     const [{ data: rows }, { data: bansData }] = await Promise.all([
       supabase.from('unique_users').select('roblox_user_id,username,execution_count,first_seen,last_seen,place_id,game_name,hwid,ip_address').order('last_seen', { ascending: false }),
       supabase.from('banned_users').select('roblox_user_id'),
@@ -294,7 +294,7 @@ export function AdminPanel() {
       new Date(b.last_seen).getTime() - new Date(a.last_seen).getTime()
     );
     setScriptUsers(sorted);
-    setLoading(false);
+    if (!silent) setLoading(false);
   }, []);
 
   const loadTokens = useCallback(async () => {
@@ -332,7 +332,7 @@ export function AdminPanel() {
 
   useEffect(() => {
     const ch = supabase.channel('admin-always-on')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'unique_users' },    loadScriptUsers)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'unique_users' },    () => loadScriptUsers(true))
       .on('postgres_changes', { event: '*', schema: 'public', table: 'banned_users' },    () => { loadBans(); loadScriptUsers(); })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'user_tokens' }, loadAccounts)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'user_roles' },       loadRoles)
