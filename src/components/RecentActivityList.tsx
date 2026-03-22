@@ -41,7 +41,7 @@ export function RecentActivityList({ executions, loading = false }: RecentActivi
     const name = e.game_name ?? `Place ${e.place_id}`;
     if (!SUPPORTED_GAMES.includes(name)) continue;
     if (!grouped[name]) {
-      grouped[name] = { count: 0, last_executed_at: e.last_executed_at };
+      grouped[name] = { count: 0, last_executed_at: e.last_executed_at ?? '' };
     }
     grouped[name].count += e.count;
     if (new Date(e.last_executed_at) > new Date(grouped[name].last_executed_at)) {
