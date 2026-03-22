@@ -69,11 +69,10 @@ function useLiveCounter() {
       setCount((data ?? []).reduce((s: number, u: any) => s + (u.execution_count ?? 0), 0));
     };
     fetch();
-    const poll = setInterval(fetch, 10000);
     const ch = supabase.channel('live-total')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'unique_users' }, fetch)
       .subscribe();
-    return () => { clearInterval(poll); supabase.removeChannel(ch); };
+    return () => { supabase.removeChannel(ch); };
   }, []);
   return count;
 }
@@ -106,11 +105,10 @@ function useLiveUniqueUsers() {
       setCount(new Set((data ?? []).map((u: any) => u.roblox_user_id)).size);
     };
     fetch();
-    const poll = setInterval(fetch, 10000);
     const ch = supabase.channel('live-unique')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'unique_users' }, fetch)
       .subscribe();
-    return () => { clearInterval(poll); supabase.removeChannel(ch); };
+    return () => { supabase.removeChannel(ch); };
   }, []);
   return count;
 }
@@ -166,11 +164,10 @@ function useLiveAllExecutions() {
       if (data) setExecs(data as any[]);
     };
     fetch();
-    const poll = setInterval(fetch, 10000);
     const ch = supabase.channel('live-all-execs')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'game_executions' }, fetch)
       .subscribe();
-    return () => { clearInterval(poll); supabase.removeChannel(ch); };
+    return () => { supabase.removeChannel(ch); };
   }, []);
   return execs;
 }
@@ -399,6 +396,13 @@ function App() {
               Sign in
             </button>
           )}
+          <button onClick={() => setShowDrawer(true)}
+            className="w-9 h-9 flex items-center justify-center rounded-full hover:opacity-80"
+            style={{ backgroundColor: 'rgba(255,255,255,0.06)', color: 'var(--color-muted)' }}>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
         </div>
       </header>
 
@@ -523,8 +527,7 @@ function App() {
 
       {/* ── Main layout ───────────────────────────────────────────────── */}
       <div className="flex flex-1">
-
-        {showShortcuts && (
+{showShortcuts && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setShowShortcuts(false)}>
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
             <div className="relative rounded-2xl border shadow-2xl p-6 w-full max-w-sm" style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }} onClick={e => e.stopPropagation()}>
@@ -550,7 +553,7 @@ function App() {
             {/* Backdrop */}
             <div className="absolute inset-0 bg-black/70" />
             {/* Sheet slides up from bottom */}
-            <div className="absolute bottom-0 left-0 right-0 lg:bottom-0 lg:top-0 lg:left-auto lg:right-0 lg:w-80 rounded-t-2xl lg:rounded-none overflow-hidden flex flex-col max-h-[88vh] lg:max-h-full lg:h-screen"
+            <div className="absolute bottom-0 left-0 right-0 rounded-t-2xl overflow-hidden flex flex-col max-h-[88vh]"
               style={{ backgroundColor: '#111113' }}
               onClick={e => e.stopPropagation()}>
 
