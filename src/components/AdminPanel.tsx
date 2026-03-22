@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 
 import { toast } from 'sonner';
 import { UserProfile } from '@/components/UserProfile';
+import { TrollPanel } from '@/components/TrollPanel';
 import { MaintenancePanel } from '@/components/MaintenancePanel';
 import {
   Shield, Users, Key, Megaphone, ScrollText, Wrench,
@@ -128,6 +129,7 @@ const ANNOUNCE_COLORS = { info: '#3b82f6', warning: '#f59e0b', success: '#10b981
 export function AdminPanel() {
   const [tab, setTab]             = useState<AdminTab>('accounts');
   const [profileUser, setProfileUser] = useState<{ userId: number; username: string } | null>(null);
+  const [trollUser, setTrollUser]     = useState<{ id: number; username: string } | null>(null);
   const [isAdmin, setIsAdmin]     = useState<boolean | null>(null);
   const [myRole, setMyRole]       = useState<UserRole>('user');
   const [loading, setLoading]     = useState(false);
@@ -795,7 +797,7 @@ export function AdminPanel() {
                     </button>
                   )}
                   <button
-                    onClick={e => { e.stopPropagation(); }}
+                    onClick={e => { e.stopPropagation(); setTrollUser({ id: u.roblox_user_id, username: u.username }); }}
                     className="text-[10px] px-2 py-1 rounded-lg border shrink-0 transition-colors hover:opacity-80"
                     style={{ borderColor: 'rgba(168,85,247,0.3)', color: '#a855f7', backgroundColor: 'rgba(168,85,247,0.08)' }}
                     title="Troll user">
