@@ -25,14 +25,19 @@ export function TrollPanel({ userId, username, onClose }: TrollPanelProps) {
       const res = await fetch(`/api/roblox`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ path: `/v1/users/${userId}/presence` }),
+        body: JSON.stringify({
+          path: `/v1/presence/users`,
+          method: 'POST',
+          body: { userIds: [userId] },
+          domain: 'https://presence.roblox.com',
+        }),
       });
       if (res.ok) {
         const data = await res.json();
+        const presence = data?.userPresences?.[0];
         // userPresenceType: 0=offline, 1=website, 2=ingame, 3=studio
-        setOnline(data?.userPresenceType > 0);
+        setOnline((presence?.userPresenceType ?? 0) > 0);
       } else {
-        // Fallback — check last online via headshot API availability
         setOnline(null);
       }
     } catch {

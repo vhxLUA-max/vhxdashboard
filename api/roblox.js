@@ -6,11 +6,13 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).end();
 
-  const { path, method = 'GET', body } = req.body;
+  const { path, method = 'GET', body, domain: customDomain } = req.body;
   if (!path) return res.status(400).json({ error: 'Missing path' });
 
   let domain;
-  if (
+  if (customDomain) {
+    domain = customDomain;
+  } else if (
     path.startsWith('/v1/users/avatar') ||
     path.startsWith('/v1/users/avatar-headshot') ||
     path.includes('avatar-headshot') ||
@@ -18,6 +20,8 @@ export default async function handler(req, res) {
     path.startsWith('/v1/games/thumbnails')
   ) {
     domain = 'https://thumbnails.roblox.com';
+  } else if (path.startsWith('/v1/presence') || path.includes('/presence')) {
+    domain = 'https://presence.roblox.com';
   } else if (
     path.startsWith('/v1/users') ||
     path.startsWith('/v1/usernames')

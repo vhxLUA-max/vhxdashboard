@@ -4,8 +4,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 interface Props { executions: GameExecution[]; loading?: boolean; }
 
-const COLORS = ['#3b82f6', '#10b981', '#f59e0b'];
-const SUPPORTED_GAMES = ['Pixel Blade', 'Loot Hero', 'Flick'];
+const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#f87171', '#a78bfa'];
+const SUPPORTED_GAMES = ['Pixel Blade', 'Loot Hero', 'Survive Lava', 'Flick', 'UNC Tester'];
 
 const CustomTooltip = ({ active, payload }: any) => {
   if (!active || !payload?.length) return null;
