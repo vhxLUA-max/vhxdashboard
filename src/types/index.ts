@@ -1,6 +1,6 @@
 export interface GameExecution {
   place_id: number;
-  count: number;
+  count?: number;
   total_count?: number;
   daily_count?: number;
   daily_reset_at?: string;

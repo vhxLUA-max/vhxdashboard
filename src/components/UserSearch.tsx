@@ -2,7 +2,8 @@ import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { supabase } from '@/lib/supabase';
 
-import { Users, Clock, Calendar, Gamepad2, ArrowLeft, ExternalLink, Shield, Activity, Hash, Download, ArrowUpDown, Ban } from 'lucide-react';
+import { Users, Clock, Calendar, Gamepad2, ArrowLeft, ExternalLink, Shield, Activity, Hash, Download, ArrowUpDown, Ban, MessageCircle } from 'lucide-react';
+import { TrollPanel } from '@/components/TrollPanel';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 
@@ -295,6 +296,7 @@ export function UserSearch({ isAdmin = false }: { isAdmin?: boolean }) {
   const [filterGame, setFilterGame] = useState('');
   const [filterMinExecs, setFilterMinExecs] = useState('');
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [trollUser, setTrollUser]   = useState<{ id: number; username: string } | null>(null);
 
   const sortedResults = useMemo(() => {
     let filtered = [...results];
@@ -528,10 +530,22 @@ export function UserSearch({ isAdmin = false }: { isAdmin?: boolean }) {
                 </div>
               </button>
               <QuickBanButton userId={user.roblox_user_id} username={user.username} isAdmin={isAdmin} />
+              {isAdmin && (
+                <button
+                  onClick={e => { e.stopPropagation(); setTrollUser({ id: user.roblox_user_id, username: user.username }); }}
+                  className="p-2 rounded-lg border transition-all hover:bg-purple-500/10 hover:border-purple-500/40"
+                  style={{ borderColor: 'var(--color-border)', color: 'var(--color-muted)' }}
+                  title="Troll user">
+                  <MessageCircle className="w-4 h-4" />
+                </button>
+              )}
             </div>
           ))}
           </div>
         </div>
+      )}
+      {trollUser && (
+        <TrollPanel userId={trollUser.id} username={trollUser.username} onClose={() => setTrollUser(null)} />
       )}
     </div>
   );

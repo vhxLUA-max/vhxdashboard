@@ -16,7 +16,7 @@ export function ExecutionHeatmap({ executions, loading = false }: Props) {
       if (!e.last_executed_at) continue;
       const d = new Date(e.last_executed_at);
       if (isNaN(d.getTime())) continue;
-      const val = (e as any).daily_count ?? e.count ?? 0;
+      const val = e.daily_count ?? e.count ?? 0;
       if (val > 0) counts[d.getDay()][d.getHours()] += val;
     }
     return counts;

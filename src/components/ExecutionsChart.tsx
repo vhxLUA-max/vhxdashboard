@@ -17,7 +17,7 @@ function buildChartData(executions: GameExecution[], dateRange: DateRange) {
       const count = executions.filter(e => {
         const t = new Date(e.last_executed_at).getTime();
         return t >= start && t < end;
-      }).reduce((s, e) => s + ((e as any).count ?? (e as any).daily_count ?? 0), 0);
+      }).reduce((s, e) => s + (e.count ?? e.daily_count ?? 0), 0);
       buckets.push({ label: format(start, 'HH:mm'), executions: count });
     }
   } else {
@@ -28,7 +28,7 @@ function buildChartData(executions: GameExecution[], dateRange: DateRange) {
       const count = executions.filter(e => {
         const t = new Date(e.last_executed_at).getTime();
         return t >= start && t < end;
-      }).reduce((s, e) => s + ((e as any).count ?? (e as any).daily_count ?? 0), 0);
+      }).reduce((s, e) => s + (e.count ?? e.daily_count ?? 0), 0);
       buckets.push({ label: format(start, 'MMM d'), executions: count });
     }
   }

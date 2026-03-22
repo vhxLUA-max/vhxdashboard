@@ -43,7 +43,7 @@ export function RecentActivityList({ executions, loading = false }: RecentActivi
     if (!grouped[name]) {
       grouped[name] = { count: 0, last_executed_at: e.last_executed_at };
     }
-    grouped[name].count += (e as any).daily_count ?? e.count ?? 0;
+    grouped[name].count += e.daily_count ?? e.count ?? 0;
     if (new Date(e.last_executed_at) > new Date(grouped[name].last_executed_at)) {
       grouped[name].last_executed_at = e.last_executed_at;
     }
