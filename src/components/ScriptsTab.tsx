@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Copy, Check, Loader2, Users, ThumbsUp, ExternalLink, Wrench, Timer } from 'lucide-react';
+import { Copy, Check, Loader2, Users, ThumbsUp, ExternalLink, Wrench } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 
