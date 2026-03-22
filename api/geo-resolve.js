@@ -1,8 +1,8 @@
 // Vercel serverless function — resolves IPs and writes lat/lng back to Supabase
 // Called by the dashboard on load; resolves up to 50 unresolved IPs per call
 
-const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-const SUPABASE_KEY = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || 'https://aowuatmvtpbwpbzzvtua.supabase.co';
+const SUPABASE_KEY = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFvd3VhdG12dHBid3Bienp2dHVhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQxNDQ3MjEsImV4cCI6MjA4OTcyMDcyMX0.PUSrmtZm1eNccfcGlbHTRnuqI7gWExBePBhZQ0apZ4Q';
 
 async function supabase(method, path, body) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
