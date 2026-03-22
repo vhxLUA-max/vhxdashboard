@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Copy, Check, Loader2, Gamepad2, Users, ThumbsUp, Star, ExternalLink, ArrowLeft, Play, Wrench, Timer } from 'lucide-react';
+import { Copy, Check, Loader2, Gamepad2, Users, ThumbsUp, ExternalLink, ArrowLeft, Play, Wrench, Timer, Shield, Star } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
 
@@ -25,26 +25,23 @@ function ScriptCountdown({ endTs }: { endTs: string | null }) {
     return () => clearInterval(id);
   }, [endTs]);
   if (!endTs || secs < 0) return null;
-  const h = Math.floor(secs/3600), m = Math.floor((secs%3600)/60), s = secs%60;
+  const h = Math.floor(secs / 3600), m = Math.floor((secs % 3600) / 60), s = secs % 60;
   return (
-    <div className="flex items-center gap-1 justify-center">
-      <Timer className="w-2.5 h-2.5 text-amber-400 shrink-0" />
-      <span className="text-[9px] font-mono font-bold text-amber-400">
-        {String(h).padStart(2,'0')}:{String(m).padStart(2,'0')}:{String(s).padStart(2,'0')}
-      </span>
-    </div>
+    <span className="font-mono text-amber-400 text-[10px]">
+      {String(h).padStart(2, '0')}:{String(m).padStart(2, '0')}:{String(s).padStart(2, '0')}
+    </span>
   );
 }
 
-const LOADER = `loadstring(game:HttpGet("https://raw.githubusercontent.com/vhxLUA-max/vhxframeworks/refs/heads/main/main.lua"))()`;
-const UNC_LOADER = `loadstring(game:HttpGet("https://raw.githubusercontent.com/vhxLUA-max/vhxframeworks/refs/heads/main/unctester"))()`;
+const LOADER     = `loadstring(game:HttpGet("https://raw.githubusercontent.com/vhxLUA-max/vhxframeworks/refs/heads/main/mainloader"))()`;
+const UNC_LOADER = `loadstring(game:HttpGet("https://raw.githubusercontent.com/vhxLUA-max/vhxframeworks/refs/heads/main/mainloader"))()`;
 
 const GAMES = [
-  { placeId: 18172550962,     loader: LOADER     },
-  { placeId: 138013005633222, loader: LOADER     },
-  { placeId: 119987266683883, loader: LOADER     },
-  { placeId: 136801880565837, loader: LOADER     },
-  { placeId: 123974602339071, loader: UNC_LOADER },
+  { placeId: 18172550962,     loader: LOADER,     tag: 'Combat'    },
+  { placeId: 138013005633222, loader: LOADER,     tag: 'RPG'       },
+  { placeId: 119987266683883, loader: LOADER,     tag: 'Survival'  },
+  { placeId: 136801880565837, loader: LOADER,     tag: 'Casual'    },
+  { placeId: 123974602339071, loader: UNC_LOADER, tag: 'Utility'   },
 ];
 
 type GameInfo = {
@@ -55,9 +52,9 @@ type GameInfo = {
   visits: number;
   maxPlayers: number;
   thumbUrl: string | null;
-  favoriteCount: number;
   likeCount: number;
   dislikeCount: number;
+  creatorName: string;
 };
 
 async function robloxProxy(path: string): Promise<unknown> {
@@ -77,12 +74,12 @@ async function fetchGameInfo(placeId: number): Promise<GameInfo | null> {
     const uid = uni.universeId;
 
     const [details, thumb, votes] = await Promise.all([
-      robloxProxy(`/v1/games?universeIds=${uid}`) as Promise<{ data?: { name?: string; description?: string; playing?: number; visits?: number; maxPlayers?: number; favoritedCount?: number }[] } | null>,
+      robloxProxy(`/v1/games?universeIds=${uid}`) as Promise<{ data?: any[] } | null>,
       robloxProxy(`/v1/games/icons?universeIds=${uid}&returnPolicy=PlaceHolder&size=512x512&format=Png&isCircular=false`) as Promise<{ data?: { imageUrl?: string }[] } | null>,
       robloxProxy(`/v1/games/votes?universeIds=${uid}`) as Promise<{ data?: { upVotes?: number; downVotes?: number }[] } | null>,
     ]);
 
-    const d = (details as { data?: { name?: string; description?: string; playing?: number; visits?: number; maxPlayers?: number; favoritedCount?: number }[] })?.data?.[0];
+    const d = (details as any)?.data?.[0];
     if (!d) return null;
 
     return {
@@ -92,10 +89,10 @@ async function fetchGameInfo(placeId: number): Promise<GameInfo | null> {
       playing: d.playing ?? 0,
       visits: d.visits ?? 0,
       maxPlayers: d.maxPlayers ?? 0,
-      favoriteCount: d.favoritedCount ?? 0,
-      thumbUrl: (thumb as { data?: { imageUrl?: string }[] })?.data?.[0]?.imageUrl ?? null,
-      likeCount: (votes as { data?: { upVotes?: number }[] })?.data?.[0]?.upVotes ?? 0,
-      dislikeCount: (votes as { data?: { downVotes?: number }[] })?.data?.[0]?.downVotes ?? 0,
+      thumbUrl: (thumb as any)?.data?.[0]?.imageUrl ?? null,
+      likeCount: (votes as any)?.data?.[0]?.upVotes ?? 0,
+      dislikeCount: (votes as any)?.data?.[0]?.downVotes ?? 0,
+      creatorName: d.creator?.name ?? 'Unknown',
     };
   } catch {
     return null;
@@ -108,102 +105,25 @@ function formatNum(n: number): string {
   return n.toString();
 }
 
-function GameDetailPanel({ info, placeId, loader, onBack }: { info: GameInfo; placeId: number; loader: string; onBack: () => void }) {
+function CopyButton({ loader, name }: { loader: string; name: string }) {
   const [copied, setCopied] = useState(false);
-  const likePercent = info.likeCount + info.dislikeCount > 0
-    ? Math.round((info.likeCount / (info.likeCount + info.dislikeCount)) * 100)
-    : null;
-
-  const copy = () => {
+  const copy = (e: React.MouseEvent) => {
+    e.stopPropagation();
     navigator.clipboard.writeText(loader);
     setCopied(true);
-    toast.success(`${info.name} script copied!`);
+    toast.success(`${name} script copied!`);
     setTimeout(() => setCopied(false), 2000);
   };
-
   return (
-    <div className="space-y-5">
-      <button onClick={onBack} className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white transition-colors">
-        <ArrowLeft className="w-3.5 h-3.5" /> Back to scripts
-      </button>
-
-      <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
-        <div className="flex flex-col sm:flex-row gap-0">
-          <div className="sm:w-48 shrink-0 bg-gray-800">
-            {info.thumbUrl ? (
-              <img src={info.thumbUrl} alt={info.name} className="w-full sm:h-full aspect-square object-contain" />
-            ) : (
-              <div className="w-full aspect-square flex items-center justify-center">
-                <Gamepad2 className="w-12 h-12 text-gray-600" />
-              </div>
-            )}
-          </div>
-
-          <div className="flex-1 p-5 space-y-4 min-w-0">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <h2 className="text-base font-bold text-gray-900 dark:text-white truncate">{info.name}</h2>
-                {likePercent !== null && (
-                  <div className="flex items-center gap-1.5 mt-1">
-                    <ThumbsUp className="w-3 h-3 text-emerald-400 shrink-0" />
-                    <span className="text-xs text-emerald-400 font-medium">{likePercent}%</span>
-                    <span className="text-xs text-gray-500">{formatNum(info.likeCount + info.dislikeCount)} votes</span>
-                  </div>
-                )}
-              </div>
-              <a
-                href={`https://www.roblox.com/games/${placeId}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="shrink-0 flex items-center gap-1 text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
-              >
-                <ExternalLink className="w-3 h-3" />
-              </a>
-            </div>
-
-            <div className="grid grid-cols-3 gap-2">
-              {[
-                { icon: Users,    label: 'Playing',   value: formatNum(info.playing)          },
-                { icon: Star,     label: 'Visits',     value: formatNum(info.visits)            },
-                { icon: ThumbsUp, label: 'Favorites',  value: formatNum(info.favoriteCount)     },
-              ].map(stat => (
-                <div key={stat.label} className="bg-gray-100 dark:bg-gray-800 rounded-lg p-2.5 text-center">
-                  <stat.icon className="w-3.5 h-3.5 text-indigo-400 mx-auto mb-1" />
-                  <p className="text-xs font-bold text-gray-900 dark:text-white">{stat.value}</p>
-                  <p className="text-[10px] text-gray-500">{stat.label}</p>
-                </div>
-              ))}
-            </div>
-
-            {info.description ? (
-              <p className="text-xs text-gray-500 leading-relaxed line-clamp-3">{info.description}</p>
-            ) : null}
-
-            <div className="flex gap-2 pt-1">
-              <button
-                onClick={copy}
-                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-semibold transition-all border ${
-                  copied
-                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
-                    : 'bg-indigo-600 hover:bg-blue-600 border-indigo-600 text-white'
-                }`}
-              >
-                {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                {copied ? 'Copied!' : 'Copy Script'}
-              </button>
-              <a
-                href={`https://www.roblox.com/games/${placeId}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:border-emerald-500/40 hover:text-emerald-400 transition-all"
-              >
-                <Play className="w-3.5 h-3.5" /> Play
-              </a>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    <button onClick={copy}
+      className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold transition-all shrink-0"
+      style={copied
+        ? { backgroundColor: 'rgba(16,185,129,0.12)', color: '#10b981', border: '1px solid rgba(16,185,129,0.3)' }
+        : { backgroundColor: 'rgba(99,102,241,0.15)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.3)' }
+      }>
+      {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+      {copied ? 'Copied!' : 'Copy Script'}
+    </button>
   );
 }
 
@@ -215,9 +135,213 @@ const GAME_NAMES: Record<number, string> = {
 
 type CardState = { loading: boolean; info: GameInfo | null };
 
+function ScriptCard({
+  game, info, loading, maintenance, onSelect
+}: {
+  game: typeof GAMES[number];
+  info: GameInfo | null;
+  loading: boolean;
+  maintenance: { on: boolean; msg: string; endTs: string | null } | null;
+  onSelect: () => void;
+}) {
+  const inMaintenance = maintenance?.on ?? false;
+  const likePercent = info && (info.likeCount + info.dislikeCount) > 0
+    ? Math.round((info.likeCount / (info.likeCount + info.dislikeCount)) * 100)
+    : null;
+
+  return (
+    <div
+      onClick={!loading ? onSelect : undefined}
+      className="group flex items-stretch gap-0 rounded-2xl overflow-hidden border cursor-pointer transition-all hover:border-indigo-500/40 hover:shadow-xl hover:shadow-indigo-500/5 hover:-translate-y-0.5"
+      style={{
+        backgroundColor: 'var(--color-surface)',
+        borderColor: inMaintenance ? 'rgba(245,158,11,0.35)' : 'var(--color-border)',
+      }}>
+
+      {/* Thumbnail */}
+      <div className="w-28 sm:w-36 shrink-0 relative overflow-hidden"
+        style={{ backgroundColor: 'var(--color-surface2)' }}>
+        {loading ? (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <Loader2 className="w-6 h-6 animate-spin" style={{ color: 'var(--color-muted)' }} />
+          </div>
+        ) : info?.thumbUrl ? (
+          <img src={info.thumbUrl} alt={info.name}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            style={{ filter: inMaintenance ? 'brightness(0.3) saturate(0.5)' : 'none' }} />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <Gamepad2 className="w-10 h-10" style={{ color: 'var(--color-muted)' }} />
+          </div>
+        )}
+        {inMaintenance && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 p-2">
+            <Wrench className="w-5 h-5 text-amber-400" />
+            <span className="text-[9px] font-bold text-amber-400 text-center leading-tight">MAINTENANCE</span>
+            <ScriptCountdown endTs={maintenance?.endTs ?? null} />
+          </div>
+        )}
+      </div>
+
+      {/* Info */}
+      <div className="flex-1 flex flex-col justify-between p-4 min-w-0">
+        <div className="space-y-1.5">
+          {/* Name + tag */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {loading ? (
+              <div className="h-4 w-32 rounded animate-pulse" style={{ backgroundColor: 'var(--color-surface2)' }} />
+            ) : (
+              <>
+                <span className="text-sm font-bold truncate" style={{ color: 'var(--color-text)' }}>
+                  {info?.name ?? GAME_NAMES[game.placeId] ?? 'Unknown'}
+                </span>
+                <span className="text-[9px] font-semibold px-2 py-0.5 rounded-full shrink-0"
+                  style={{ backgroundColor: 'rgba(99,102,241,0.12)', color: '#818cf8', border: '1px solid rgba(99,102,241,0.2)' }}>
+                  {game.tag}
+                </span>
+                {inMaintenance && (
+                  <span className="text-[9px] font-semibold px-2 py-0.5 rounded-full shrink-0"
+                    style={{ backgroundColor: 'rgba(245,158,11,0.12)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.25)' }}>
+                    🔧 Maintenance
+                  </span>
+                )}
+              </>
+            )}
+          </div>
+
+          {/* Creator */}
+          {!loading && info && (
+            <p className="text-[11px] truncate" style={{ color: 'var(--color-muted)' }}>
+              by {info.creatorName}
+            </p>
+          )}
+
+          {/* Stats */}
+          {!loading && info && (
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="flex items-center gap-1 text-[11px]" style={{ color: 'var(--color-muted)' }}>
+                <Users className="w-3 h-3" /> {formatNum(info.playing)} playing
+              </span>
+              <span className="flex items-center gap-1 text-[11px]" style={{ color: 'var(--color-muted)' }}>
+                <Star className="w-3 h-3" /> {formatNum(info.visits)} visits
+              </span>
+              {likePercent !== null && (
+                <span className="flex items-center gap-1 text-[11px] text-emerald-400">
+                  <ThumbsUp className="w-3 h-3" /> {likePercent}%
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center gap-2 mt-3">
+          {!loading && !inMaintenance && (
+            <CopyButton loader={game.loader} name={info?.name ?? 'Script'} />
+          )}
+          <a href={`https://www.roblox.com/games/${game.placeId}`}
+            target="_blank" rel="noopener noreferrer"
+            onClick={e => e.stopPropagation()}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-all"
+            style={{ backgroundColor: 'var(--color-surface2)', color: 'var(--color-muted)', border: '1px solid var(--color-border)' }}>
+            <Play className="w-3 h-3" /> Play
+          </a>
+          <a href={`https://www.roblox.com/games/${game.placeId}`}
+            target="_blank" rel="noopener noreferrer"
+            onClick={e => e.stopPropagation()}
+            className="p-2 rounded-xl transition-all"
+            style={{ backgroundColor: 'var(--color-surface2)', color: 'var(--color-muted)', border: '1px solid var(--color-border)' }}>
+            <ExternalLink className="w-3.5 h-3.5" />
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function GameDetailPanel({ info, placeId, loader, onBack }: { info: GameInfo; placeId: number; loader: string; onBack: () => void }) {
+  const [copied, setCopied] = useState(false);
+  const likePercent = (info.likeCount + info.dislikeCount) > 0
+    ? Math.round((info.likeCount / (info.likeCount + info.dislikeCount)) * 100) : null;
+
+  const copy = () => {
+    navigator.clipboard.writeText(loader);
+    setCopied(true);
+    toast.success(`${info.name} script copied!`);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="space-y-5">
+      <button onClick={onBack} className="flex items-center gap-1.5 text-xs transition-colors hover:opacity-80" style={{ color: 'var(--color-muted)' }}>
+        <ArrowLeft className="w-3.5 h-3.5" /> Back to scripts
+      </button>
+
+      <div className="rounded-2xl overflow-hidden border" style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }}>
+        <div className="flex flex-col sm:flex-row">
+          <div className="sm:w-56 shrink-0" style={{ backgroundColor: 'var(--color-surface2)' }}>
+            {info.thumbUrl
+              ? <img src={info.thumbUrl} alt={info.name} className="w-full aspect-square object-cover" />
+              : <div className="w-full aspect-square flex items-center justify-center"><Gamepad2 className="w-12 h-12" style={{ color: 'var(--color-muted)' }} /></div>
+            }
+          </div>
+
+          <div className="flex-1 p-6 space-y-4 min-w-0">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-bold" style={{ color: 'var(--color-text)' }}>{info.name}</h2>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--color-muted)' }}>by {info.creatorName}</p>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Shield className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="text-xs text-emerald-400 font-medium">Verified</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { icon: Users, label: 'Playing', value: formatNum(info.playing) },
+                { icon: Star, label: 'Visits', value: formatNum(info.visits) },
+                { icon: ThumbsUp, label: 'Rating', value: likePercent !== null ? `${likePercent}%` : 'N/A' },
+              ].map(s => (
+                <div key={s.label} className="rounded-xl p-3 text-center" style={{ backgroundColor: 'var(--color-surface2)' }}>
+                  <s.icon className="w-4 h-4 mx-auto mb-1" style={{ color: 'var(--color-accent)' }} />
+                  <p className="text-sm font-bold" style={{ color: 'var(--color-text)' }}>{s.value}</p>
+                  <p className="text-[10px]" style={{ color: 'var(--color-muted)' }}>{s.label}</p>
+                </div>
+              ))}
+            </div>
+
+            {info.description && (
+              <p className="text-xs leading-relaxed line-clamp-3" style={{ color: 'var(--color-muted)' }}>{info.description}</p>
+            )}
+
+            <div className="flex gap-2 pt-1">
+              <button onClick={copy}
+                className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all"
+                style={copied
+                  ? { backgroundColor: 'rgba(16,185,129,0.12)', color: '#10b981', border: '1px solid rgba(16,185,129,0.3)' }
+                  : { backgroundColor: 'var(--color-accent)', color: '#fff', border: '1px solid var(--color-accent)' }
+                }>
+                {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                {copied ? 'Copied!' : 'Copy Script'}
+              </button>
+              <a href={`https://www.roblox.com/games/${placeId}`} target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all"
+                style={{ backgroundColor: 'var(--color-surface2)', color: 'var(--color-text)', border: '1px solid var(--color-border)' }}>
+                <Play className="w-4 h-4" /> Play
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function ScriptsTab() {
-  const [cards,       setCards]       = useState<Record<number, CardState>>({});
-  const [selected,    setSelected]    = useState<typeof GAMES[number] | null>(null);
+  const [cards, setCards] = useState<Record<number, CardState>>({});
+  const [selected, setSelected] = useState<typeof GAMES[number] | null>(null);
   const [maintenance, setMaintenance] = useState<Record<string, { on: boolean; msg: string; endTs: string | null }>>({});
 
   useEffect(() => {
@@ -237,11 +361,8 @@ export function ScriptsTab() {
     loadMaintenance();
 
     const ch = supabase.channel('scripts-maintenance')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'game_status' }, () => {
-        loadMaintenance();
-      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'game_status' }, loadMaintenance)
       .subscribe();
-
     return () => { supabase.removeChannel(ch); };
   }, []);
 
@@ -253,78 +374,43 @@ export function ScriptsTab() {
   }
 
   return (
-    <div className="space-y-5">
-      <div className="flex items-start justify-between gap-4">
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Scripts</h2>
-          <p className="text-sm text-gray-500 mt-0.5">Click a game to view info and copy the script</p>
+          <h2 className="text-lg font-bold" style={{ color: 'var(--color-text)' }}>Scripts</h2>
+          <p className="text-xs mt-0.5" style={{ color: 'var(--color-muted)' }}>Tap a game to view details or copy the script directly</p>
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <a href="https://rscripts.net/@vhxLUA_" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:text-indigo-400 hover:border-indigo-500/40 transition-all">
-            <ExternalLink className="w-3 h-3" /> rscripts
-          </a>
-          <a href="https://youtube.com/@vhxlua?si=0j9rYLl0qPf3gu1Y" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:text-red-400 hover:border-red-500/40 transition-all">
-            <ExternalLink className="w-3 h-3" /> YouTube
-          </a>
-          <a href="https://www.tiktok.com/@vhxlua_?lang=en" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:text-pink-400 hover:border-pink-500/40 transition-all">
-            <ExternalLink className="w-3 h-3" /> TikTok
-          </a>
+        <div className="flex items-center gap-2 shrink-0">
+          {[
+            { label: 'rscripts', url: 'https://rscripts.net/@vhxLUA_', color: '#818cf8' },
+            { label: 'YouTube',  url: 'https://youtube.com/@vhxlua?si=0j9rYLl0qPf3gu1Y', color: '#f87171' },
+            { label: 'TikTok',   url: 'https://www.tiktok.com/@vhxlua_?lang=en', color: '#f472b6' },
+          ].map(l => (
+            <a key={l.label} href={l.url} target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-medium transition-all hover:opacity-80"
+              style={{ backgroundColor: 'var(--color-surface2)', color: l.color, border: '1px solid var(--color-border)' }}>
+              {l.label}
+            </a>
+          ))}
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+      {/* Script list — Rscripts style horizontal cards */}
+      <div className="space-y-3">
         {GAMES.map(game => {
           const card = cards[game.placeId];
-          const loading = card?.loading ?? true;
-          const info = card?.info ?? null;
           const gameName = GAME_NAMES[game.placeId];
           const mStatus = gameName ? maintenance[gameName] : null;
-          const inMaintenance = mStatus?.on ?? false;
-
           return (
-            <button
+            <ScriptCard
               key={game.placeId}
-              onClick={() => setSelected(game)}
-              disabled={loading}
-              className="group text-left bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden hover:border-indigo-500/40 hover:shadow-lg hover:shadow-indigo-500/5 transition-all disabled:opacity-60 disabled:cursor-wait"
-              style={inMaintenance ? { borderColor: '#f59e0b60' } : {}}
-            >
-              <div className="aspect-square bg-gray-200 dark:bg-gray-800 relative">
-                {loading ? (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
-                  </div>
-                ) : info?.thumbUrl ? (
-                  <img src={info.thumbUrl} alt={info.name} className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300" style={{ filter: inMaintenance ? 'brightness(0.4)' : 'none' }} />
-                ) : (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <Gamepad2 className="w-10 h-10 text-gray-600" />
-                  </div>
-                )}
-                {inMaintenance && (
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 px-2">
-                    <div className="w-8 h-8 rounded-full bg-amber-500/20 border border-amber-500/40 flex items-center justify-center">
-                      <Wrench className="w-4 h-4 text-amber-400" />
-                    </div>
-                    <span className="text-[10px] font-bold text-amber-400 text-center leading-tight">MAINTENANCE</span>
-                    {mStatus?.msg && (
-                      <span className="text-[9px] text-amber-300/70 text-center leading-tight line-clamp-2">{mStatus.msg}</span>
-                    )}
-                    <ScriptCountdown endTs={mStatus?.endTs ?? null} />
-                  </div>
-                )}
-              </div>
-              <div className="p-2.5">
-                <p className="text-xs font-semibold text-gray-900 dark:text-white truncate">
-                  {loading ? <span className="block h-3 w-20 bg-gray-700 rounded animate-pulse" /> : (info?.name ?? 'Unknown')}
-                </p>
-                {!loading && info && (
-                  <p className="text-[10px] mt-0.5" style={{ color: inMaintenance ? '#f59e0b' : 'rgb(107 114 128)' }}>
-                    {inMaintenance ? '🔧 Under maintenance' : `${formatNum(info.playing)} playing`}
-                  </p>
-                )}
-              </div>
-            </button>
+              game={game}
+              info={card?.info ?? null}
+              loading={card?.loading ?? true}
+              maintenance={mStatus ?? null}
+              onSelect={() => setSelected(game)}
+            />
           );
         })}
       </div>
