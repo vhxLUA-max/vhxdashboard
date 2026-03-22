@@ -116,7 +116,20 @@ function useLiveUniqueUsers() {
 function useLiveNewUsers() {
   const [count, setCount] = useState<number | null>(null);
   useEffect(() => {
-    setCount(0); // New users tracked in Google Sheets
+    const fetch = async () => {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const { data } = await supabase
+        .from('unique_users')
+        .select('roblox_user_id')
+        .gte('first_seen', today.toISOString());
+      setCount(new Set((data ?? []).map((u: any) => u.roblox_user_id)).size);
+    };
+    fetch();
+    const ch = supabase.channel('live-new-users')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'unique_users' }, fetch)
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
   }, []);
   return count;
 }
@@ -832,7 +845,7 @@ function App() {
                 {activeTab === 'stats' && (
                   <div className="space-y-6">
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                      <MetricCard title="Executions" value={(dateRange === '24h' ? live24h : liveCount)?.toLocaleString() ?? '-'} subtitle={dateRange === '24h' ? 'Today' : `Last ${dateRange}`} icon={Activity} loading={false} />
+                      <MetricCard title="Executions" value={liveCount?.toLocaleString() ?? '-'} subtitle="All time" icon={Activity} loading={false} />
                       <MetricCard title="Users"      value={liveUsers?.toLocaleString() ?? '-'}    subtitle="Active 24h"    icon={Users}   loading={false} />
                       <MetricCard title="New Today"  value={liveNewUsers?.toLocaleString() ?? '-'} subtitle="First seen"    icon={Users}   loading={false} />
                       <MetricCard title="Last Exec"  value={lastExecution}                         subtitle="Most recent"   icon={Clock}   loading={false} />
