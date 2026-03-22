@@ -24,15 +24,14 @@ export function useSupabaseDashboard(dateRange: DateRange): UseSupabaseDashboard
     try {
       const since   = new Date(Date.now() - RANGE_MS[dateRange]).toISOString();
       const since24 = new Date(Date.now() - 86400000).toISOString();
+      const today   = new Date().toISOString().slice(0, 10);
 
       const [
-        { data: filtered, error: e1 },
-        { data: all,       error: e2 },
-        { data: active,    error: e3 },
-        { data: newUsers,  error: e4 },
+        { data: all,      error: e1 },
+        { data: active,   error: e2 },
+        { data: newUsers, error: e3 },
       ] = await Promise.all([
-        supabase.from('game_executions').select('place_id,count,daily_count,last_executed_at,game_name').gte('last_executed_at', since).order('last_executed_at', { ascending: false }),
-        supabase.from('game_executions').select('place_id,count,daily_count,last_executed_at,game_name').order('last_executed_at', { ascending: false }),
+        supabase.from('game_executions').select('place_id,count,daily_count,daily_reset_at,last_executed_at,game_name').order('last_executed_at', { ascending: false }),
         supabase.from('unique_users').select('roblox_user_id,user_id').gte('last_seen', since),
         supabase.from('unique_users').select('roblox_user_id').gte('first_seen', since24),
       ]);
@@ -40,28 +39,26 @@ export function useSupabaseDashboard(dateRange: DateRange): UseSupabaseDashboard
       if (e1) throw new Error(e1.message);
       if (e2) throw new Error(e2.message);
       if (e3) throw new Error(e3.message);
-      if (e4) throw new Error(e4.message);
 
-      const filteredExecs: GameExecution[] = filtered ?? [];
-      const allExecs: GameExecution[]      = all ?? [];
+      const allExecs: (GameExecution & { daily_count?: number; daily_reset_at?: string })[] = all ?? [];
       const activeUsers: Pick<UniqueUser, 'roblox_user_id' | 'user_id'>[] = active ?? [];
 
-      const today = new Date().toISOString().slice(0, 10);
-      let totalExecutions = dateRange === '24h'
-        ? (allExecs as (GameExecution & { daily_count?: number; daily_reset_at?: string })[])
-            .reduce((s, e) => s + ((e as { daily_reset_at?: string }).daily_reset_at?.slice(0, 10) === today ? ((e as { daily_count?: number }).daily_count ?? 0) : 0), 0)
-        : filteredExecs.reduce((s, e) => s + e.count, 0);
+      // Always use game_executions.count as the source of truth
+      // For 24h: sum daily_count where daily_reset_at is today
+      // For all other ranges: sum total count across all games
+      const totalExecutions = dateRange === '24h'
+        ? allExecs.reduce((s, e) => s + (e.daily_reset_at?.slice(0, 10) === today ? (e.daily_count ?? 0) : 0), 0)
+        : allExecs.reduce((s, e) => s + (e.count ?? 0), 0);
 
-      // Fallback: if game_executions empty, sum from unique_users
-      if (totalExecutions === 0) {
-        const { data: uData } = await supabase.from('unique_users').select('execution_count');
-        totalExecutions = (uData ?? []).reduce((s: number, u: { execution_count: number }) => s + (u.execution_count ?? 0), 0);
-      }
+      // For date-filtered views (7d/30d/90d): only include rows active in range
+      const filteredExecs = dateRange === '24h'
+        ? allExecs.filter(e => e.last_executed_at && e.last_executed_at >= since)
+        : allExecs.filter(e => e.last_executed_at && e.last_executed_at >= since);
 
       setData({
         totalExecutions,
         uniqueUsers:      new Set(activeUsers.map(u => u.roblox_user_id ?? u.user_id)).size,
-        activeGames:      3,
+        activeGames:      allExecs.filter(e => e.last_executed_at && e.last_executed_at >= since).length,
         lastExecutedAt:   allExecs[0]?.last_executed_at ?? null,
         recentExecutions: filteredExecs,
         allExecutions:    allExecs,
@@ -81,7 +78,7 @@ export function useSupabaseDashboard(dateRange: DateRange): UseSupabaseDashboard
   useEffect(() => {
     const ch = supabase.channel('dashboard-realtime')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'game_executions' }, fetchData)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'unique_users' }, fetchData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'unique_users' },    fetchData)
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [fetchData]);
