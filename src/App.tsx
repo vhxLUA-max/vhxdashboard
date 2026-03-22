@@ -8,11 +8,10 @@ import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { LiveRecentActivity } from '@/components/LiveRecentActivity';
-import { ExecutionWorldMap } from '@/components/ExecutionWorldMap';
 import { ExecutionRateBadge } from '@/components/ExecutionRateBadge';
 import { AnnouncementBanner } from '@/components/AnnouncementBanner';
 import { LiveToastFeed } from '@/components/LiveToastFeed';
-import { Activity, Users, Clock, RefreshCw, BarChart3, Gamepad2, Search, Webhook, Key, ShieldCheck, Megaphone, Code, Loader2, Palette, Shield, MessageSquare, FileText, Crown, Globe } from 'lucide-react';
+import { Activity, Users, Clock, RefreshCw, BarChart3, Gamepad2, Search, Webhook, Key, ShieldCheck, Megaphone, Code, Loader2, Palette, Shield, MessageSquare, FileText, Crown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LoginModal } from '@/components/LoginModal';
 import { logout } from '@/lib/auth';
@@ -167,7 +166,7 @@ async function checkIsAdmin(userId: string, username: string | null): Promise<bo
   return ADMIN_USERNAMES.includes(username?.toLowerCase() ?? '');
 }
 
-type SidebarTab = 'stats' | 'search' | 'webhook' | 'token' | 'scripts' | 'themes' | 'feedback' | 'status' | 'changelog' | 'admin' | 'socials' | 'privacy' | 'pro' | 'map';
+type SidebarTab = 'stats' | 'search' | 'webhook' | 'token' | 'scripts' | 'themes' | 'feedback' | 'status' | 'changelog' | 'admin' | 'socials' | 'privacy' | 'pro';
 
 const TABS = [
   { id: 'stats',     label: 'Stats',     icon: BarChart3     },
@@ -180,7 +179,6 @@ const TABS = [
   { id: 'themes',    label: 'Themes',    icon: Palette       },
   { id: 'feedback',  label: 'Feedback',  icon: MessageSquare },
   { id: 'status',    label: 'Status',    icon: ShieldCheck   },
-  { id: 'map',       label: 'Map',        icon: Globe         },
   { id: 'admin',     label: 'Admin',     icon: Shield        },
   { id: 'privacy',   label: 'Privacy',   icon: FileText      },
   { id: 'pro',       label: 'Pro',        icon: Crown         },
@@ -203,7 +201,7 @@ function App() {
   const [adminUsername, setAdminUsername] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl]         = useState<string | null>(null);
   const [isAdmin, setIsAdmin]             = useState(false);
-  const [userRole, setUserRole]           = useState<string>('user');
+  const [_userRole, setUserRole]           = useState<string>('user');
   const [isLoggedIn, setIsLoggedIn]       = useState(false);
   const [isPro, setIsPro]                 = useState(false);
   const [userExecs, setUserExecs]         = useState(0);
@@ -220,7 +218,6 @@ function App() {
   const lastExecution                     = useLiveLastExecution();
   const visibleTabs = TABS.filter(t => {
     if (t.id === 'admin') return isAdmin;
-    if (t.id === 'map') return isAdmin || ['moderator','founder','admin'].includes(userRole);
     return true;
   });
 
@@ -875,8 +872,7 @@ function App() {
                 <div style={{ display: activeTab === 'admin' ? 'block' : 'none' }}>
                   <AdminPanel />
                 </div>
-                {activeTab === 'map' && <ExecutionWorldMap />}
-              </ErrorBoundary>
+                              </ErrorBoundary>
             )}
           </main>
         </div>

@@ -338,6 +338,14 @@ export function AdminPanel() {
     return () => { supabase.removeChannel(ch); };
   }, [loadScriptUsers, loadBans, loadAccounts, loadRoles]);
 
+  // Load data when isAdmin resolves for the first time
+  useEffect(() => {
+    if (!isAdmin) return;
+    loadScriptUsers();
+    loadAccounts();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAdmin]);
+
   useEffect(() => {
     if (!isAdmin) return;
     if (tab === 'accounts')      loadAccounts();
