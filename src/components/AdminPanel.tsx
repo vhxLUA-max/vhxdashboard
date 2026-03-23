@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { UserProfile } from '@/components/UserProfile';
 import { MaintenancePanel } from '@/components/MaintenancePanel';
 import {
-  Shield, Users, Key, Megaphone, ScrollText, Wrench,
+  Shield, Users, Key, Megaphone, ScrollText, Wrench, Wifi,
   Loader2, Trash2, Ban, CheckCircle2, Plus, X,
   RefreshCw, AlertTriangle, Info, Check, Zap,
   ChevronLeft, ChevronRight, Gamepad2, Calendar, Clock,
@@ -14,7 +14,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
-type AdminTab = 'accounts' | 'users' | 'tokens' | 'bans' | 'announcements' | 'audit' | 'maintenance' | 'roles';
+type AdminTab = 'accounts' | 'users' | 'tokens' | 'bans' | 'announcements' | 'audit' | 'maintenance' | 'roles' | 'vpn';
 type UserRole = 'founder' | 'admin' | 'moderator' | 'pro' | 'user';
 
 type RoleEntry = {
@@ -146,6 +146,7 @@ export function AdminPanel() {
   const [acctPage, setAcctPage]   = useState(1);
 
   const [scriptUsers, setScriptUsers] = useState<ScriptUser[]>([]);
+  const [vpnFlags,    setVpnFlags]    = useState<any[]>([]);
   const [userPage, setUserPage]       = useState(1);
   const [userSearch, setUserSearch]   = useState('');
 
@@ -300,6 +301,13 @@ export function AdminPanel() {
     if (!silent) setLoading(false);
   }, []);
 
+  const loadVpnFlags = useCallback(async () => {
+    setLoading(true);
+    const { data } = await supabase.from('vpn_flags').select('*').order('created_at', { ascending: false }).limit(200);
+    setVpnFlags(data ?? []);
+    setLoading(false);
+  }, []);
+
   const loadTokens = useCallback(async () => {
     setLoading(true);
     const { data } = await supabase.from('user_tokens').select('*').order('updated_at', { ascending: false });
@@ -374,7 +382,8 @@ export function AdminPanel() {
     if (tab === 'announcements') loadAnnouncements();
     if (tab === 'audit')         loadAudit();
     if (tab === 'roles')         loadRoles();
-  }, [tab, isAdmin, loadAccounts, loadScriptUsers, loadTokens, loadBans, loadAnnouncements, loadAudit, loadRoles]);
+    if (tab === 'vpn')           loadVpnFlags();
+  }, [tab, isAdmin, loadAccounts, loadScriptUsers, loadTokens, loadBans, loadAnnouncements, loadAudit, loadRoles, loadVpnFlags]);
 
   const resetToken = async (row: TokenRow) => {
     if (!window.confirm(`Reset token for @${row.roblox_username}? Their current token will stop working.`)) return;
@@ -574,6 +583,7 @@ export function AdminPanel() {
     { id: 'announcements', label: 'Announcements',  icon: Megaphone   },
     { id: 'audit',         label: 'Audit Log',      icon: ScrollText  },
     { id: 'maintenance',   label: 'Maintenance',    icon: Wrench      },
+    { id: 'vpn' as AdminTab, label: 'VPN Flags', icon: Wifi },
     ...(myRole === 'founder' ? [{ id: 'roles' as AdminTab, label: 'Role Manager', icon: Crown }] : []),
   ];
 
@@ -1168,6 +1178,45 @@ export function AdminPanel() {
             ))}
             {roles.length === 0 && <p className="text-center text-xs py-6" style={{ color: 'var(--color-muted)' }}>No roles assigned yet</p>}
           </div>
+        </div>
+      )}
+
+      {!loading && tab === 'vpn' && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-xs" style={{ color: 'var(--color-muted)' }}>{vpnFlags.length} flagged users</p>
+            <button onClick={loadVpnFlags} className="text-xs px-2 py-1 rounded-lg border"
+              style={{ borderColor: 'var(--color-border)', color: 'var(--color-muted)' }}>Refresh</button>
+          </div>
+          {vpnFlags.length === 0
+            ? <p className="text-center text-xs py-8" style={{ color: 'var(--color-muted)' }}>No VPN flags yet</p>
+            : vpnFlags.map((v, i) => (
+              <div key={v.id ?? i} className="flex items-center gap-3 p-3 rounded-lg border"
+                style={{ borderColor: 'rgba(239,68,68,0.25)', backgroundColor: 'rgba(239,68,68,0.04)' }}>
+                <Wifi className="w-4 h-4 shrink-0 text-rose-400" />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>{v.username ?? `ID ${v.roblox_user_id}`}</p>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20">VPN</span>
+                    {v.country && <span className="text-[10px]" style={{ color: 'var(--color-muted)' }}>🌍 {v.country}</span>}
+                  </div>
+                  <div className="flex items-center gap-3 mt-0.5 text-[10px] flex-wrap" style={{ color: 'var(--color-muted)' }}>
+                    {v.provider && <span>Provider: {v.provider}</span>}
+                    <span>{timeAgo(v.created_at)}</span>
+                    <span>ID: {v.roblox_user_id}</span>
+                  </div>
+                </div>
+                <button onClick={async () => {
+                    await supabase.from('vpn_flags').delete().eq('id', v.id);
+                    setVpnFlags(f => f.filter(x => x.id !== v.id));
+                  }}
+                  className="text-xs px-2 py-1 rounded-lg border shrink-0 hover:bg-red-500/10 transition-colors"
+                  style={{ borderColor: 'rgba(239,68,68,0.3)', color: '#f87171' }}>
+                  Remove
+                </button>
+              </div>
+            ))
+          }
         </div>
       )}
 

@@ -67,10 +67,11 @@ function useLiveCounter() {
       setCount((data ?? []).reduce((s: number, u: any) => s + (u.execution_count ?? 0), 0));
     };
     fetch();
+    const interval = setInterval(fetch, 10000);
     const ch = supabase.channel('live-total')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'unique_users' }, fetch)
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    return () => { clearInterval(interval); supabase.removeChannel(ch); };
   }, []);
   return count;
 }
@@ -357,9 +358,10 @@ function App() {
         {/* Right: action icons */}
         <div className="flex items-center gap-1">
           {liveCount !== null && (
-            <span className="mr-1 text-[10px] font-semibold px-2 py-0.5 rounded-full"
-              style={{ backgroundColor: 'rgba(16,185,129,0.12)', color: '#10b981' }}>
-              {(live24h ?? liveCount ?? 0).toLocaleString()}
+            <span className="mr-1 text-[10px] font-semibold px-2.5 py-1 rounded-full flex items-center gap-1"
+              style={{ backgroundColor: 'rgba(16,185,129,0.12)', color: '#10b981', border: '1px solid rgba(16,185,129,0.2)' }}>
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block" />
+              {(liveCount ?? 0).toLocaleString()} total
             </span>
           )}
           <button onClick={() => setShowSearch(true)}
@@ -588,7 +590,7 @@ function App() {
             <div className="mx-3 mb-3 flex items-center gap-2 px-3 py-2 rounded-lg"
               style={{ backgroundColor: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.15)' }}>
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-              <span className="text-xs font-medium text-emerald-400">{(live24h ?? liveCount ?? 0).toLocaleString()} executions today</span>
+              <span className="text-xs font-medium text-emerald-400">{(liveCount ?? 0).toLocaleString()} total executions</span>
             </div>
           )}
 
@@ -830,7 +832,7 @@ function App() {
                     <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg"
                       style={{ backgroundColor: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)' }}>
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                      <span className="text-xs font-medium text-emerald-400">{(live24h ?? liveCount ?? 0).toLocaleString()} today</span>
+                      <span className="text-xs font-medium text-emerald-400">{(liveCount ?? 0).toLocaleString()} total</span>
                     </div>
                   )}
                   <ExecutionRateBadge />
