@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { supabase } from '@/lib/supabase';
+import { ExecutionHistory } from '@/components/ExecutionHistory';
 
 import { Users, Clock, Calendar, Gamepad2, ArrowLeft, ExternalLink, Shield, Activity, Hash, Download, ArrowUpDown, Ban, Key } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -138,6 +139,7 @@ async function fetchRobloxProfile(userId: number): Promise<RobloxProfile | null>
 function UserProfilePanel({ user, onBack }: { user: UserResult; onBack: () => void }) {
   const [profile, setProfile] = useState<RobloxProfile | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'overview' | 'history'>('overview');
 
   useEffect(() => {
     fetchRobloxProfile(user.roblox_user_id).then((p) => {
@@ -245,7 +247,24 @@ function UserProfilePanel({ user, onBack }: { user: UserResult; onBack: () => vo
             <Activity className="w-3.5 h-3.5 text-indigo-400" />
             Execution History
           </p>
-          {user.places.length > 0 && (
+          {/* Tab switcher */}
+          <div className="flex gap-1 p-0.5 rounded-lg mb-4" style={{ backgroundColor: 'var(--color-surface2)' }}>
+            {(['overview', 'history'] as const).map(t => (
+              <button key={t} onClick={() => setActiveTab(t)}
+                className="flex-1 py-1.5 rounded-md text-xs font-medium capitalize transition-all"
+                style={{
+                  backgroundColor: activeTab === t ? 'var(--color-surface)' : 'transparent',
+                  color: activeTab === t ? 'var(--color-text)' : 'var(--color-muted)',
+                  boxShadow: activeTab === t ? '0 1px 3px rgba(0,0,0,0.2)' : 'none',
+                }}>
+                {t === 'overview' ? 'Overview' : 'History'}
+              </button>
+            ))}
+          </div>
+
+          {activeTab === 'history' && <ExecutionHistory robloxUserId={user.roblox_user_id} />}
+
+          {activeTab === 'overview' && user.places.length > 0 && (
             <div className="mb-3 bg-white dark:bg-gray-950 rounded-lg border border-gray-200 dark:border-gray-800 p-3">
               <ResponsiveContainer width="100%" height={100}>
                 <BarChart data={user.places.map(p => ({ name: p.game_name?.split(' ')[0] ?? `P${p.place_id}`, execs: p.user_execution_count }))} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>

@@ -60,7 +60,7 @@ async function fetchRobloxBio(userId: number): Promise<string | null> {
   } catch { return null; }
 }
 
-type TokenRow = { token: string; roblox_username: string; roblox_user_id: number | null; updated_at?: string };
+type TokenRow = { token: string; roblox_username: string; roblox_user_id: number | null; updated_at?: string; last_reset_at?: string | null };
 type Step = 'username' | 'verify' | 'done';
 type RobloxUser = { id: number; name: string; displayName: string };
 
@@ -101,7 +101,7 @@ export function MyTokenPanel() {
     if (user) {
       const { data } = await supabase
         .from('user_tokens')
-        .select('token,roblox_username,roblox_user_id,updated_at')
+        .select('token,roblox_username,roblox_user_id,updated_at,last_reset_at')
         .eq('user_id', user.id)
         .maybeSingle();
       if (data) {
@@ -175,21 +175,34 @@ export function MyTokenPanel() {
     } finally { setVerifying(false); }
   };
 
+  const COOLDOWN_HOURS = 24;
+
+  const getCooldownRemaining = () => {
+    if (!tokenRow?.last_reset_at) return 0;
+    const elapsed = (Date.now() - new Date(tokenRow.last_reset_at).getTime()) / 3600000;
+    return Math.max(0, COOLDOWN_HOURS - elapsed);
+  };
+
   const handleRegenerate = async () => {
     if (!tokenRow) return;
+    const remaining = getCooldownRemaining();
+    if (remaining > 0) {
+      const h = Math.floor(remaining), m = Math.floor((remaining % 1) * 60);
+      return setError(`Cooldown: wait ${h}h ${m}m before resetting again.`);
+    }
     setRegenerating(true); setError('');
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not logged in.');
       const newToken = await ensureUniqueToken();
+      const now = new Date().toISOString();
       const { error: err } = await supabase.from('user_tokens').upsert({
         user_id: user.id, token: newToken,
         roblox_username: tokenRow.roblox_username, roblox_user_id: tokenRow.roblox_user_id,
-        updated_at: new Date().toISOString(),
+        updated_at: now, last_reset_at: now,
       }, { onConflict: 'user_id' });
       if (err) throw new Error(err.message);
-    // token stored in user_tokens only
-      const newRow = { ...tokenRow, token: newToken, updated_at: new Date().toISOString() };
+      const newRow = { ...tokenRow, token: newToken, updated_at: now, last_reset_at: now };
       setTokenRow(newRow); lsSet(LS_TOKEN, newRow);
       toast.success('Token regenerated. Old token is now invalid.');
     } catch (err) {
@@ -268,7 +281,12 @@ export function MyTokenPanel() {
               <Copy className="w-3.5 h-3.5 mr-1.5" /> Copy Token
             </Button>
             <Button onClick={handleRegenerate} disabled={regenerating} variant="outline" className="flex-1 text-xs h-8" style={{ borderColor: 'var(--color-border)', color: 'var(--color-muted)' }}>
-              {regenerating ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Regenerating...</> : <><RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Regenerate</>}
+              {regenerating
+  ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> Regenerating...</>
+  : getCooldownRemaining() > 0
+    ? <><RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Reset ({Math.floor(getCooldownRemaining())}h cooldown)</>
+    : <><RefreshCw className="w-3.5 h-3.5 mr-1.5" /> Regenerate</>
+}
             </Button>
           </div>
         </div>

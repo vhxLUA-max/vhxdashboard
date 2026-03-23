@@ -12,7 +12,7 @@ import { ExecutionWorldMap } from '@/components/ExecutionWorldMap';
 import { ExecutionRateBadge } from '@/components/ExecutionRateBadge';
 import { AnnouncementBanner } from '@/components/AnnouncementBanner';
 import { LiveToastFeed } from '@/components/LiveToastFeed';
-import { Activity, Users, Clock, RefreshCw, BarChart3, Gamepad2, Search, Webhook, Key, ShieldCheck, Megaphone, Code, Loader2, Palette, Shield, MessageSquare, FileText, Crown, Globe } from 'lucide-react';
+import { Activity, Users, Clock, RefreshCw, BarChart3, Gamepad2, Search, Webhook, Key, ShieldCheck, Megaphone, Code, Loader2, Palette, Shield, MessageSquare, FileText, Crown, Globe, ListChecks } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LoginModal } from '@/components/LoginModal';
 import { logout } from '@/lib/auth';
@@ -25,10 +25,11 @@ const ProTab         = lazy(() => import('@/components/ProTab').then(m => ({ def
 const AccountManager = lazy(() => import('@/components/AccountManager').then(m => ({ default: m.AccountManager })));
 const UserSearch     = lazy(() => import('@/components/UserSearch').then(m => ({ default: m.UserSearch })));
 const WebhookTab     = lazy(() => import('@/components/WebhookTab').then(m => ({ default: m.WebhookTab })));
-const MyTokenPanel   = lazy(() => import('@/components/MyTokenPanel').then(m => ({ default: m.MyTokenPanel })));
+const MyTokenPanel     = lazy(() => import('@/components/MyTokenPanel').then(m => ({ default: m.MyTokenPanel })));
+const ScriptRequests   = lazy(() => import('@/components/ScriptRequests').then(m => ({ default: m.ScriptRequests })));
+const StatusPage       = lazy(() => import('@/components/StatusPage').then(m => ({ default: m.StatusPage })));
 const ScriptsTab     = lazy(() => import('@/components/ScriptsTab').then(m => ({ default: m.ScriptsTab })));
 const ThemeManager   = lazy(() => import('@/components/ThemeManager').then(m => ({ default: m.ThemeManager })));
-const StatusTab      = lazy(() => import('@/components/StatusTab').then(m => ({ default: m.StatusTab })));
 const ChangelogTab   = lazy(() => import('@/components/ChangelogTab').then(m => ({ default: m.ChangelogTab })));
 import { AdminPanel } from '@/components/AdminPanel';
 const FeedbackTab    = lazy(() => import('@/components/FeedbackTab').then(m => ({ default: m.FeedbackTab })));
@@ -167,11 +168,12 @@ async function checkIsAdmin(userId: string, username: string | null): Promise<bo
   return ADMIN_USERNAMES.includes(username?.toLowerCase() ?? '');
 }
 
-type SidebarTab = 'stats' | 'search' | 'webhook' | 'token' | 'scripts' | 'themes' | 'feedback' | 'status' | 'changelog' | 'admin' | 'socials' | 'privacy' | 'pro' | 'map';
+type SidebarTab = 'stats' | 'search' | 'webhook' | 'token' | 'scripts' | 'themes' | 'feedback' | 'status' | 'changelog' | 'admin' | 'socials' | 'privacy' | 'pro' | 'map' | 'requests';
 
 const TABS = [
   { id: 'stats',     label: 'Stats',     icon: BarChart3     },
   { id: 'scripts',   label: 'Scripts',   icon: Code          },
+  { id: 'requests',  label: 'Requests',  icon: ListChecks    },
   { id: 'search',    label: 'Search',    icon: Search        },
   { id: 'token',     label: 'Token',     icon: Key           },
   { id: 'changelog', label: 'Updates',   icon: Megaphone     },
@@ -865,7 +867,8 @@ function App() {
                     {activeTab === 'scripts'   && <ScriptsTab />}
                     {activeTab === 'themes'    && <ThemeManager />}
                     {activeTab === 'feedback'  && <FeedbackTab />}
-                    {activeTab === 'status'    && <StatusTab />}
+                    {activeTab === 'status'    && <StatusPage />}
+                    {activeTab === 'requests'  && <ScriptRequests isAdmin={isAdmin} />}
                     {activeTab === 'changelog' && <ChangelogTab />}
                     {activeTab === 'socials'   && <SocialsTab />}
                     {activeTab === 'privacy'   && <PrivacyPolicy />}
