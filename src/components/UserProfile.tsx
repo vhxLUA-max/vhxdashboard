@@ -39,9 +39,11 @@ const fmt = (iso: string) => {
   const m  = gmt8.getUTCMonth() + 1;
   const dd = String(gmt8.getUTCDate()).padStart(2, '0');
   const y  = gmt8.getUTCFullYear();
-  const hh = String(gmt8.getUTCHours()).padStart(2, '0');
+  let hh   = gmt8.getUTCHours();
   const mm = String(gmt8.getUTCMinutes()).padStart(2, '0');
-  return `${m}/${dd}/${y} • ${hh}:${mm} GMT+8`;
+  const ap = hh >= 12 ? 'PM' : 'AM';
+  hh = hh % 12 || 12;
+  return `${m}/${dd}/${y} • ${hh}:${mm} ${ap}`;
 };
 const accountAge = (created: string) => {
   const days = Math.floor((Date.now() - new Date(created).getTime()) / 86400000);
