@@ -23,14 +23,13 @@ export function useSupabaseDashboard(dateRange: DateRange): UseSupabaseDashboard
 
     try {
       const since = new Date(Date.now() - RANGE_MS[dateRange]).toISOString();
-      const today = new Date().toISOString().slice(0, 10);
 
       const [
         { data: all,      error: e1 },
         { data: users },
         { data: newToday },
       ] = await Promise.all([
-        supabase.from('game_executions').select('place_id,total_count:count,daily_count,daily_reset_at,last_executed_at,game_name').order('last_executed_at', { ascending: false }),
+        supabase.from('game_execution_totals').select('game_name,total_count,last_executed_at').order('total_count', { ascending: false }),
         supabase.from('unique_users').select('roblox_user_id').gte('last_seen', since),
         supabase.from('unique_users').select('roblox_user_id').gte('first_seen', new Date().toISOString().slice(0,10) + 'T00:00:00.000Z'),
       ]);
@@ -42,7 +41,7 @@ export function useSupabaseDashboard(dateRange: DateRange): UseSupabaseDashboard
       // Total executions — sum unique_users.execution_count for accuracy
       const { data: execSum } = await supabase.from('unique_users').select('execution_count');
       const totalExecutions = dateRange === '24h'
-        ? allExecs.reduce((s: number, e: any) => s + (e.daily_reset_at?.slice(0, 10) === today ? (e.daily_count ?? 0) : 0), 0)
+        ? allExecs.reduce((s: number, e: any) => s + (e.total_count ?? 0), 0)
         : (execSum ?? []).reduce((s: number, u: any) => s + (u.execution_count ?? 0), 0);
 
       const filteredExecs = allExecs.filter((e: any) => e.last_executed_at && e.last_executed_at >= since);

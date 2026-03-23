@@ -1,19 +1,22 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import type { GameExecution } from '@/types';
 import { RecentActivityList } from './RecentActivityList';
 
 export function LiveRecentActivity() {
-  const [executions, setExecutions] = useState<GameExecution[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [executions, setExecutions] = useState<any[]>([]);
+  const [loading, setLoading]       = useState(true);
 
   useEffect(() => {
     const fetch = async () => {
       const { data } = await supabase
-        .from('game_executions')
-        .select('place_id,daily_count,last_executed_at,game_name')
-        .order('last_executed_at', { ascending: false });
-      setExecutions((data ?? []).map((e: any) => ({ ...e, count: e.daily_count ?? e.count ?? 0 })));
+        .from('game_execution_totals')
+        .select('game_name,total_count,last_executed_at');
+      setExecutions((data ?? []).map((e: any) => ({
+        game_name:        e.game_name,
+        count:            e.total_count ?? 0,
+        last_executed_at: e.last_executed_at,
+        place_id:         0,
+      })));
       setLoading(false);
     };
     fetch();

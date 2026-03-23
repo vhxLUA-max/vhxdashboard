@@ -1,15 +1,19 @@
-import type { GameExecution } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Gamepad2 } from 'lucide-react';
+import { Gamepad2, Zap } from 'lucide-react';
+
+interface GameEntry {
+  game_name: string | null;
+  count: number;
+  last_executed_at: string | null;
+  place_id?: number;
+}
 
 interface RecentActivityListProps {
-  executions: GameExecution[];
+  executions: GameEntry[];
   loading?: boolean;
 }
 
-const SUPPORTED_GAMES = ['Pixel Blade', 'Loot Hero', 'Flick'];
-
-function formatRelativeTime(dateString: string): string {
+function timeAgo(dateString: string): string {
   const diff = (Date.now() - new Date(dateString).getTime()) / 1000;
   if (diff < 60) return 'just now';
   if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
@@ -21,67 +25,60 @@ function formatRelativeTime(dateString: string): string {
 export function RecentActivityList({ executions, loading = false }: RecentActivityListProps) {
   if (loading) {
     return (
-      <div className="space-y-3">
+      <div className="space-y-2">
         {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="flex items-center gap-4 p-4 bg-gray-900 rounded-lg border border-gray-800">
-            <Skeleton className="h-10 w-10 rounded-full bg-gray-800" />
+          <div key={i} className="flex items-center gap-4 p-4 rounded-xl border"
+            style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-surface2)' }}>
+            <Skeleton className="h-10 w-10 rounded-full" style={{ backgroundColor: 'var(--color-surface)' }} />
             <div className="flex-1 space-y-2">
-              <Skeleton className="h-4 w-40 bg-gray-800" />
-              <Skeleton className="h-3 w-24 bg-gray-800" />
+              <Skeleton className="h-4 w-40" style={{ backgroundColor: 'var(--color-surface)' }} />
+              <Skeleton className="h-3 w-24" style={{ backgroundColor: 'var(--color-surface)' }} />
             </div>
-            <Skeleton className="h-6 w-16 bg-gray-800" />
           </div>
         ))}
       </div>
     );
   }
 
-  const grouped: Record<string, { count: number; last_executed_at: string }> = {};
-  for (const e of executions) {
-    const name = e.game_name ?? `Place ${e.place_id}`;
-    if (!SUPPORTED_GAMES.includes(name)) continue;
-    if (!grouped[name]) {
-      grouped[name] = { count: 0, last_executed_at: e.last_executed_at ?? '' };
-    }
-    grouped[name].count += e.count;
-    if (new Date(e.last_executed_at) > new Date(grouped[name].last_executed_at)) {
-      grouped[name].last_executed_at = e.last_executed_at;
-    }
+  const sorted = [...executions]
+    .filter(e => e.game_name && e.game_name !== 'Unknown')
+    .sort((a, b) => b.count - a.count);
+
+  if (sorted.length === 0) {
+    return <p className="text-center py-6 text-sm" style={{ color: 'var(--color-muted)' }}>No executions yet</p>;
   }
 
-  const games = SUPPORTED_GAMES.map(name => ({
-    name,
-    count: grouped[name]?.count ?? 0,
-    last_executed_at: grouped[name]?.last_executed_at ?? null,
-  }));
+  const max = sorted[0]?.count ?? 1;
 
   return (
     <div className="space-y-2">
-      {games.map((game) => (
-        <div
-          key={game.name}
-          className="flex items-center gap-4 p-4 bg-gray-900 rounded-lg border border-gray-800 hover:border-gray-700 transition-colors"
-        >
-          <div className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center bg-blue-600/10">
-            <Gamepad2 className="w-5 h-5 text-indigo-400" />
+      {sorted.map((game) => (
+        <div key={game.game_name}
+          className="flex items-center gap-4 p-4 rounded-xl border transition-colors"
+          style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-surface2)' }}>
+          <div className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center"
+            style={{ backgroundColor: 'rgba(59,130,246,0.1)' }}>
+            <Gamepad2 className="w-5 h-5" style={{ color: 'var(--color-accent)' }} />
           </div>
 
           <div className="flex-1 min-w-0">
-            <p className="font-medium text-white">{game.name}</p>
-            <p className="text-xs text-gray-500 mt-0.5">
-              {game.count > 0
-                ? `${game.count.toLocaleString()} executions · ${formatRelativeTime(game.last_executed_at!)}`
-                : 'No executions yet'}
+            <div className="flex items-center justify-between mb-1.5">
+              <p className="font-semibold text-sm" style={{ color: 'var(--color-text)' }}>{game.game_name}</p>
+              <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                <Zap className="w-3 h-3" style={{ color: 'var(--color-accent)' }} />
+                <span className="text-sm font-bold" style={{ color: 'var(--color-accent)' }}>
+                  {game.count.toLocaleString()}
+                </span>
+              </div>
+            </div>
+            <div className="h-1.5 rounded-full overflow-hidden mb-1.5" style={{ backgroundColor: 'var(--color-surface)' }}>
+              <div className="h-full rounded-full transition-all duration-500"
+                style={{ width: `${(game.count / max) * 100}%`, backgroundColor: 'var(--color-accent)' }} />
+            </div>
+            <p className="text-xs" style={{ color: 'var(--color-muted)' }}>
+              {game.last_executed_at ? `Last exec ${timeAgo(game.last_executed_at)}` : 'No executions yet'}
             </p>
           </div>
-
-          <span className={`text-xs font-medium px-2.5 py-1 rounded-full flex-shrink-0 ${
-            game.count > 0
-              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-              : 'bg-gray-800 text-gray-500 border border-gray-700'
-          }`}>
-            {game.count > 0 ? 'Active' : 'Pending'}
-          </span>
         </div>
       ))}
     </div>
