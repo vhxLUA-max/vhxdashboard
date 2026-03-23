@@ -80,16 +80,17 @@ function useLive24h() {
   const [count, setCount] = useState<number | null>(null);
   useEffect(() => {
     const fetch = async () => {
-      const { data } = await supabase.from('game_executions').select('daily_count,daily_reset_at');
-      if (!data) return;
-      const today = new Date().toISOString().slice(0, 10);
-      setCount(data.reduce((s: number, e: { daily_count?: number; daily_reset_at?: string }) =>
-        s + (e.daily_reset_at?.slice(0, 10) === today ? (e.daily_count ?? 0) : 0), 0));
+      const since = new Date(Date.now() - 86400000).toISOString();
+      const { data } = await supabase
+        .from('unique_users')
+        .select('execution_count')
+        .gte('last_seen', since);
+      setCount((data ?? []).reduce((s: number, u: any) => s + (u.execution_count ?? 0), 0));
     };
     fetch();
     const poll = setInterval(fetch, 15000);
     const ch = supabase.channel('live-24h')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'game_executions' }, fetch)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'unique_users' }, fetch)
       .subscribe();
     return () => { clearInterval(poll); supabase.removeChannel(ch); };
   }, []);
