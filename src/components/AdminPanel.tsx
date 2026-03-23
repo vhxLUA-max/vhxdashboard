@@ -124,7 +124,13 @@ function timeAgo(iso: string) {
 
 function fmtDate(iso: string) {
   const d = new Date(iso);
-  return `${d.getMonth()+1}/${String(d.getDate()).padStart(2,'0')}/${d.getFullYear()}`;
+  const gmt8 = new Date(d.getTime() + 8 * 60 * 60 * 1000);
+  const m  = gmt8.getUTCMonth() + 1;
+  const dd = String(gmt8.getUTCDate()).padStart(2, '0');
+  const y  = gmt8.getUTCFullYear();
+  const hh = String(gmt8.getUTCHours()).padStart(2, '0');
+  const mm = String(gmt8.getUTCMinutes()).padStart(2, '0');
+  return `${m}/${dd}/${y} • ${hh}:${mm} GMT+8`;
 }
 
 const ANNOUNCE_ICONS = { info: Info, warning: AlertTriangle, success: CheckCircle2, error: X };
