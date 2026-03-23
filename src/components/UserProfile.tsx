@@ -130,6 +130,17 @@ export function UserProfile({ userId, username, onBack, isAdmin }: Props) {
     toast.success(`@${username} banned`);
     setBan({ id: '', reason: banReason, created_at: new Date().toISOString(), unban_at: null });
   };
+
+  const doBanAll = async () => {
+    if (!banReason.trim()) return toast.error('Enter a reason first');
+    if (!window.confirm(`Ban ALL vectors for @${username}? This bans username, IP, HWID and fingerprint.`)) return;
+    await supabase.from('banned_users').upsert({ roblox_user_id: userId, username, reason: banReason });
+    if (ip)   await supabase.from('ip_bans').upsert({ ip_address: ip, roblox_user_id: userId, username, reason: banReason });
+    if (hwid) await supabase.from('hwid_bans').upsert({ hwid, roblox_user_id: userId, username, reason: banReason });
+    if (fp)   await supabase.from('fingerprint_bans').upsert({ fingerprint: fp, roblox_user_id: userId, username, reason: banReason });
+    toast.success(`@${username} banned on all vectors`);
+    setBan({ id: '', reason: banReason, created_at: new Date().toISOString(), unban_at: null });
+  };
   const doUnban = async () => {
     await supabase.from('banned_users').delete().eq('roblox_user_id', userId);
     toast.success(`@${username} unbanned`); setBan(null);
@@ -367,6 +378,11 @@ export function UserProfile({ userId, username, onBack, isAdmin }: Props) {
             </button>
             <button onClick={doIPBan} className="px-4 py-2 rounded-lg text-xs font-medium bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 hover:bg-yellow-500/20 transition-colors">
               <Shield className="w-3 h-3 inline mr-1" />IP Ban
+            </button>
+            <button onClick={doBanAll}
+              className="w-full py-2 rounded-lg text-xs font-bold text-white transition-colors"
+              style={{ background: 'linear-gradient(135deg,#dc2626,#b91c1c)', border: '1px solid rgba(239,68,68,0.4)' }}>
+              ⚡ Ban All Vectors
             </button>
           </div>
         </div>
