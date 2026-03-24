@@ -8,10 +8,11 @@ import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { LiveRecentActivity } from '@/components/LiveRecentActivity';
+import { ExecutionWorldMap } from '@/components/ExecutionWorldMap';
 import { ExecutionRateBadge } from '@/components/ExecutionRateBadge';
 import { AnnouncementBanner } from '@/components/AnnouncementBanner';
 import { LiveToastFeed } from '@/components/LiveToastFeed';
-import { Activity, Users, Clock, RefreshCw, BarChart3, Gamepad2, Search, Webhook, Key, ShieldCheck, Megaphone, Code, Loader2, Palette, Shield, MessageSquare, FileText, Crown, Globe, ListChecks } from 'lucide-react';
+import { Activity, Users, Clock, RefreshCw, BarChart3, Gamepad2, Search, Webhook, Key, ShieldCheck, Megaphone, Code, Loader2, Palette, Shield, MessageSquare, FileText, Crown, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LoginModal } from '@/components/LoginModal';
 import { logout } from '@/lib/auth';
@@ -62,15 +63,14 @@ function useLiveCounter() {
   const [count, setCount] = useState<number | null>(null);
   useEffect(() => {
     const fetch = async () => {
-      const { data } = await supabase.from('game_executions').select('count');
-      setCount((data ?? []).reduce((s: number, e: any) => s + (e.count ?? 0), 0));
+      const { data } = await supabase.from('unique_users').select('execution_count');
+      setCount((data ?? []).reduce((s: number, u: any) => s + (u.execution_count ?? 0), 0));
     };
     fetch();
-    const interval = setInterval(fetch, 10000);
     const ch = supabase.channel('live-total')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'game_executions' }, fetch)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'unique_users' }, fetch)
       .subscribe();
-    return () => { clearInterval(interval); supabase.removeChannel(ch); };
+    return () => { supabase.removeChannel(ch); };
   }, []);
   return count;
 }
@@ -79,17 +79,16 @@ function useLive24h() {
   const [count, setCount] = useState<number | null>(null);
   useEffect(() => {
     const fetch = async () => {
-      const since = new Date(Date.now() - 86400000).toISOString();
-      const { data } = await supabase
-        .from('unique_users')
-        .select('execution_count')
-        .gte('last_seen', since);
-      setCount((data ?? []).reduce((s: number, u: any) => s + (u.execution_count ?? 0), 0));
+      const { data } = await supabase.from('game_executions').select('daily_count,daily_reset_at');
+      if (!data) return;
+      const today = new Date().toISOString().slice(0, 10);
+      setCount(data.reduce((s: number, e: { daily_count?: number; daily_reset_at?: string }) =>
+        s + (e.daily_reset_at?.slice(0, 10) === today ? (e.daily_count ?? 0) : 0), 0));
     };
     fetch();
     const poll = setInterval(fetch, 15000);
     const ch = supabase.channel('live-24h')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'unique_users' }, fetch)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'game_executions' }, fetch)
       .subscribe();
     return () => { clearInterval(poll); supabase.removeChannel(ch); };
   }, []);
@@ -115,25 +114,7 @@ function useLiveUniqueUsers() {
 function useLiveNewUsers() {
   const [count, setCount] = useState<number | null>(null);
   useEffect(() => {
-    const fetch = async () => {
-      const since = new Date(Date.now() - 86400000).toISOString();
-      // Count users active OR new in last 24h
-      const [{ data: active }, { data: newUsers }] = await Promise.all([
-        supabase.from('unique_users').select('roblox_user_id').gte('last_seen', since),
-        supabase.from('unique_users').select('roblox_user_id').gte('first_seen', since),
-      ]);
-      const combined = new Set([
-        ...(active ?? []).map((u: any) => u.roblox_user_id),
-        ...(newUsers ?? []).map((u: any) => u.roblox_user_id),
-      ]);
-      setCount(combined.size);
-    };
-    fetch();
-    const interval = setInterval(fetch, 30000);
-    const ch = supabase.channel('live-new-users')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'unique_users' }, fetch)
-      .subscribe();
-    return () => { clearInterval(interval); supabase.removeChannel(ch); };
+    setCount(0); // New users tracked in Google Sheets
   }, []);
   return count;
 }
@@ -179,18 +160,14 @@ function useLiveAllExecutions() {
 const ADMIN_USERNAMES = ['vhxlua-max'];
 
 async function checkIsAdmin(userId: string, username: string | null): Promise<boolean> {
-  // Founder is always admin
-  if (ADMIN_USERNAMES.includes(username?.toLowerCase() ?? '')) return true;
   try {
-    const { data: roleData } = await supabase.from('user_roles').select('role').eq('user_id', userId).maybeSingle();
-    if (roleData?.role === 'founder' || roleData?.role === 'admin') return true;
-    const { data: adminData } = await supabase.from('admins').select('user_id').eq('user_id', userId).maybeSingle();
-    if (adminData) return true;
+    const { data } = await supabase.from('admins').select('user_id').eq('user_id', userId).maybeSingle();
+    if (data) return true;
   } catch { /* fall through */ }
-  return false;
+  return ADMIN_USERNAMES.includes(username?.toLowerCase() ?? '');
 }
 
-type SidebarTab = 'stats' | 'search' | 'webhook' | 'token' | 'scripts' | 'themes' | 'feedback' | 'status' | 'changelog' | 'admin' | 'socials' | 'privacy' | 'pro' | 'map' | 'requests';
+type SidebarTab = 'stats' | 'search' | 'webhook' | 'token' | 'scripts' | 'themes' | 'feedback' | 'status' | 'changelog' | 'admin' | 'socials' | 'privacy' | 'pro' | 'map';
 
 const TABS = [
   { id: 'stats',     label: 'Stats',     icon: BarChart3     },
@@ -203,7 +180,6 @@ const TABS = [
   { id: 'themes',    label: 'Themes',    icon: Palette       },
   { id: 'feedback',  label: 'Feedback',  icon: MessageSquare },
   { id: 'status',    label: 'Status',    icon: ShieldCheck   },
-  { id: 'requests',  label: 'Requests',  icon: ListChecks    },
   { id: 'map',       label: 'Map',        icon: Globe         },
   { id: 'admin',     label: 'Admin',     icon: Shield        },
   { id: 'privacy',   label: 'Privacy',   icon: FileText      },
@@ -227,7 +203,7 @@ function App() {
   const [adminUsername, setAdminUsername] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl]         = useState<string | null>(null);
   const [isAdmin, setIsAdmin]             = useState(false);
-  const [_userRole, setUserRole]           = useState<string>('user');
+  const [userRole, setUserRole]           = useState<string>('user');
   const [isLoggedIn, setIsLoggedIn]       = useState(false);
   const [isPro, setIsPro]                 = useState(false);
   const [userExecs, setUserExecs]         = useState(0);
@@ -244,6 +220,7 @@ function App() {
   const lastExecution                     = useLiveLastExecution();
   const visibleTabs = TABS.filter(t => {
     if (t.id === 'admin') return isAdmin;
+    if (t.id === 'map') return isAdmin || ['moderator','founder','admin'].includes(userRole);
     return true;
   });
 
@@ -312,16 +289,11 @@ function App() {
       setAdminUsername(u);
       setAvatarUrl(resolveAvatar(session.user));
       setIsLoggedIn(true);
+      checkIsAdmin(session.user.id, u).then(setIsAdmin);
       if ((u ?? '').toLowerCase() === 'vhxlua-max') {
-        setIsAdmin(true);
         setIsPro(true);
-        setUserRole('founder');
-        // Auto-upsert founder role into DB
-        supabase.from('user_roles').upsert({ user_id: session.user.id, username: 'vhxlua-max', role: 'founder' }).then(() => {});
       } else {
-        checkIsAdmin(session.user.id, u).then(setIsAdmin);
-        supabase.from('user_roles').select('role,custom_badge,custom_badge_color').eq('user_id', session.user.id).maybeSingle().then(({ data }) => {
-          if (data?.role) setUserRole(data.role);
+        supabase.from('user_roles').select('role').eq('user_id', session.user.id).maybeSingle().then(({ data }) => {
           setIsPro(data?.role === 'pro' || data?.role === 'founder' || data?.role === 'admin');
         });
       }
@@ -337,7 +309,6 @@ function App() {
   }, []);
 
   return (
-    <>
     <div className="min-h-screen flex flex-col" style={{ backgroundColor: 'var(--color-bg, #09090b)', color: 'var(--color-text)' }}>
 
 
@@ -353,10 +324,9 @@ function App() {
         {/* Right: action icons */}
         <div className="flex items-center gap-1">
           {liveCount !== null && (
-            <span className="mr-1 text-[10px] font-semibold px-2.5 py-1 rounded-full flex items-center gap-1"
-              style={{ backgroundColor: 'rgba(16,185,129,0.12)', color: '#10b981', border: '1px solid rgba(16,185,129,0.2)' }}>
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block" />
-              {(liveCount ?? 0).toLocaleString()} total
+            <span className="mr-1 text-[10px] font-semibold px-2 py-0.5 rounded-full"
+              style={{ backgroundColor: 'rgba(16,185,129,0.12)', color: '#10b981' }}>
+              {(live24h ?? liveCount ?? 0).toLocaleString()}
             </span>
           )}
           <button onClick={() => setShowSearch(true)}
@@ -583,7 +553,7 @@ function App() {
             <div className="mx-3 mb-3 flex items-center gap-2 px-3 py-2 rounded-lg"
               style={{ backgroundColor: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.15)' }}>
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-              <span className="text-xs font-medium text-emerald-400">{(liveCount ?? 0).toLocaleString()} total executions</span>
+              <span className="text-xs font-medium text-emerald-400">{(live24h ?? liveCount ?? 0).toLocaleString()} executions today</span>
             </div>
           )}
 
@@ -823,7 +793,7 @@ function App() {
                     <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg"
                       style={{ backgroundColor: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)' }}>
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                      <span className="text-xs font-medium text-emerald-400">{(liveCount ?? 0).toLocaleString()} total</span>
+                      <span className="text-xs font-medium text-emerald-400">{(live24h ?? liveCount ?? 0).toLocaleString()} today</span>
                     </div>
                   )}
                   <ExecutionRateBadge />
@@ -861,8 +831,8 @@ function App() {
                   <div className="space-y-6">
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                       <MetricCard title="Executions" value={(dateRange === '24h' ? live24h : liveCount)?.toLocaleString() ?? '-'} subtitle={dateRange === '24h' ? 'Today' : `Last ${dateRange}`} icon={Activity} loading={false} />
-                      <MetricCard title="Total Users" value={liveUsers?.toLocaleString() ?? '-'}   subtitle="All time"      icon={Users}   loading={false} />
-                      <MetricCard title="New Today"  value={liveNewUsers?.toLocaleString() ?? '-'} subtitle="Active / new 24h" icon={Users} loading={false} />
+                      <MetricCard title="Users"      value={liveUsers?.toLocaleString() ?? '-'}    subtitle="Active 24h"    icon={Users}   loading={false} />
+                      <MetricCard title="New Today"  value={liveNewUsers?.toLocaleString() ?? '-'} subtitle="First seen"    icon={Users}   loading={false} />
                       <MetricCard title="Last Exec"  value={lastExecution}                         subtitle="Most recent"   icon={Clock}   loading={false} />
                     </div>
                     <div>
@@ -905,71 +875,13 @@ function App() {
                 <div style={{ display: activeTab === 'admin' ? 'block' : 'none' }}>
                   <AdminPanel />
                 </div>
-                              </ErrorBoundary>
+                {activeTab === 'map' && <ExecutionWorldMap />}
+              </ErrorBoundary>
             )}
           </main>
-
-          {/* ── Footer ─────────────────────────────────────── */}
-          <footer className="border-t mt-4 pb-24 lg:pb-8" style={{ borderColor: 'var(--color-border)' }}>
-            <div className="max-w-6xl mx-auto px-4 sm:px-8 py-8 flex flex-col items-center gap-6">
-
-              {/* Logo + name */}
-              <div className="flex items-center gap-2.5">
-                <svg width="28" height="28" viewBox="0 0 100 100" fill="none">
-                  <rect width="100" height="100" rx="16" fill="var(--color-accent)" />
-                  <text x="50" y="68" textAnchor="middle" fontSize="52" fontFamily="monospace" fontWeight="bold" fill="white">V</text>
-                </svg>
-                <span className="text-base font-bold" style={{ color: 'var(--color-text)' }}>vhxLUA</span>
-              </div>
-
-              {/* Social buttons */}
-              <div className="flex items-center gap-3">
-                <a href="https://discord.gg/usEnYvqnaJ" target="_blank" rel="noreferrer"
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-opacity hover:opacity-80"
-                  style={{ backgroundColor: 'var(--color-surface2)', color: 'var(--color-text)', border: '1px solid var(--color-border)' }}>
-                  <svg width="16" height="16" viewBox="0 0 127.14 96.36" fill="currentColor"><path d="M107.7 8.07A105.15 105.15 0 0 0 81.47 0a72.06 72.06 0 0 0-3.36 6.83 97.68 97.68 0 0 0-29.11 0A72.37 72.37 0 0 0 45.64 0a105.89 105.89 0 0 0-26.25 8.09C2.79 32.65-1.71 56.6.54 80.21a105.73 105.73 0 0 0 32.17 16.15 77.7 77.7 0 0 0 6.89-11.11 68.42 68.42 0 0 1-10.85-5.18c.91-.66 1.8-1.34 2.66-2a75.57 75.57 0 0 0 64.32 0c.87.71 1.76 1.39 2.66 2a68.68 68.68 0 0 1-10.87 5.19 77 77 0 0 0 6.89 11.1 105.25 105.25 0 0 0 32.19-16.14c2.64-27.38-4.51-51.11-18.9-72.15ZM42.45 65.69C36.18 65.69 31 60 31 53s5-12.74 11.43-12.74S54 46 53.89 53s-5.05 12.69-11.44 12.69Zm42.24 0C78.41 65.69 73.25 60 73.25 53s5-12.74 11.44-12.74S96.23 46 96.12 53s-5.04 12.69-11.43 12.69Z"/></svg>
-                  Discord Server
-                </a>
-                <a href="https://youtube.com/@vhxlua" target="_blank" rel="noreferrer"
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-opacity hover:opacity-80"
-                  style={{ backgroundColor: 'var(--color-surface2)', color: 'var(--color-text)', border: '1px solid var(--color-border)' }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
-                  YouTube Channel
-                </a>
-              </div>
-
-              {/* Links */}
-              <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm">
-                {[
-                  { label: 'Pro Plans', action: () => setActiveTab('pro' as any) },
-                  { label: 'Terms',     action: () => setFooterModal('terms') },
-                  { label: 'Privacy',   action: () => setActiveTab('privacy' as any) },
-                  { label: 'Refunds',   action: () => setFooterModal('refunds') },
-                  { label: 'Legal',     action: () => setFooterModal('legal') },
-                  { label: 'Contact',   action: () => setFooterModal('contact') },
-                ].map(link => (
-                  <button key={link.label} onClick={link.action}
-                    className="transition-opacity hover:opacity-80"
-                    style={{ color: link.label === 'Pro Plans' ? '#f59e0b' : 'var(--color-muted)', fontWeight: link.label === 'Pro Plans' ? 600 : 400 }}>
-                    {link.label}
-                  </button>
-                ))}
-              </div>
-
-              {/* Copyright */}
-              <p className="text-xs" style={{ color: 'var(--color-muted)' }}>
-                © {new Date().getFullYear()} vhxLUA. All rights reserved.
-              </p>
-            </div>
-          </footer>
-
         </div>
       </div>
     </div>
-
-      {/* Footer modals */}
-
-    </>
   );
 }
 
