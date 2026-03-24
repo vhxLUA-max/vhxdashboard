@@ -203,6 +203,8 @@ const TABS = [
   { id: 'themes',    label: 'Themes',    icon: Palette       },
   { id: 'feedback',  label: 'Feedback',  icon: MessageSquare },
   { id: 'status',    label: 'Status',    icon: ShieldCheck   },
+  { id: 'requests',  label: 'Requests',  icon: ListChecks    },
+  { id: 'map',       label: 'Map',        icon: Globe         },
   { id: 'admin',     label: 'Admin',     icon: Shield        },
   { id: 'privacy',   label: 'Privacy',   icon: FileText      },
   { id: 'pro',       label: 'Pro',        icon: Crown         },
@@ -317,8 +319,6 @@ function App() {
         setUserRole('founder');
         // Auto-upsert founder role into DB
         supabase.from('user_roles').upsert({ user_id: session.user.id, username: 'vhxlua-max', role: 'founder' }).then(() => {});
-        supabase.from('user_roles').select('custom_badge,custom_badge_color').eq('user_id', session.user.id).maybeSingle().then(({ data }) => {
-        });
       } else {
         checkIsAdmin(session.user.id, u).then(setIsAdmin);
         supabase.from('user_roles').select('role,custom_badge,custom_badge_color').eq('user_id', session.user.id).maybeSingle().then(({ data }) => {
@@ -969,10 +969,7 @@ function App() {
     </div>
 
       {/* Footer modals */}
-      {footerModal === 'terms'    && <TermsModal    onClose={() => setFooterModal(null)} />}
-      {footerModal === 'refunds'  && <RefundsModal  onClose={() => setFooterModal(null)} />}
-      {footerModal === 'legal'    && <LegalModal    onClose={() => setFooterModal(null)} />}
-      {footerModal === 'contact'  && <ContactModal  onClose={() => setFooterModal(null)} />}
+
     </>
   );
 }
