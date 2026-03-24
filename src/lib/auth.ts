@@ -30,9 +30,20 @@ export async function register(username: string, password: string): Promise<{ su
 
 export async function login(usernameOrEmail: string, password: string): Promise<{ success: boolean; error?: string }> {
   const email = usernameOrEmail.includes('@') ? usernameOrEmail.trim().toLowerCase() : toEmail(usernameOrEmail);
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) return { success: false, error: 'Invalid username or password.' };
-  return { success: true };
+  try {
+    const res = await fetch('/api/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ email, password }),
+    });
+    const data = await res.json();
+    if (!res.ok) return { success: false, error: data.error || 'Invalid username or password.' };
+    await supabase.auth.signInWithPassword({ email, password });
+    return { success: true };
+  } catch {
+    return { success: false, error: 'Network error. Please try again.' };
+  }
 }
 
 export async function checkUsernameAvailable(username: string): Promise<boolean> {
@@ -123,5 +134,6 @@ export async function updateUserEmail(email: string): Promise<{ success: boolean
 }
 
 export async function logout() {
+  await fetch('/api/auth', { method: 'DELETE', credentials: 'include' });
   await supabase.auth.signOut();
 }
