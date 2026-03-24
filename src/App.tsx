@@ -145,7 +145,7 @@ function useLiveAllExecutions() {
   const [execs, setExecs] = useState<any[]>([]);
   useEffect(() => {
     const fetch = async () => {
-      const { data } = await supabase.from('game_executions').select('place_id,daily_count,last_executed_at,game_name').order('last_executed_at', { ascending: false });
+      const { data } = await supabase.from('game_executions').select('place_id,total_count:count,last_executed_at,game_name').order('last_executed_at', { ascending: false });
       if (data) setExecs(data as any[]);
     };
     fetch();
@@ -326,7 +326,7 @@ function App() {
           {liveCount !== null && (
             <span className="mr-1 text-[10px] font-semibold px-2 py-0.5 rounded-full"
               style={{ backgroundColor: 'rgba(16,185,129,0.12)', color: '#10b981' }}>
-              {(live24h ?? liveCount ?? 0).toLocaleString()}
+              {liveCount.toLocaleString()}
             </span>
           )}
           <button onClick={() => setShowSearch(true)}
@@ -473,7 +473,7 @@ function App() {
           {liveCount !== null && (
             <span className="text-[10px] font-semibold px-2.5 py-1 rounded-full"
               style={{ backgroundColor: 'rgba(16,185,129,0.12)', color: '#10b981' }}>
-              {(live24h ?? liveCount ?? 0).toLocaleString()} execs
+              {liveCount.toLocaleString()} execs
             </span>
           )}
           <button onClick={() => setShowSearch(true)}
@@ -553,7 +553,7 @@ function App() {
             <div className="mx-3 mb-3 flex items-center gap-2 px-3 py-2 rounded-lg"
               style={{ backgroundColor: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.15)' }}>
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-              <span className="text-xs font-medium text-emerald-400">{(live24h ?? liveCount ?? 0).toLocaleString()} executions today</span>
+              <span className="text-xs font-medium text-emerald-400">{liveCount.toLocaleString()} total executions</span>
             </div>
           )}
 
@@ -793,7 +793,7 @@ function App() {
                     <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg"
                       style={{ backgroundColor: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)' }}>
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                      <span className="text-xs font-medium text-emerald-400">{(live24h ?? liveCount ?? 0).toLocaleString()} today</span>
+                      <span className="text-xs font-medium text-emerald-400">{liveCount.toLocaleString()} total</span>
                     </div>
                   )}
                   <ExecutionRateBadge />
