@@ -2,7 +2,6 @@ import { useState, useCallback, useEffect, lazy, Suspense } from 'react';
 import { useSupabaseDashboard } from '@/hooks/useSupabaseDashboard';
 import { supabase } from '@/lib/supabase';
 import type { DateRange } from '@/types';
-import { TermsModal, RefundsModal, LegalModal, ContactModal } from '@/components/FooterModals';
 import { MetricCard } from '@/components/MetricCard';
 import { DateRangeFilter } from '@/components/DateRangeFilter';
 import { EmptyState } from '@/components/EmptyState';
@@ -12,7 +11,7 @@ import { LiveRecentActivity } from '@/components/LiveRecentActivity';
 import { ExecutionRateBadge } from '@/components/ExecutionRateBadge';
 import { AnnouncementBanner } from '@/components/AnnouncementBanner';
 import { LiveToastFeed } from '@/components/LiveToastFeed';
-import { Activity, Users, Clock, RefreshCw, BarChart3, Gamepad2, Search, Webhook, Key, ShieldCheck, Megaphone, Code, Loader2, Palette, Shield, MessageSquare, FileText, Crown } from 'lucide-react';
+import { Activity, Users, Clock, RefreshCw, BarChart3, Gamepad2, Search, Webhook, Key, ShieldCheck, Megaphone, Code, Loader2, Palette, Shield, MessageSquare, FileText, Crown, Globe, ListChecks } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LoginModal } from '@/components/LoginModal';
 import { logout } from '@/lib/auth';
@@ -229,8 +228,6 @@ function App() {
   const [_userRole, setUserRole]           = useState<string>('user');
   const [isLoggedIn, setIsLoggedIn]       = useState(false);
   const [isPro, setIsPro]                 = useState(false);
-  const [customBadge, setCustomBadge]       = useState<string | null>(null);
-  const [customBadgeColor, setCustomBadgeColor] = useState<string>('#3b82f6');
   const [userExecs, setUserExecs]         = useState(0);
   const [footerModal, setFooterModal] = useState<'terms'|'refunds'|'legal'|'contact'|null>(null);
   const [showLogin, setShowLogin]         = useState(false);
@@ -321,14 +318,12 @@ function App() {
         // Auto-upsert founder role into DB
         supabase.from('user_roles').upsert({ user_id: session.user.id, username: 'vhxlua-max', role: 'founder' }).then(() => {});
         supabase.from('user_roles').select('custom_badge,custom_badge_color').eq('user_id', session.user.id).maybeSingle().then(({ data }) => {
-          if (data?.custom_badge) { setCustomBadge(data.custom_badge); setCustomBadgeColor(data.custom_badge_color ?? '#3b82f6'); }
         });
       } else {
         checkIsAdmin(session.user.id, u).then(setIsAdmin);
         supabase.from('user_roles').select('role,custom_badge,custom_badge_color').eq('user_id', session.user.id).maybeSingle().then(({ data }) => {
           if (data?.role) setUserRole(data.role);
           setIsPro(data?.role === 'pro' || data?.role === 'founder' || data?.role === 'admin');
-          if (data?.custom_badge) { setCustomBadge(data.custom_badge); setCustomBadgeColor(data.custom_badge_color ?? '#3b82f6'); }
         });
       }
     });
@@ -568,8 +563,6 @@ function App() {
                 isAdmin={isAdmin}
                 isPro={isPro}
                 isLoggedIn={isLoggedIn}
-                customBadge={customBadge}
-                customBadgeColor={customBadgeColor}
                 onEditProfile={() => setShowAccount(true)}
               />
             </div>
@@ -719,8 +712,6 @@ function App() {
                       isAdmin={isAdmin}
                       isPro={isPro}
                       isLoggedIn={isLoggedIn}
-                      customBadge={customBadge}
-                      customBadgeColor={customBadgeColor}
                       onEditProfile={() => { setShowDrawer(false); setShowAccount(true); }}
                       compact
                     />

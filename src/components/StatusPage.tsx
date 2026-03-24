@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { CheckCircle, AlertTriangle, XCircle, Clock } from 'lucide-react';
+import { CheckCircle, AlertTriangle, Clock } from 'lucide-react';
 
 type GameStatus = {
   game_name: string;
@@ -52,7 +52,6 @@ export function StatusPage() {
   }, []);
 
   const allUp = statuses.every(s => !s.maintenance);
-  const anyDown = statuses.some(s => s.maintenance);
 
   const ordered = GAME_ORDER
     .map(name => statuses.find(s => s.game_name === name))

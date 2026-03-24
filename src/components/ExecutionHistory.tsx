@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { Gamepad2, Clock, Loader2 } from 'lucide-react';
+import { Gamepad2, Loader2 } from 'lucide-react';
 
 type HistoryRow = {
   id: string;
