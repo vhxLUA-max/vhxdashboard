@@ -190,7 +190,7 @@ async function checkIsAdmin(userId: string, username: string | null): Promise<bo
   return false;
 }
 
-type SidebarTab = 'stats' | 'search' | 'webhook' | 'token' | 'scripts' | 'themes' | 'feedback' | 'status' | 'changelog' | 'admin' | 'socials' | 'privacy' | 'pro';
+type SidebarTab = 'stats' | 'search' | 'webhook' | 'token' | 'scripts' | 'themes' | 'feedback' | 'status' | 'changelog' | 'admin' | 'socials' | 'privacy' | 'pro' | 'map' | 'requests';
 
 const TABS = [
   { id: 'stats',     label: 'Stats',     icon: BarChart3     },
@@ -231,7 +231,6 @@ function App() {
   const [isLoggedIn, setIsLoggedIn]       = useState(false);
   const [isPro, setIsPro]                 = useState(false);
   const [userExecs, setUserExecs]         = useState(0);
-  const [footerModal, setFooterModal] = useState<'terms'|'refunds'|'legal'|'contact'|null>(null);
   const [showLogin, setShowLogin]         = useState(false);
   const [showAccount, setShowAccount]     = useState(false);
   const [showProfile, setShowProfile]     = useState(false);
