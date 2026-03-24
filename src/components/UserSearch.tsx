@@ -228,7 +228,7 @@ function UserProfilePanel({ user, onBack }: { user: UserResult; onBack: () => vo
             <Calendar className="w-3 h-3 text-gray-400 flex-shrink-0" />
             <div>
               <p className="text-[10px] text-gray-400">First seen</p>
-              <p className="text-gray-900 dark:text-white text-[11px]">{timeAgo(user.earliest_seen)}</p>
+              <p className="text-gray-900 dark:text-white text-[11px]">{formatDateTime(user.earliest_seen)}</p>
             </div>
           </div>
           <div className="flex items-center gap-1.5 text-gray-500 bg-white dark:bg-gray-950 rounded-lg px-3 py-2 border border-gray-200 dark:border-gray-800">
