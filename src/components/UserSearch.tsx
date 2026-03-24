@@ -98,6 +98,15 @@ function formatDuration(first: string, last: string): string {
   return 'Just started';
 }
 
+function formatDateTime(iso: string): string {
+  const d = new Date(iso);
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day   = String(d.getDate()).padStart(2, '0');
+  const year  = String(d.getFullYear()).slice(2);
+  const time  = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+  return `${month}/${day}/${year} \u2022 ${time}`;
+}
+
 function timeAgo(iso: string): string {
   const diff = (Date.now() - new Date(iso).getTime()) / 1000;
   if (diff < 60) return `${Math.floor(diff)}s ago`;
