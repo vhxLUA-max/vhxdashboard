@@ -63,12 +63,12 @@ function useLiveCounter() {
   const [count, setCount] = useState<number | null>(null);
   useEffect(() => {
     const fetch = async () => {
-      const { data } = await supabase.from('unique_users').select('execution_count');
-      setCount((data ?? []).reduce((s: number, u: any) => s + (u.execution_count ?? 0), 0));
+      const { data } = await supabase.from('game_executions').select('count');
+      setCount((data ?? []).reduce((s: number, e: any) => s + (e.count ?? 0), 0));
     };
     fetch();
     const ch = supabase.channel('live-total')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'unique_users' }, fetch)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'game_executions' }, fetch)
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, []);
